@@ -21,7 +21,24 @@ npm run local-api
 
 Then open **http://127.0.0.1:8788/** (not `file://`). **Upload to cloud**, **Cloud tours**, and **Admin** use the same ACL model as production (local SQLite at `cloudflare/.data/insp360-acl.sqlite`). Default user is `robert.piwin@quadreal.com` — override with `?as=email@…` or header `X-Insp360-Email`. Local API skips Resend; no OTP email is required. Note: local SQLite is separate from production D1.
 
-## Production deploy
+## GitHub Actions deploy
+
+Pushing to `main` (or running **Actions → Deploy → Run workflow**) deploys the Worker when `cloudflare/` or `QR-360-Inspections/` change.
+
+### One-time GitHub secret
+
+1. Cloudflare dashboard → **My Profile** → **API Tokens** → **Create Token**
+2. Use template **Edit Cloudflare Workers** (must be able to write Workers / R2 / D1)
+3. Account resources: **krutki11** (`e46c718ce72e30e61182c9b1c04cf286`)
+4. GitHub → repo **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+   - Name: `CLOUDFLARE_API_TOKEN`
+   - Value: the token
+
+Runtime Worker secrets (`SESSION_SECRET`, `RESEND_API_KEY`, `RESEND_FROM`) stay on Cloudflare (`wrangler secret put`) — they are not set by this workflow.
+
+Live URL after deploy: https://insp360-viewer.krutki11.workers.dev
+
+## Production deploy (manual)
 
 ```powershell
 cd C:\Users\Robert\Projects\QR-360-Inspections\cloudflare

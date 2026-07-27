@@ -1,0 +1,53 @@
+# Deploy INSP 360 Worker to Cloudflare (krutki11) on push to main.
+# Requires repo secrets: CLOUDFLARE_API_TOKEN (Edit Cloudflare Workers on krutki11).
+# Optional: CLOUDFLARE_ACCOUNT_ID = e46c718ce72e30e61182c9b1c04cf286
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cloudflare/**'
+      - 'QR-360-Inspections/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-insp360
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    name: Deploy Worker
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: cloudflare
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: cloudflare/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync viewer into Worker assets
+        run: npm run sync-viewer
+
+      - name: Deploy to Cloudflare
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # Same as cloudflare/wrangler.toml (krutki11) — not sensitive.
+          accountId: e46c718ce72e30e61182c9b1c04cf286
+          workingDirectory: cloudflare
+          wranglerVersion: '4'
+          packageManager: npm
+          command: deploy
