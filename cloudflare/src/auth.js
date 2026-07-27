@@ -456,17 +456,23 @@ export function authWallResponse(request, auth) {
   html,body{height:100%;margin:0}
   body{
     display:flex;align-items:center;justify-content:center;
-    background:radial-gradient(120% 80% at 50% -10%,#2947A3 0%,var(--bg) 55%);
+    background-color:var(--bg);
+    background-image:
+      linear-gradient(180deg, rgba(19,32,73,.72) 0%, rgba(19,32,73,.82) 100%),
+      url('/brand/60-birmingham-background.jpg');
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
     color:var(--text);font-family:var(--sans);
   }
   .card{
-    width:min(420px,92vw);padding:32px 28px 28px;
+    width:min(480px,92vw);padding:40px 36px 32px;
     border:1px solid var(--qr-blue3);border-radius:14px;
     background:rgba(23,48,115,.92);box-shadow:0 18px 50px rgba(0,0,0,.35);
   }
-  .qr-mark{display:block;width:min(168px,70%);height:auto;margin:0 auto 18px}
+  .qr-mark{display:block;width:min(196px,72%);height:auto;margin:0 auto 22px}
   h1{
-    margin:0 0 6px;font-family:var(--display);font-size:28px;font-weight:600;
+    margin:0 0 6px;font-family:var(--display);font-size:30px;font-weight:600;
     letter-spacing:-.02em;text-align:center;
   }
   .sub{margin:0 0 22px;color:var(--muted);font-size:14px;line-height:1.45;text-align:center}

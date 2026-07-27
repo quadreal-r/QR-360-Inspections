@@ -1252,9 +1252,15 @@ export default {
         return withCors(await handleApi(request, env), request)
       }
 
+      // Brand assets must stay public so the login wall can load its background.
+      const isPublicBrand = url.pathname.startsWith('/brand/')
+
       // Session cookie gate for viewer HTML/assets. Unauthenticated → QuadReal login wall.
       const auth = await verifySession(request, env)
       if (!auth.ok) {
+        if (isPublicBrand && env.ASSETS) {
+          return env.ASSETS.fetch(request)
+        }
         return authWallResponse(request, auth)
       }
 
