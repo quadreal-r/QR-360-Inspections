@@ -1,0 +1,21 @@
+{
+  "name": "insp360-viewer-cloudflare",
+  "private": true,
+  "version": "1.0.0",
+  "description": "INSP 360 standalone viewer on Cloudflare (QuadReal OTP + R2 insp360)",
+  "type": "module",
+  "scripts": {
+    "sync-viewer": "node scripts/sync-viewer.mjs",
+    "local-api": "npm run sync-viewer && node scripts/local-api.mjs",
+    "dev": "npm run sync-viewer && wrangler dev",
+    "deploy": "npm run sync-viewer && wrangler deploy",
+    "setup:access": "node scripts/setup-cloudflare-access.mjs",
+    "seed:admin": "wrangler d1 execute insp360-acl --remote --file=migrations/0002_seed_admin.sql",
+    "db:migrate": "wrangler d1 migrations apply insp360-acl --remote",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-s3": "^3.1075.0",
+    "wrangler": "^4.28.0"
+  }
+}

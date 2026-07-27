@@ -1,0 +1,16 @@
+# Ask before updating cloud / local copies
+
+After finishing any meaningful feature, UI, fix, or behavior change to the viewer (`QR-360-Inspections_v*.html`), capture (`insp-capture.html`), or related shippable app behavior:
+
+1. **Do not** run `npm run sync-viewer`, `npm run deploy`, `npm run cap:sync`, or East Industrial `npm run sync:qr360-viewer` until the user chooses a target.
+2. **Always ask** (use AskQuestion when available) which copies to update:
+   - **1 — Local only** — bump/source files in the repo; optionally `npm run sync-viewer` into `cloudflare/public/` for local `:8788` / file testing. No Cloudflare Worker deploy.
+   - **2 — Cloud only** — deploy the already-synced public assets / Worker (`npm run deploy` in `cloudflare/`) so https://insp360-viewer.krutki11.workers.dev updates. Skip if public is stale — confirm with the user.
+   - **3 — Both** — `npm run sync-viewer` then `npm run deploy`.
+   - **4 — Both + Map Explorer** — same as Both, then also sync the Map360 embed into East Industrial:
+     ```powershell
+     cd C:\Users\Robert\Projects\QR-East_Industrial_Database
+     npm run sync:qr360-viewer
+     ```
+3. Wait for the answer before syncing or deploying.
+4. Still follow the version-bump rule for the source viewer/capture file itself; only the *distribution* step (local public sync / cloud deploy / map embed) is gated on this question.

@@ -1,0 +1,32 @@
+# Dependencies & build
+node_modules/
+dist/
+build/
+.wrangler/
+.data/
+
+# Secrets / local env
+.env
+.env.*
+!.env.example
+.dev.vars
+*.pem
+*.key
+credentials.json
+
+# Local tour media (multi-GB; keep out of git)
+360-Tours/
+
+# Android / Capacitor
+*.apk
+*.aab
+*.jks
+local.properties
+.gradle/
+captures/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+*.log

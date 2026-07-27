@@ -1,0 +1,34 @@
+---
+description: Always bump INSP 360 viewer patch version after each program change
+alwaysApply: true
+---
+
+# Always bump viewer version after each change
+
+When editing the INSP 360 viewer (`QR-360-Inspections_v*.html`) or related app behavior that ships in that file:
+
+1. **After every meaningful change** (feature, UI, fix, or behavior change — including small ones), **bump the version before finishing**:
+   - Patch numbers go `0`–`99` only. After `vX.Y.99`, the next bump is `vX.(Y+1).0` (example: `v1.1.99` → `v1.2.0`). Never ship `v1.1.100` or higher.
+   - Copy/update to `QR-360-Inspections_vX.Y.Z.html` with that next version
+   - Version **badge** uses product prefixes (same semver):
+     - Standalone Inspections → `QR360-vX.Y.Z` (`VIEWER_PRODUCT="QR360"`)
+     - Map embed copy (after East Industrial sync) → `Map360-vX.Y.Z`
+   - Update `VERSION_NUM` / `appVer` strings inside the file to match
+   - Update `.cursor/rules/open-viewer-link.mdc` to the new path + file URL
+2. Sync the local Cloudflare public copy (keeps **QR360** badge):
+
+```powershell
+cd C:\Users\Robert\Projects\QR-360-Inspections\cloudflare
+npm run sync-viewer
+```
+
+3. When publishing / deploying, also sync to East Industrial Database (stamps **Map360** for the map iframe):
+
+```powershell
+cd C:\Users\Robert\Projects\QR-East_Industrial_Database
+npm run sync:qr360-viewer
+```
+
+Do **not** leave edits only on the previous version file. One bump per finished change set is enough (do not bump mid-edit repeatedly in the same turn).
+
+Whitespace-only or accidental touch with no user-facing/program change does not require a bump.

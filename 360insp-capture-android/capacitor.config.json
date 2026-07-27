@@ -1,0 +1,20 @@
+{
+  "appId": "com.quadreal.insp360.capture",
+  "appName": "QR360 Capture",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    },
+    "SplashScreen": {
+      "launchAutoHide": true
+    }
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}

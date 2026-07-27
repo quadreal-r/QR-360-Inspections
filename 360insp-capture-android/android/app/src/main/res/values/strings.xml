@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">QR360 Capture</string>
+    <string name="title_activity_main">QR360 Capture</string>
+    <string name="package_name">com.quadreal.insp360.capture</string>
+    <string name="custom_url_scheme">com.quadreal.insp360.capture</string>
+</resources>

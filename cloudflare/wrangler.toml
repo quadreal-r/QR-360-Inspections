@@ -1,0 +1,40 @@
+# INSP 360 viewer — krutki11 Cloudflare account
+# Deploy: npm run deploy
+name = "insp360-viewer"
+main = "src/worker.js"
+compatibility_date = "2026-04-01"
+account_id = "e46c718ce72e30e61182c9b1c04cf286"
+workers_dev = true
+preview_urls = true
+
+[[r2_buckets]]
+binding = "INSP360_BUCKET"
+bucket_name = "insp360"
+
+[[d1_databases]]
+binding = "INSP360_DB"
+database_name = "insp360-acl"
+database_id = "f61f77db-9b74-41ea-9b7b-551e2eb85213"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+# Run Worker first so session cookie can gate HTML + /api/*.
+run_worker_first = true
+
+[vars]
+# Access JWT is no longer required — QuadReal OTP wall + insp360_session cookie gate the app.
+# Keep "1" so leftover Access secrets are ignored if present.
+ACCESS_DISABLE_CHECK = "1"
+# Secrets (wrangler secret put):
+#   SESSION_SECRET   — HMAC key for insp360_session cookie
+#   RESEND_API_KEY   — Resend API key for OTP email
+#   RESEND_FROM      — e.g. INSP 360 <noreply@your-verified-domain>
+
+[triggers]
+crons = ["0 12 * * *"]  # once daily UTC (~8am ET / 9am EDT)
+
+[observability]
+enabled = true
+head_sampling_rate = 1

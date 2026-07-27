@@ -1,0 +1,1720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0e1620">
+<title>INSP Capture — QR360</title>
+<style>
+  :root{
+    --bg:#0e1620; --panel:#17222e; --panel2:#1e2c3a; --line:#2c3d4e;
+    --ink:#eaf1f7; --dim:#9fb2c2; --faint:#6b7f90;
+    --arm:#ff8c1a;        /* armed / active pin */
+    --ok:#25c274;         /* captured */
+    --bad:#ff5252;        /* error / delete */
+    --pin:#3fa9ff;        /* placed, empty */
+    --accent:#3fa9ff;
+    --tap:56px;
+    font-synthesis:none;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; transition:none!important; animation:none!important}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-user-select:none;user-select:none;overscroll-behavior:none}
+  button{font-family:inherit;color:inherit;cursor:pointer;border:0;background:none}
+  .mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+
+  /* ---- layout ---- */
+  #app{display:flex;flex-direction:column;height:100dvh}
+  header{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--panel);
+    border-bottom:1px solid var(--line);min-height:52px}
+  header .title{font-weight:700;font-size:14px;letter-spacing:.5px;white-space:nowrap}
+  header .title b{color:var(--accent)}
+  #bldgBtn{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;
+    background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;text-align:left}
+  #bldgBtn .a{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  #bldgBtn .b{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .hbtn{width:44px;height:44px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+  .hbtn:active{background:var(--line)}
+
+  main{flex:1;position:relative;overflow:hidden;background:#0a1119;touch-action:none}
+  #viewport{position:absolute;inset:0;overflow:hidden}
+  #page{position:absolute;left:0;top:0;transform-origin:0 0;background:#fff;box-shadow:0 0 0 1px #000}
+  #pdfCanvas{display:block;width:100%;height:100%}
+  #pinLayer{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden}
+  .pin{position:absolute;transform:translate(-50%,-100%)}
+  .pin .body{transform-origin:50% 100%;display:flex;flex-direction:column;align-items:center}
+  .pin .num{font-weight:800;font-size:12px;line-height:1;padding:5px 7px;border-radius:7px;
+    background:var(--pin);color:#04121f;box-shadow:0 2px 6px rgba(0,0,0,.6);white-space:nowrap;
+    border:2px solid #04121f;min-width:26px;text-align:center}
+  .pin .stem{width:2px;height:10px;background:#04121f}
+  .pin .dot{width:11px;height:11px;border-radius:50%;background:var(--pin);border:2px solid #04121f;margin-top:-1px}
+  .pin.has .num,.pin.has .dot{background:var(--ok)}
+  .pin.armed .num,.pin.armed .dot{background:var(--arm);color:#1a0d00}
+  .pin.sel .num{outline:3px solid #fff;outline-offset:1px}
+
+  /* ---- empty / hint states ---- */
+  #hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:var(--dim);font-size:15px;line-height:1.5}
+  #hint .box{max-width:320px}
+  #hint b{color:var(--ink)}
+
+  /* ---- right control rail ---- */
+  #rail{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:8px;z-index:20}
+  .rbtn{width:var(--tap);height:var(--tap);border-radius:12px;background:var(--panel);
+    border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;box-shadow:0 3px 10px rgba(0,0,0,.45)}
+  .rbtn:active{background:var(--panel2)}
+  .rbtn .ic{font-size:20px;line-height:1}
+  .rbtn .lb{font-size:9px;letter-spacing:.3px;color:var(--dim)}
+  .rbtn.on{border-color:var(--arm);background:#2a1c08}
+  .rbtn.on .lb{color:var(--arm)}
+  .rbtn:disabled{opacity:.35}
+
+  /* zoom cluster bottom-right */
+  #zoom{position:absolute;right:8px;bottom:96px;display:flex;flex-direction:column;gap:6px;z-index:20}
+  #zoom button{width:44px;height:44px;border-radius:10px;background:var(--panel);border:1px solid var(--line);font-size:22px;font-weight:700;box-shadow:0 3px 10px rgba(0,0,0,.45)}
+  #zoom button:active{background:var(--panel2)}
+
+  /* page nav bottom-left */
+  #pageNav{position:absolute;left:8px;bottom:96px;display:flex;align-items:center;gap:6px;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px;z-index:20;box-shadow:0 3px 10px rgba(0,0,0,.45)}
+  #pageNav button{width:38px;height:38px;border-radius:8px;font-size:20px;font-weight:700}
+  #pageNav button:active{background:var(--panel2)}
+  #pageNav .lbl{font-size:12px;color:var(--dim);min-width:52px;text-align:center}
+
+  /* ---- bottom action bar (field) ---- */
+  #actionBar{background:var(--panel);border-top:1px solid var(--line);padding:8px 10px;
+    display:flex;gap:8px;align-items:stretch}
+  .act{flex:1;border-radius:12px;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;
+    background:var(--panel2);border:1px solid var(--line);font-weight:700;font-size:13px}
+  .act .sub{font-size:10px;font-weight:500;color:var(--dim)}
+  .act:active{filter:brightness(1.2)}
+  .act:disabled{opacity:.4}
+  .act.shoot{background:var(--arm);color:#1a0d00;border-color:var(--arm)}
+  .act.shoot .sub{color:#3a2400}
+  .act.shoot:disabled{background:var(--panel2);color:var(--ink);border-color:var(--line)}
+  .act.shoot:disabled .sub{color:var(--dim)}
+
+  /* ---- panels / modal ---- */
+  .sheet{position:fixed;inset:0;z-index:200;background:rgba(4,8,12,.7);display:none;align-items:flex-end}
+  .sheet.open{display:flex}
+  .sheet .card{background:var(--panel);width:100%;max-height:88dvh;border-radius:16px 16px 0 0;
+    border-top:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+  .sheet.center{align-items:center;justify-content:center;padding:16px}
+  .sheet.center .card{max-width:440px;border-radius:16px;border:1px solid var(--line);max-height:82dvh}
+  .card h2{margin:0;padding:14px 16px;font-size:15px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-between}
+  .card h2 .x{width:34px;height:34px;border-radius:8px;background:var(--panel2);font-size:18px;display:flex;align-items:center;justify-content:center}
+  .card .body{overflow:auto;padding:12px 14px;-webkit-overflow-scrolling:touch}
+  .card .foot{padding:10px 14px;border-top:1px solid var(--line);display:flex;gap:8px}
+
+  input[type=text],input[type=search]{width:100%;background:var(--panel2);border:1px solid var(--line);
+    border-radius:9px;padding:11px 12px;color:var(--ink);font-size:15px}
+  input:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+  .filters{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
+  .chip{padding:7px 11px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);font-size:12px;color:var(--dim)}
+  .chip.on{background:var(--accent);color:#04121f;border-color:var(--accent);font-weight:700}
+  .blist{margin-top:6px}
+  .brow{display:flex;align-items:center;gap:10px;padding:11px 8px;border-bottom:1px solid var(--line);border-radius:8px}
+  .brow:active{background:var(--panel2)}
+  .brow .info{flex:1;min-width:0}
+  .brow .a{font-weight:600;font-size:14px}
+  .brow .b{font-size:11px;color:var(--dim)}
+  .brow .rt{font-size:11px;color:var(--faint);text-align:right;white-space:nowrap}
+  .brow .pfx{font-family:ui-monospace,monospace;font-size:12px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 7px;color:var(--accent)}
+
+  .fld{margin-bottom:12px}
+  .fld label{display:block;font-size:11px;color:var(--dim);margin-bottom:5px;letter-spacing:.4px;text-transform:uppercase}
+  .row2{display:flex;gap:8px}
+  .row2>*{flex:1}
+  .btn{border-radius:10px;padding:12px;font-weight:700;font-size:14px;text-align:center;
+    background:var(--panel2);border:1px solid var(--line);flex:1}
+  .btn.primary{background:var(--accent);color:#04121f;border-color:var(--accent)}
+  .btn.warn{background:#2a1010;color:var(--bad);border-color:#5a2020}
+  .btn:active{filter:brightness(1.15)}
+  .switch{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+  .switch .t{font-size:14px}
+  .switch .t small{display:block;color:var(--dim);font-size:11px}
+  .tog{width:50px;height:30px;border-radius:16px;background:var(--line);position:relative;flex:none}
+  .tog i{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff}
+  .tog.on{background:var(--ok)}.tog.on i{left:23px}
+
+  /* pin list */
+  .plist .prow{display:flex;align-items:center;gap:10px;padding:8px;border-bottom:1px solid var(--line)}
+  .plist .thumb{width:52px;height:52px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);
+    object-fit:cover;flex:none;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--faint)}
+  .plist .pn{font-weight:700;font-family:ui-monospace,monospace}
+  .plist .pmeta{font-size:11px;color:var(--dim)}
+  .badge{font-size:10px;padding:2px 6px;border-radius:5px;background:var(--panel2);border:1px solid var(--line);color:var(--dim)}
+  .badge.ok{color:var(--ok);border-color:#1c4d33}
+
+  /* camera log */
+  #camState{display:flex;gap:8px;margin-bottom:8px}
+  .stat{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px;text-align:center}
+  .stat .v{font-size:18px;font-weight:800;font-family:ui-monospace,monospace}
+  .stat .k{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.4px}
+  #log{background:#0a1119;border:1px solid var(--line);border-radius:9px;padding:8px;height:150px;overflow:auto;
+    font-family:ui-monospace,monospace;font-size:11px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+  #log .e{color:var(--bad)}#log .s{color:var(--ok)}#log .i{color:var(--dim)}
+
+  .toast{position:fixed;left:50%;bottom:calc(72px + env(safe-area-inset-bottom));transform:translateX(-50%);
+    background:#04121f;border:1px solid var(--line);color:var(--ink);padding:10px 16px;border-radius:10px;
+    font-size:13px;z-index:80;box-shadow:0 6px 20px rgba(0,0,0,.5);max-width:90vw;text-align:center;display:none}
+  .toast.show{display:block}
+  .note{font-size:11px;color:var(--faint);line-height:1.5;margin-top:8px}
+  .safe{padding-bottom:env(safe-area-inset-bottom)}
+
+  #home{position:fixed;inset:0;z-index:100;background:linear-gradient(165deg,#0a1119 0%,#17222e 55%,#0e1620 100%);
+    display:flex;flex-direction:column;align-items:stretch;padding:16px 16px calc(20px + env(safe-area-inset-bottom));overflow:auto;-webkit-overflow-scrolling:touch}
+  #home.hidden{display:none;pointer-events:none}
+  #home .brand{font-size:24px;font-weight:800;letter-spacing:.4px;margin:4px 0 2px}
+  #home .brand span{color:var(--accent)}
+  #home .sub{color:var(--dim);font-size:13px;line-height:1.4;margin-bottom:14px;max-width:480px}
+  #home .form{max-width:480px;width:100%;display:flex;flex-direction:column;gap:0}
+  #home .hact{display:flex;flex-direction:column;gap:10px;max-width:480px;margin-top:8px}
+  #home .hbtn2{border-radius:14px;padding:14px 16px;background:var(--panel);border:1px solid var(--line);
+    text-align:left;display:flex;flex-direction:column;gap:4px}
+  #home .hbtn2.primary{background:var(--accent);color:#04121f;border-color:var(--accent)}
+  #home .hbtn2.primary .s{color:#1a3040}
+  #home .hbtn2 .t{font-weight:800;font-size:15px}
+  #home .hbtn2 .s{font-size:12px;color:var(--dim);font-weight:500}
+  #home .glist{display:flex;flex-direction:column;gap:6px;max-height:160px;overflow:auto;margin-top:4px}
+  #home .grow{display:flex;align-items:center;gap:10px;padding:10px 10px;background:var(--panel2);border:1px solid var(--line);border-radius:10px}
+  #home .grow input{width:20px;height:20px;accent-color:var(--accent)}
+  #home .grow .gn{flex:1;font-size:14px;font-weight:600}
+  #planFileStatus{font-size:12px;color:var(--ok);margin-top:6px;min-height:1.2em}
+  #mixedBanner{display:none;background:#2a1c08;border-bottom:1px solid #5a3a10;color:#ffd59a;
+    padding:8px 12px;font-size:12px;line-height:1.4;z-index:40}
+  #mixedBanner.show{display:block}
+  #completeBar{display:none;background:var(--panel);border-top:1px solid var(--line);
+    padding:8px 10px;gap:8px;align-items:stretch}
+  #completeBar.show{display:flex}
+  #completeBar .act.done{background:var(--ok);color:#04121f;border-color:var(--ok)}
+  #completeBar .act.done .sub{color:#0a3a24}
+  .prog{height:8px;background:var(--panel2);border-radius:6px;overflow:hidden;margin:10px 0}
+  .prog>i{display:block;height:100%;width:0;background:var(--accent)}
+  #authNote{font-size:12px;color:var(--dim);margin-top:6px}
+  #authNote.ok{color:var(--ok)} #authNote.bad{color:var(--bad)}
+
+</style>
+</head>
+<body>
+
+<div id="home">
+  <div class="brand">QR<span>360</span> Capture</div>
+  <div class="sub">New field project — building, group, floor plan, then pin &amp; shoot.</div>
+
+  <div class="form">
+    <div class="fld"><label>Project name</label><input type="text" id="metaName" placeholder="e.g. Electrical Room — July 2026" autocomplete="off"></div>
+    <div class="fld"><label>Building</label>
+      <button class="btn" id="metaPickBldg" type="button" style="width:100%;text-align:left">Select building from portfolio…</button>
+      <div class="note" id="metaAddrNote" style="margin-top:6px">Required for naming &amp; cloud folder</div>
+    </div>
+    <div class="row2">
+      <div class="fld"><label>Tenant</label><input type="text" id="metaTenant" placeholder="Vacant / tenant" autocomplete="organization"></div>
+      <div class="fld"><label>Creator</label><input type="text" id="metaCreator" placeholder="Your name" autocomplete="name"></div>
+    </div>
+    <div class="fld"><label>Assign to group</label>
+      <div class="note" id="groupNote">Sign in on the viewer first so groups load here.</div>
+      <div class="glist" id="groupList"></div>
+    </div>
+    <div class="fld"><label>Floor plan (PDF or PNG)</label>
+      <button class="btn primary" id="homeLoadPlan" type="button" style="width:100%">Load PDF / PNG drawing</button>
+      <div id="planFileStatus"></div>
+    </div>
+    <button class="hbtn2 primary" id="metaStart" type="button" style="margin-top:6px">
+      <span class="t">Start capture</span>
+      <span class="s">Drop pins on the plan, then ATTACH stitched 360° JPGs</span>
+    </button>
+  </div>
+
+  <div class="hact" style="margin-top:18px">
+    <button class="hbtn2" id="homeResume" type="button"><span class="t">Resume draft</span><span class="s" id="homeResumeSub">No draft on this phone yet</span></button>
+    <button class="hbtn2" id="homeViewer" type="button"><span class="t">Open full viewer</span><span class="s">Cloud tours &amp; desktop tools</span></button>
+  </div>
+  <div class="note" style="margin-top:14px;max-width:480px" id="homeMixedNote"></div>
+</div>
+
+<div id="app" style="display:none">
+  <div id="mixedBanner">On this HTTPS site the browser blocks live SNAP to the camera. Shoot with the X5 / Insta360 app, then tap <b>IMPORT 360°</b> to attach the stitched JPG from your phone.</div>
+  <header>
+    <div class="title">QR<span style="color:var(--accent)">360</span> Capture</div>
+    <button id="bldgBtn"><span class="a" id="bldgA">Select building</span><span class="b" id="bldgB">tap to choose from portfolio</span></button>
+    <button class="hbtn" id="pinsBtn" title="Pins">☰</button>
+    <button class="hbtn" id="menuBtn" title="Menu">⋮</button>
+  </header>
+
+  <main>
+    <div id="viewport">
+      <div id="page">
+        <canvas id="pdfCanvas"></canvas>
+      </div>
+      <div id="pinLayer"></div>
+    </div>
+
+    <div id="hint"><div class="box">
+      <div style="font-size:34px;margin-bottom:10px">📐</div>
+      <b>Load a floor plan</b> to begin.<br>
+      Pick a building, open its PDF drawing, then drop pins where each 360° shot goes — at your desk or on site.
+    </div></div>
+
+    <div id="rail">
+      <button class="rbtn" id="addBtn"><span class="ic">📍</span><span class="lb">ADD</span></button>
+      <button class="rbtn" id="camBtn"><span class="ic">📷</span><span class="lb">CAMERA</span></button>
+    </div>
+
+    <div id="zoom">
+      <button id="zin">＋</button>
+      <button id="zout">－</button>
+      <button id="zfit" style="font-size:15px">⤢</button>
+    </div>
+
+    <div id="pageNav" style="display:none">
+      <button id="pprev">‹</button>
+      <span class="lbl" id="pageLbl">1 / 1</span>
+      <button id="pnext">›</button>
+    </div>
+  </main>
+
+  <div id="actionBar" class="safe">
+    <button class="act shoot" id="shootBtn" disabled>
+      <span id="shootLbl">IMPORT 360°</span><span class="sub" id="shootSub">select a pin first</span>
+    </button>
+    <button class="act" id="attachBtn" disabled style="display:none">
+      <span>ATTACH</span><span class="sub">from phone</span>
+    </button>
+  </div>
+  <div id="completeBar" class="safe">
+    <button class="act done" id="completeBtn">
+      <span>Complete project</span><span class="sub" id="completeSub">build .insp360</span>
+    </button>
+  </div>
+</div>
+
+
+<!-- ============ NEW PROJECT (kept for compatibility; primary form is #home) ============ -->
+<div class="sheet" id="projSheet">
+  <div class="card">
+    <h2>Project details <button class="x" data-close>✕</button></h2>
+    <div class="body">
+      <div class="note">Use the Capture home form to set name, building, group, and floor plan.</div>
+    </div>
+    <div class="foot">
+      <button class="btn primary" data-close>OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ COMPLETE / PUBLISH ============ -->
+<div class="sheet" id="completeSheet">
+  <div class="card">
+    <h2>Complete project <button class="x" data-close>✕</button></h2>
+    <div class="body">
+      <div id="completeSummary" class="note" style="color:var(--ink);font-size:14px;margin-bottom:10px"></div>
+      <div class="prog" id="upProg"><i id="upProgFill"></i></div>
+      <div id="upProgLbl" class="note" style="margin:0 0 12px"></div>
+      <div id="authNote">Checking sign-in…</div>
+      <div class="note" style="margin-top:12px">
+        Builds a store-only <span class="mono">.insp360</span> (photos + tour.json) matching the viewer schema.
+        Upload needs Wi‑Fi + OTP login on this site. Offline? Save for USB and transfer to a PC.
+      </div>
+    </div>
+    <div class="foot" style="flex-wrap:wrap">
+      <button class="btn primary" id="btnUploadCloud" style="flex:1 1 100%">Upload to cloud</button>
+      <button class="btn" id="btnSaveUsb" style="flex:1">Save for USB</button>
+      <button class="btn" id="btnSaveTourJson" style="flex:1">Save .tour.json</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BUILDING PICKER ============ -->
+<div class="sheet" id="bldgSheet">
+  <div class="card">
+    <h2>Select building <button class="x" data-close>✕</button></h2>
+    <div class="body">
+      <input type="search" id="bldgSearch" placeholder="Search address, BU#, cluster…" autocomplete="off">
+      <div class="filters" id="portFilters"></div>
+      <div class="blist" id="bldgList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PIN LIST ============ -->
+<div class="sheet" id="pinSheet">
+  <div class="card">
+    <h2>Pins <span id="pinCount" style="color:var(--dim);font-size:13px;font-weight:400"></span> <button class="x" data-close>✕</button></h2>
+    <div class="body plist" id="pinList"></div>
+    <div class="foot"><button class="btn warn" id="clearPins">Clear all pins</button></div>
+  </div>
+</div>
+
+<!-- ============ PIN DETAIL ============ -->
+<div class="sheet center" id="pinDetail">
+  <div class="card">
+    <h2><span id="pdTitle">Pin</span> <button class="x" data-close>✕</button></h2>
+    <div class="body">
+      <div id="pdThumbWrap" style="text-align:center;margin-bottom:12px"></div>
+      <div class="fld"><label>Photo name</label><input type="text" id="pdName" class="mono"></div>
+      <div class="fld"><label>Note (optional)</label><input type="text" id="pdNote" placeholder="e.g. RTU-3 north, roof access"></div>
+    </div>
+    <div class="foot">
+      <button class="btn warn" id="pdDelete">Delete</button>
+      <button class="btn primary" id="pdSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CAMERA / IMPORT ============ -->
+<div class="sheet" id="camSheet">
+  <div class="card">
+    <h2 id="camSheetTitle">Import 360° photos <button class="x" data-close>✕</button></h2>
+    <div class="body">
+      <div id="camHttpsHelp">
+        <div class="note" style="color:var(--ink);font-size:14px;line-height:1.5;margin-bottom:12px">
+          <b>Live Connect/SNAP cannot run on this HTTPS page</b> — Chrome blocks talking to the camera at <span class="mono">http://192.168.42.1</span>.
+          Use this workflow instead:
+        </div>
+        <ol style="margin:0 0 14px;padding-left:20px;color:var(--dim);font-size:13px;line-height:1.55">
+          <li>Shoot on the X5 (or Insta360 app) with on-device stitch / equirectangular JPG</li>
+          <li>Let the Insta360 app save the photo to this phone</li>
+          <li>Select a pin on the plan, then tap <b>Import stitched JPG</b></li>
+        </ol>
+        <button class="btn primary" id="camImportBtn" type="button" style="width:100%;margin-bottom:10px">Import stitched JPG</button>
+        <div class="note">Need live SNAP? Open Capture over <b>local HTTP</b> (laptop on camera Wi‑Fi) — not this workers.dev link.</div>
+      </div>
+      <div id="camOscPanel" style="display:none">
+        <div id="camState">
+          <div class="stat"><div class="v" id="csBatt">—</div><div class="k">Battery</div></div>
+          <div class="stat"><div class="v" id="csCard">—</div><div class="k">Card</div></div>
+          <div class="stat"><div class="v" id="csFree">—</div><div class="k">Free</div></div>
+        </div>
+        <div class="row2" style="margin-bottom:10px">
+          <button class="btn primary" id="camTest">Connect / refresh</button>
+          <button class="btn" id="camPreview">List last photos</button>
+        </div>
+        <div id="log" class="i">Not connected.\n</div>
+        <div class="note">
+          Join the camera Wi‑Fi (hotspot at <b>192.168.42.1</b>). This page must be loaded over <b>http</b>, not https.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MENU ============ -->
+<div class="sheet" id="menuSheet">
+  <div class="card">
+    <h2>Menu <button class="x" data-close>✕</button></h2>
+    <div class="body">
+      <div class="fld"><label>Floor plan PDF</label>
+        <div class="row2">
+          <button class="btn primary" id="loadPdf">Open PDF / PNG</button>
+          <button class="btn" id="loadPdfUrl">From link…</button>
+        </div>
+      </div>
+
+      <div class="fld"><label>Photo naming</label>
+        <div class="row2">
+          <div><div class="note" style="margin:0 0 4px">Prefix</div><input type="text" id="setPrefix" class="mono"></div>
+          <div><div class="note" style="margin:0 0 4px">Next number</div><input type="text" id="setNext" class="mono" value="1"></div>
+        </div>
+        <div class="note">Photos are named <span class="mono" id="egName">6990 (1).jpg</span>. Prefix defaults from the street number; change it per site.</div>
+      </div>
+
+      <div class="switch"><div class="t">On-device stitching<small>X5 returns one finished equirectangular JPG</small></div><div class="tog on" id="togStitch"><i></i></div></div>
+      <div class="switch"><div class="t">HDR photo<small>3-bracket blend, slower shot</small></div><div class="tog" id="togHdr"><i></i></div></div>
+      <div class="switch"><div class="t">Auto-advance to next pin<small>after a successful shot</small></div><div class="tog on" id="togAdv"><i></i></div></div>
+
+      <div class="fld" style="margin-top:14px"><label>Camera address</label><input type="text" id="setIp" class="mono" value="192.168.42.1"></div>
+
+      <div class="fld"><label>Project</label>
+        <div class="row2">
+          <button class="btn primary" id="completeMenuBtn">Complete / publish</button>
+          <button class="btn" id="saveProj">Save draft .json</button>
+        </div>
+        <div class="row2" style="margin-top:8px">
+          <button class="btn" id="loadProj">Load project</button>
+          <button class="btn warn" id="resetProj">Reset</button>
+        </div>
+        <div class="row2" style="margin-top:8px">
+          <button class="btn" id="homeBackBtn">Capture home</button>
+          <button class="btn" id="openViewerBtn">Viewer</button>
+        </div>
+        <div class="note">Autosaves on this device. <b>Complete</b> builds a real <span class="mono">.insp360</span> + tour.json for cloud upload or USB. Naming matches viewer tours: <span class="mono">145 (1).jpg</span>.</div>
+      </div>
+
+      <details style="margin-top:6px">
+        <summary style="color:var(--accent);font-size:13px;padding:6px 0">How this works / troubleshooting</summary>
+        <div class="note" style="color:var(--dim)">
+          <b>Two ways to capture, per pin:</b><br>
+          • <b>SNAP 360°</b> drives the camera directly over its Wi-Fi (OSC: setOptions → takePicture → download the stitched JPG) and auto-attaches it to the selected pin.<br>
+          • <b>ATTACH</b> lets you pick a photo already on the phone (e.g. imported by the Insta360 app) and binds + renames it to the pin. This always works.<br><br>
+          <b>If SNAP fails:</b> browsers block a secure (https) page from calling the camera's plain-http address, and may block cross-origin reads. For direct capture, load this file over <b>http</b> (e.g. a local server or the file opened directly) while on the camera Wi-Fi, or just use ATTACH. The log in the Camera panel shows the exact error.<br><br>
+          <b>Offline:</b> open this page once on normal internet so it caches, then switch to the camera's Wi-Fi. Pins, photos and the PDF live in this browser and survive reloads.
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="pdfFile" accept="application/pdf,image/png,image/jpeg,.pdf,.png,.jpg,.jpeg" style="display:none">
+<input type="file" id="photoFile" accept="image/jpeg,image/jpg,image/png,.jpg,.jpeg,.png" multiple style="display:none">
+<input type="file" id="projFile" accept=".json,.zip,.insp360,application/json,application/zip" style="display:none">
+<input type="file" id="planFileHome" accept="application/pdf,image/png,image/jpeg,.pdf,.png,.jpg,.jpeg" style="display:none">
+<div class="toast" id="toast"></div>
+
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/jszip.min.js"></script>
+<script>
+/* ============================================================
+   INSP Capture — single-file 360 pin-capture field tool
+   ============================================================ */
+const BUILDINGS = [{"address":"(8925-old) 8945 Torbram Road","bu":"53780","portfolio":"East Business Park","cluster":"The Torbram","manager":"Sylvia Zwierkowski","sqft":"201,832","rtu":0,"lat":43.734272,"lng":-79.704831,"prefix":"8925"},{"address":"100 Leek Crescent","bu":"50450","portfolio":"East Business Park","cluster":"Richmond Hill Business Park","manager":"Sylvia Zwierkowski","sqft":"69,802","rtu":26,"lat":43.861112,"lng":-79.38184,"prefix":"100"},{"address":"11 Steelcase Road West (Blg 2)","bu":"53790","portfolio":"East Business Park","cluster":"The Steelcase","manager":"Sylvia Zwierkowski","sqft":"192,052","rtu":0,"lat":43.818621,"lng":-79.351799,"prefix":"11"},{"address":"130 - 146 Sparks Ave","bu":"50600","portfolio":"East Business Park","cluster":"Victoria / Denison Business Park","manager":"Sylvia Zwierkowski","sqft":"89,007","rtu":11,"lat":43.8081545,"lng":-79.3425081,"prefix":"130"},{"address":"145 Carrier Drive","bu":"53770","portfolio":"East Business Park","cluster":"The Carrier","manager":"Sylvia Zwierkowski","sqft":"551,264","rtu":0,"lat":43.740873,"lng":-79.615643,"prefix":"145"},{"address":"1495 Bonhill Road","bu":"65186","portfolio":"Dixie Business Park","cluster":"Dixie 2","manager":"Evelyn Lu","sqft":"33,597","rtu":17,"lat":43.6618318,"lng":-79.6543698,"prefix":"1495"},{"address":"150 Courtneypark","bu":"65215","portfolio":"Meadowvale North Business Park","cluster":"Mississauga Gateway","manager":"Maia Krasowski","sqft":"512,947","rtu":11,"lat":43.633548,"lng":-79.696918,"prefix":"150"},{"address":"151 Courtneypark","bu":"65216","portfolio":"Meadowvale North Business Park","cluster":"Mississauga Gateway","manager":"Maia Krasowski","sqft":"143,129","rtu":9,"lat":43.634565,"lng":-79.698446,"prefix":"151"},{"address":"1535 Meyerside Drive","bu":"65187","portfolio":"Dixie Business Park","cluster":"Dixie 2","manager":"Evelyn Lu","sqft":"48,879","rtu":24,"lat":43.6612376,"lng":-79.6544128,"prefix":"1535"},{"address":"1550 Courtneypark Drive","bu":"65201","portfolio":"Dixie Business Park","cluster":"Dixie 4","manager":"Evelyn Lu","sqft":"73,621","rtu":3,"lat":43.6645439,"lng":-79.655703,"prefix":"1550"},{"address":"1555 Bonhill Road","bu":"65202","portfolio":"Dixie Business Park","cluster":"Dixie 4","manager":"Evelyn Lu","sqft":"36,259","rtu":10,"lat":43.6626155,"lng":-79.6551155,"prefix":"1555"},{"address":"1577 Meyerside / 1500 Bonhill","bu":"65188","portfolio":"Dixie Business Park","cluster":"Dixie 2","manager":"Evelyn Lu","sqft":"140,986","rtu":7,"lat":43.6630604,"lng":-79.6517072,"prefix":"1577"},{"address":"1590 South Gateway Road","bu":"53845","portfolio":"Dixie Business Park","cluster":"Single","manager":"Evelyn Lu","sqft":"195,038","rtu":11,"lat":43.6346157,"lng":-79.6115055,"prefix":"1590"},{"address":"160 Dwight Ave (Blg 2)","bu":"53732","portfolio":"East Business Park","cluster":"The Birmingham","manager":"Sylvia Zwierkowski","sqft":"120,671","rtu":4,"lat":43.606272,"lng":-79.50109,"prefix":"160"},{"address":"1600 Courtneypark Drive","bu":"65203","portfolio":"Dixie Business Park","cluster":"Dixie 4","manager":"Evelyn Lu","sqft":"91,711","rtu":5,"lat":43.6651979,"lng":-79.6547081,"prefix":"1600"},{"address":"1633 - 1655 Meyerside Drive","bu":"65189","portfolio":"Dixie Business Park","cluster":"Dixie 2","manager":"Evelyn Lu","sqft":"95,740","rtu":8,"lat":43.6634023,"lng":-79.651249,"prefix":"1633"},{"address":"1645 Bonhill Road","bu":"65171/50200","portfolio":"Dixie Business Park","cluster":"Dixie 1","manager":"Evelyn Lu","sqft":"51,814","rtu":12,"lat":43.6661102,"lng":-79.6533178,"prefix":"1645"},{"address":"1675 - 1705 Meyerside Drive","bu":"65190","portfolio":"Dixie Business Park","cluster":"Dixie 2","manager":"Evelyn Lu","sqft":"96,420","rtu":6,"lat":43.6646687,"lng":-79.650317,"prefix":"1675"},{"address":"1680 Courtneypark Drive","bu":"65172","portfolio":"Dixie Business Park","cluster":"Dixie 1","manager":"Evelyn Lu","sqft":"51,318","rtu":13,"lat":43.6664548,"lng":-79.653844,"prefix":"1680"},{"address":"1695 Bonhill Road","bu":"65173","portfolio":"Dixie Business Park","cluster":"Dixie 1","manager":"Evelyn Lu","sqft":"28,297","rtu":1,"lat":43.6669256,"lng":-79.6521794,"prefix":"1695"},{"address":"1700 Courtneypark Drive","bu":"65174","portfolio":"Dixie Business Park","cluster":"Dixie 1","manager":"Evelyn Lu","sqft":"37,512","rtu":4,"lat":43.6673563,"lng":-79.6528935,"prefix":"1700"},{"address":"1700 Derry Road","bu":"53810","portfolio":"Dixie Business Park","cluster":"Single","manager":"Evelyn Lu","sqft":"114,132","rtu":0,"lat":43.6794145,"lng":-79.6686856,"prefix":"1700"},{"address":"1715 Meyerside Drive","bu":"65191","portfolio":"Dixie Business Park","cluster":"Dixie 2","manager":"Evelyn Lu","sqft":"51,077","rtu":8,"lat":43.6654539,"lng":-79.6495231,"prefix":"1715"},{"address":"1745 Bonhill Road","bu":"65175","portfolio":"Dixie Business Park","cluster":"Dixie 1","manager":"Evelyn Lu","sqft":"36,562","rtu":6,"lat":43.6676325,"lng":-79.6513791,"prefix":"1745"},{"address":"1745 Meyerside Drive","bu":"65192","portfolio":"Dixie Business Park","cluster":"Dixie 2","manager":"Evelyn Lu","sqft":"50,998","rtu":12,"lat":43.6659982,"lng":-79.6488819,"prefix":"1745"},{"address":"175 New Toronto St (Blg 3)","bu":"53733","portfolio":"East Business Park","cluster":"The Birmingham","manager":"Sylvia Zwierkowski","sqft":"119,393","rtu":4,"lat":43.607175,"lng":-79.501445,"prefix":"175"},{"address":"1750 Courtneypark Drive","bu":"65176","portfolio":"Dixie Business Park","cluster":"Dixie 1","manager":"Evelyn Lu","sqft":"48,689","rtu":6,"lat":43.668059,"lng":-79.6520925,"prefix":"1750"},{"address":"1775 Bonhill Road","bu":"65177","portfolio":"Dixie Business Park","cluster":"Dixie 1","manager":"Evelyn Lu","sqft":"36,675","rtu":6,"lat":43.6683702,"lng":-79.6505172,"prefix":"1775"},{"address":"1775 Meyerside Drive","bu":"65193","portfolio":"Dixie Business Park","cluster":"Dixie 2","manager":"Evelyn Lu","sqft":"38,486","rtu":11,"lat":43.666525,"lng":-79.6482917,"prefix":"1775"},{"address":"1795 Meyerside Drive","bu":"65194","portfolio":"Dixie Business Park","cluster":"Dixie 2","manager":"Evelyn Lu","sqft":"49,775","rtu":7,"lat":43.6669308,"lng":-79.6478095,"prefix":"1795"},{"address":"1800 Courtneypark Drive","bu":"65178","portfolio":"Dixie Business Park","cluster":"Dixie 1","manager":"Evelyn Lu","sqft":"43,281","rtu":5,"lat":43.6688059,"lng":-79.6512444,"prefix":"1800"},{"address":"1815 Meyerside Drive","bu":"65195","portfolio":"Dixie Business Park","cluster":"Dixie 2","manager":"Evelyn Lu","sqft":"38,427","rtu":12,"lat":43.667501,"lng":-79.647294,"prefix":"1815"},{"address":"1820 Courtneypark Drive","bu":"65179","portfolio":"Dixie Business Park","cluster":"Dixie 1","manager":"Evelyn Lu","sqft":"88,185","rtu":7,"lat":43.6692687,"lng":-79.6500543,"prefix":"1820"},{"address":"1835 Meyerside Drive","bu":"65196","portfolio":"Dixie Business Park","cluster":"Dixie 2","manager":"Evelyn Lu","sqft":"49,298","rtu":7,"lat":43.6679951,"lng":-79.6470234,"prefix":"1835"},{"address":"1840 Courtneypark Drive","bu":"65180","portfolio":"Dixie Business Park","cluster":"Dixie 1","manager":"Evelyn Lu","sqft":"99,390","rtu":5,"lat":43.669857,"lng":-79.649334,"prefix":"1840"},{"address":"1850 Derry Road East","bu":"65155","portfolio":"Dixie Business Park","cluster":"Dixie 1","manager":"Evelyn Lu","sqft":"48,030","rtu":6,"lat":43.681783,"lng":-79.66556,"prefix":"1850"},{"address":"1865 Meyerside Drive","bu":"65197","portfolio":"Dixie Business Park","cluster":"Dixie 2","manager":"Evelyn Lu","sqft":"49,248","rtu":10,"lat":43.6684215,"lng":-79.646147,"prefix":"1865"},{"address":"1870 - 1880 Courtneypark Drive","bu":"65181","portfolio":"Dixie Business Park","cluster":"Dixie 1","manager":"Evelyn Lu","sqft":"60,943","rtu":13,"lat":43.6710663,"lng":-79.6485911,"prefix":"1870"},{"address":"20 Westbridge Drive","bu":"52904","portfolio":"Meadowvale North Business Park","cluster":"Halton Hills","manager":"Maia Krasowski","sqft":"324,708","rtu":6,"lat":43.557478,"lng":-79.852257,"prefix":"20"},{"address":"200 - 206 Sparks Ave","bu":"50603","portfolio":"East Business Park","cluster":"Victoria / Denison Business Park","manager":"Sylvia Zwierkowski","sqft":"36,972","rtu":7,"lat":43.8080844,"lng":-79.3418209,"prefix":"200"},{"address":"2300 Bristol Circle","bu":"51201","portfolio":"Western Business Park","cluster":"Bristol / Brighton","manager":"Josh Starkey","sqft":"60,370","rtu":8,"lat":43.515572,"lng":-79.6763205,"prefix":"2300"},{"address":"2320 Bristol Circle","bu":"51202","portfolio":"Western Business Park","cluster":"Bristol / Brighton","manager":"Josh Starkey","sqft":"58,051","rtu":16,"lat":43.5164587,"lng":-79.6769601,"prefix":"2320"},{"address":"25 Leek Crescent","bu":"50451","portfolio":"East Business Park","cluster":"Richmond Hill Business Park","manager":"Sylvia Zwierkowski","sqft":"75,421","rtu":17,"lat":43.862352,"lng":-79.379456,"prefix":"25"},{"address":"250 - 256 Sparks Ave","bu":"50605","portfolio":"East Business Park","cluster":"Victoria / Denison Business Park","manager":"Sylvia Zwierkowski","sqft":"36,570","rtu":3,"lat":43.8086341,"lng":-79.3409344,"prefix":"250"},{"address":"2880 Brighton Road","bu":"51203","portfolio":"Western Business Park","cluster":"Bristol / Brighton","manager":"Josh Starkey","sqft":"25,825","rtu":3,"lat":43.51513,"lng":-79.678714,"prefix":"2880"},{"address":"2910 Brighton Road","bu":"51204","portfolio":"Western Business Park","cluster":"Bristol / Brighton","manager":"Josh Starkey","sqft":"25,825","rtu":8,"lat":43.515678,"lng":-79.678188,"prefix":"2910"},{"address":"3105 Unity Drive","bu":"50303","portfolio":"Western Business Park","cluster":"Western Business Park","manager":"Josh Starkey","sqft":"87,171","rtu":35,"lat":43.5386636,"lng":-79.7085232,"prefix":"3105"},{"address":"3135 Unity Drive","bu":"50302","portfolio":"Western Business Park","cluster":"Western Business Park","manager":"Josh Starkey","sqft":"47,146","rtu":6,"lat":43.5377366,"lng":-79.7089615,"prefix":"3135"},{"address":"3150 Ridgeway Drive","bu":"50311","portfolio":"Western Business Park","cluster":"Western Business Park","manager":"Josh Starkey","sqft":"40,721","rtu":21,"lat":43.517463,"lng":-79.6928097,"prefix":"3150"},{"address":"3165 Unity Drive","bu":"50301","portfolio":"Western Business Park","cluster":"Western Business Park","manager":"Josh Starkey","sqft":"29,744","rtu":8,"lat":43.5372836,"lng":-79.7098712,"prefix":"3165"},{"address":"3170 Ridgeway Drive","bu":"50311","portfolio":"Western Business Park","cluster":"Western Business Park","manager":"Josh Starkey","sqft":"46,730","rtu":23,"lat":43.5176653,"lng":-79.6939721,"prefix":"3170"},{"address":"3176 Ridgeway Drive","bu":"50312","portfolio":"Western Business Park","cluster":"Western Business Park","manager":"Josh Starkey","sqft":"39,348","rtu":20,"lat":43.5174829,"lng":-79.6944465,"prefix":"3176"},{"address":"3180 Ridgeway Drive","bu":"50312","portfolio":"Western Business Park","cluster":"Western Business Park","manager":"Josh Starkey","sqft":"9,892","rtu":5,"lat":43.5176463,"lng":-79.6951259,"prefix":"3180"},{"address":"3184 Ridgeway Drive","bu":"50312","portfolio":"Western Business Park","cluster":"Western Business Park","manager":"Josh Starkey","sqft":"11,398","rtu":6,"lat":43.5172236,"lng":-79.6952698,"prefix":"3184"},{"address":"3190 Ridgeway Drive","bu":"50312","portfolio":"Western Business Park","cluster":"Western Business Park","manager":"Josh Starkey","sqft":"71,060","rtu":32,"lat":43.5170293,"lng":-79.6960932,"prefix":"3190"},{"address":"320 Superior Boulevard","bu":"50502","portfolio":"Meadowvale North Business Park","cluster":"Mississauga Portfolio","manager":"Maia Krasowski","sqft":"57,932","rtu":5,"lat":43.6470589,"lng":-79.6917331,"prefix":"320"},{"address":"326 Superior Boulevard","bu":"50503","portfolio":"Meadowvale North Business Park","cluster":"Mississauga Portfolio","manager":"Maia Krasowski","sqft":"59,777","rtu":9,"lat":43.6475844,"lng":-79.6908405,"prefix":"326"},{"address":"3345 Laird Road","bu":"50307","portfolio":"Western Business Park","cluster":"Western Business Park","manager":"Josh Starkey","sqft":"46,320","rtu":11,"lat":43.5169224,"lng":-79.692202,"prefix":"3345"},{"address":"3375 Laird Road","bu":"50308","portfolio":"Western Business Park","cluster":"Western Business Park","manager":"Josh Starkey","sqft":"29,639","rtu":5,"lat":43.5163737,"lng":-79.6928302,"prefix":"3375"},{"address":"3425 Laird Road","bu":"50309","portfolio":"Western Business Park","cluster":"Western Business Park","manager":"Josh Starkey","sqft":"68,807","rtu":11,"lat":43.5158247,"lng":-79.693741,"prefix":"3425"},{"address":"3495 Laird Road","bu":"50310","portfolio":"Western Business Park","cluster":"Western Business Park","manager":"Josh Starkey","sqft":"61,149","rtu":25,"lat":43.5162097,"lng":-79.6957417,"prefix":"3495"},{"address":"35 Leek Crescent","bu":"50452","portfolio":"East Business Park","cluster":"Richmond Hill Business Park","manager":"Sylvia Zwierkowski","sqft":"35,405","rtu":6,"lat":43.862373,"lng":-79.377969,"prefix":"35"},{"address":"39 Steelcase Road West (Blg 1)","bu":"53790","portfolio":"East Business Park","cluster":"The Steelcase","manager":"Sylvia Zwierkowski","sqft":"169,230","rtu":0,"lat":43.8181893,"lng":-79.3540143,"prefix":"39"},{"address":"40 Westbridge Drive","bu":"52905","portfolio":"Meadowvale North Business Park","cluster":"Halton Hills","manager":"Maia Krasowski","sqft":"774,614","rtu":12,"lat":43.554133,"lng":-79.851118,"prefix":"40"},{"address":"4085 Sladeview Crescent","bu":"50313","portfolio":"Western Business Park","cluster":"Western Business Park","manager":"Josh Starkey","sqft":"62,323","rtu":13,"lat":43.5278323,"lng":-79.7178818,"prefix":"4085"},{"address":"4120 Ridgeway Drive","bu":"50306","portfolio":"Western Business Park","cluster":"Western Business Park","manager":"Josh Starkey","sqft":"80,860","rtu":26,"lat":43.529805,"lng":-79.717464,"prefix":"4120"},{"address":"4141 Sladeview Crescent","bu":"50305","portfolio":"Western Business Park","cluster":"Western Business Park","manager":"Josh Starkey","sqft":"74,918","rtu":27,"lat":43.5291815,"lng":-79.7182746,"prefix":"4141"},{"address":"4161 Sladeview Crescent","bu":"50304","portfolio":"Western Business Park","cluster":"Western Business Park","manager":"Josh Starkey","sqft":"41,333","rtu":21,"lat":43.5303811,"lng":-79.7185786,"prefix":"4161"},{"address":"4181 Sladeview Crescent","bu":"50304","portfolio":"Western Business Park","cluster":"Western Business Park","manager":"Josh Starkey","sqft":"54,047","rtu":27,"lat":43.531133,"lng":-79.718202,"prefix":"4181"},{"address":"441 Courtneypark","bu":"50501","portfolio":"Meadowvale North Business Park","cluster":"Mississauga Portfolio","manager":"Maia Krasowski","sqft":"178,893","rtu":30,"lat":43.6469708,"lng":-79.6864165,"prefix":"441"},{"address":"45 Mural Street","bu":"50453","portfolio":"East Business Park","cluster":"Richmond Hill Business Park","manager":"Sylvia Zwierkowski","sqft":"73,241","rtu":12,"lat":43.860079,"lng":-79.383424,"prefix":"45"},{"address":"50 Leek Crescent","bu":"50454","portfolio":"East Business Park","cluster":"Richmond Hill Business Park","manager":"Sylvia Zwierkowski","sqft":"105,185","rtu":11,"lat":43.862471,"lng":-79.37665,"prefix":"50"},{"address":"5455 Ashburn Road","bu":"53831","portfolio":"East Business Park","cluster":"The Ashburn","manager":"Sylvia Zwierkowski","sqft":"279,216","rtu":0,"lat":43.939719,"lng":-78.9663889,"prefix":"5455"},{"address":"55 Interchange Way","bu":"51902","portfolio":"East Business Park","cluster":"Interchange Industrial","manager":"Sylvia Zwierkowski","sqft":"122,037","rtu":12,"lat":43.78988,"lng":-79.52739,"prefix":"55"},{"address":"56 Leek Crescent","bu":"50455","portfolio":"East Business Park","cluster":"Richmond Hill Business Park","manager":"Sylvia Zwierkowski","sqft":"60,780","rtu":18,"lat":43.861601,"lng":-79.376034,"prefix":"56"},{"address":"60 Birmingham St (Blg 1)","bu":"53731","portfolio":"East Business Park","cluster":"The Birmingham","manager":"Sylvia Zwierkowski","sqft":"157,710","rtu":4,"lat":43.6049973,"lng":-79.5004769,"prefix":"60"},{"address":"60 Idema Road  (Blg 3)","bu":"53790","portfolio":"East Business Park","cluster":"The Steelcase","manager":"Sylvia Zwierkowski","sqft":"260,290","rtu":0,"lat":43.817166,"lng":-79.35192,"prefix":"60"},{"address":"6100 Kenway Drive","bu":"50400","portfolio":"Meadowvale North Business Park","cluster":"Kenway Business Park","manager":"Maia Krasowski","sqft":"121,773","rtu":5,"lat":43.6367974,"lng":-79.6711238,"prefix":"6100"},{"address":"6150 Kennedy Rd-East (A)","bu":"50402","portfolio":"Meadowvale North Business Park","cluster":"Kenway Business Park","manager":"Maia Krasowski","sqft":"23,089","rtu":7,"lat":43.6378465,"lng":-79.6724882,"prefix":"6150"},{"address":"6150 Kennedy Rd-West (B)","bu":"50402","portfolio":"Meadowvale North Business Park","cluster":"Kenway Business Park","manager":"Maia Krasowski","sqft":"69,265","rtu":11,"lat":43.6374983,"lng":-79.6732481,"prefix":"6150"},{"address":"6160 Kenway Drive","bu":"50403","portfolio":"Meadowvale North Business Park","cluster":"Kenway Business Park","manager":"Maia Krasowski","sqft":"141,039","rtu":15,"lat":43.6359141,"lng":-79.6737157,"prefix":"6160"},{"address":"6175 Kenway Drive","bu":"50404","portfolio":"Meadowvale North Business Park","cluster":"Kenway Business Park","manager":"Maia Krasowski","sqft":"68,255","rtu":10,"lat":43.6368286,"lng":-79.6753394,"prefix":"6175"},{"address":"6200 Kenway Drive","bu":"50405","portfolio":"Meadowvale North Business Park","cluster":"Kenway Business Park","manager":"Maia Krasowski","sqft":"78,183","rtu":8,"lat":43.6356216,"lng":-79.6753601,"prefix":"6200"},{"address":"6270 Kenway Drive","bu":"50406","portfolio":"Meadowvale North Business Park","cluster":"Kenway Business Park","manager":"Maia Krasowski","sqft":"127,961","rtu":5,"lat":43.6347362,"lng":-79.6773065,"prefix":"6270"},{"address":"6300 Kenway Drive","bu":"50407","portfolio":"Meadowvale North Business Park","cluster":"Kenway Business Park","manager":"Maia Krasowski","sqft":"61,355","rtu":2,"lat":43.6351257,"lng":-79.6786331,"prefix":"6300"},{"address":"6325 Dixie Road","bu":"65204","portfolio":"Dixie Business Park","cluster":"Dixie 4","manager":"Evelyn Lu","sqft":"36,234","rtu":16,"lat":43.6622388,"lng":-79.6557095,"prefix":"6325"},{"address":"6350 Netherhart / 1885 Meyerside Drive","bu":"65198","portfolio":"Dixie Business Park","cluster":"Dixie 2","manager":"Evelyn Lu","sqft":"64,383","rtu":9,"lat":43.668977,"lng":-79.6455393,"prefix":"6350"},{"address":"6774 Financial Drive","bu":"65129","portfolio":"Meadowvale North Business Park","cluster":"MNBP Single","manager":"Maia Krasowski","sqft":"50,085","rtu":4,"lat":43.609289,"lng":-79.742532,"prefix":"6774"},{"address":"6820 Creditview Drive","bu":"65128","portfolio":"Meadowvale North Business Park","cluster":"MNBP Single","manager":"Maia Krasowski","sqft":"50,000","rtu":12,"lat":43.6130238,"lng":-79.7359671,"prefix":"6820"},{"address":"6901 Creditview Road","bu":"65126","portfolio":"Meadowvale North Business Park","cluster":"MNBP Single","manager":"Maia Krasowski","sqft":"262,452","rtu":9,"lat":43.6140946,"lng":-79.7388158,"prefix":"6901"},{"address":"6911 Creditview Road","bu":"65126","portfolio":"Meadowvale North Business Park","cluster":"MNBP Single","manager":"Maia Krasowski","sqft":"58,337","rtu":10,"lat":43.6132887,"lng":-79.7406739,"prefix":"6911"},{"address":"6915 Dixie Road","bu":"53810","portfolio":"Dixie Business Park","cluster":"Single","manager":"Evelyn Lu","sqft":"New Development","rtu":0,"lat":43.674184,"lng":-79.670574,"prefix":"6915"},{"address":"6950 Creditview Road","bu":"50804","portfolio":"Meadowvale North Business Park","cluster":"MNBP FLEX","manager":"Maia Krasowski","sqft":"106,552","rtu":19,"lat":43.6119698,"lng":-79.7406814,"prefix":"6950"},{"address":"6950 Menkes Drive","bu":"53810","portfolio":"Dixie Business Park","cluster":"Single","manager":"Evelyn Lu","sqft":"New Development","rtu":2,"lat":43.6790562,"lng":-79.6693417,"prefix":"6950"},{"address":"6955 Creditview Road","bu":"65127","portfolio":"Meadowvale North Business Park","cluster":"MNBP Single","manager":"Maia Krasowski","sqft":"175,879","rtu":14,"lat":43.6161556,"lng":-79.7412143,"prefix":"6955"},{"address":"6975 Creditview Road","bu":"65120","portfolio":"Meadowvale North Business Park","cluster":"MNBP FLEX","manager":"Maia Krasowski","sqft":"144,207","rtu":29,"lat":43.6145621,"lng":-79.7428113,"prefix":"6975"},{"address":"6980 Creditview Road","bu":"50901","portfolio":"Meadowvale North Business Park","cluster":"MNBP Single","manager":"Maia Krasowski","sqft":"171,976","rtu":25,"lat":43.6121806,"lng":-79.7434047,"prefix":"6980"},{"address":"6990 Creditview Road","bu":"50803","portfolio":"Meadowvale North Business Park","cluster":"MNBP FLEX","manager":"Maia Krasowski","sqft":"153,901","rtu":26,"lat":43.6126394,"lng":-79.7450899,"prefix":"6990"},{"address":"7030 Royal Bank Drive","bu":"65111","portfolio":"Meadowvale North Business Park","cluster":"Halton Hills","manager":"Maia Krasowski","sqft":"12,000","rtu":0,"lat":43.6088302,"lng":-79.7492526,"prefix":"7030"},{"address":"7311 Kimbel Street","bu":"53850","portfolio":"Dixie Business Park","cluster":"Single","manager":"Evelyn Lu","sqft":"111,603","rtu":6,"lat":43.7035128,"lng":-79.6575828,"prefix":"7311"},{"address":"7540 Jane Street","bu":"51901","portfolio":"East Business Park","cluster":"Interchange Industrial","manager":"Sylvia Zwierkowski","sqft":"120,000","rtu":9,"lat":43.7904617,"lng":-79.5252241,"prefix":"7540"},{"address":"85 Leek Crescent","bu":"50455","portfolio":"East Business Park","cluster":"Richmond Hill Business Park","manager":"Sylvia Zwierkowski","sqft":"50,581","rtu":14,"lat":43.861185,"lng":-79.38008,"prefix":"85"}];
+
+if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "vendor/pdf.worker.min.js";
+
+/* ---------- state ---------- */
+const S = {
+  building:null, pdfDoc:null, pdfName:null, pdfBytes:null, planKind:"pdf", planImg:null,
+  pageNum:1, pageCount:1,
+  pins:[], selPin:null,
+  zoom:1, panX:0, panY:0, baseW:0, baseH:0,
+  mode:"add",                 // "add" | "move"
+  prefix:"", next:1,
+  meta:{ name:"", address:"", tenant:"", sf:"", creator:"", type:"", created:null, modified:null, pendingGroupGrants:[] },
+  opt:{stitch:true, hdr:false, advance:true, ip:"192.168.42.1"},
+  completed:false,
+  aclGroups:[],
+};
+const CAPTURE_VER="1.0.0";
+const CLOUD_API_HOSTED="https://insp360-viewer.krutki11.workers.dev";
+const CLOUD_MPU_PART_SIZE=8*1024*1024;
+const CLOUD_MPU_MIN_SIZE=16*1024*1024;
+
+
+/* ---------- tiny DOM helpers ---------- */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;};
+function toast(m,msOrErr){const ms=typeof msOrErr==="number"?msOrErr:1900;const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),ms);}
+
+/* ---------- IndexedDB (project + pdf + photo blobs) ---------- */
+const DB={db:null};
+function idb(){return new Promise((res,rej)=>{const r=indexedDB.open("inspcap",1);
+  r.onupgradeneeded=e=>{const d=e.target.result;["kv","photos"].forEach(n=>{if(!d.objectStoreNames.contains(n))d.createObjectStore(n);});};
+  r.onsuccess=e=>{DB.db=e.target.result;res(DB.db);};r.onerror=e=>rej(e);});}
+function tx(store,mode){return DB.db.transaction(store,mode).objectStore(store);}
+function idbPut(store,key,val){return new Promise((res,rej)=>{const r=tx(store,"readwrite").put(val,key);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});}
+function idbGet(store,key){return new Promise((res,rej)=>{const r=tx(store,"readonly").get(key);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+function idbDel(store,key){return new Promise((res)=>{const r=tx(store,"readwrite").delete(key);r.onsuccess=()=>res();r.onerror=()=>res();});}
+function idbClear(store){return new Promise((res)=>{const r=tx(store,"readwrite").clear();r.onsuccess=()=>res();r.onerror=()=>res();});}
+
+/* ---------- autosave ---------- */
+let saveT=null;
+function save(){clearTimeout(saveT);saveT=setTimeout(async()=>{
+  try{await idbPut("kv","project",serialize());}catch(e){}
+},400);}
+function serialize(){
+  return {v:2, captureVer:CAPTURE_VER, building:S.building, pdfName:S.pdfName, pageCount:S.pageCount,
+    prefix:S.prefix, next:S.next, opt:S.opt, meta:S.meta, completed:!!S.completed,
+    pins:S.pins.map(p=>({id:p.id,page:p.page,x:p.x,y:p.y,seq:p.seq,name:p.name,note:p.note,photoId:p.photoId,ts:p.ts}))};
+}
+
+/* ============================================================
+   BUILDING PICKER
+   ============================================================ */
+let curPortFilter="All";
+function renderPorts(){
+  const ports=["All",...[...new Set(BUILDINGS.map(b=>b.portfolio))].sort()];
+  const box=$("#portFilters");box.innerHTML="";
+  ports.forEach(p=>{const c=el("button","chip"+(p===curPortFilter?" on":""));
+    c.textContent=p.replace(" Business Park","");c.onclick=()=>{curPortFilter=p;renderPorts();renderBldgList();};box.appendChild(c);});
+}
+function renderBldgList(){
+  const q=$("#bldgSearch").value.trim().toLowerCase();
+  const list=$("#bldgList");list.innerHTML="";
+  BUILDINGS.filter(b=>{
+    if(curPortFilter!=="All"&&b.portfolio!==curPortFilter)return false;
+    if(!q)return true;
+    return (b.address+" "+b.bu+" "+b.cluster+" "+b.manager).toLowerCase().includes(q);
+  }).forEach(b=>{
+    const r=el("div","brow");
+    r.innerHTML=`<div class="info"><div class="a">${esc(b.address)}</div>
+      <div class="b">${esc(b.portfolio.replace(" Business Park",""))} · ${esc(b.cluster)} · BU ${esc(b.bu)}</div></div>
+      <div style="text-align:right"><div class="pfx">${esc(b.prefix||"—")}</div><div class="rt">${b.rtu||0} RTU</div></div>`;
+    r.onclick=()=>pickBuilding(b);
+    list.appendChild(r);
+  });
+  if(!list.children.length)list.innerHTML='<div class="note" style="text-align:center;padding:20px">No buildings match.</div>';
+}
+function pickBuilding(b){
+  S.building=b; S.prefix=b.prefix||b.bu||"SITE"; S.next=nextFreeNum();
+  S.meta.address=b.address||"";
+  S.meta.type=(b.portfolio||"").replace(/ \(x \d+\)$/,"")||S.meta.type;
+  S.meta.sf=b.sqft||S.meta.sf||"";
+  if(!S.meta.name) S.meta.name=(S.prefix||"Site")+" Capture";
+  $("#bldgA").textContent=b.address;
+  $("#bldgB").textContent=`${b.portfolio.replace(" Business Park","")} · BU ${b.bu} · ${b.rtu||0} RTU`;
+  $("#setPrefix").value=S.prefix;$("#setNext").value=S.next;updateEg();
+  $("#metaAddrNote").textContent=b.address;
+  if($("#metaName") && !$("#metaName").value.trim()){
+    $("#metaName").value=(b.prefix||b.address.split(/\s+/)[0]||"Site")+" Capture";
+  }
+  const pickBtn=$("#metaPickBldg");
+  if(pickBtn) pickBtn.textContent=b.address;
+  closeSheet("#bldgSheet");save();toast("Building selected");
+  updateCompleteBar();
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+/* ============================================================
+   FLOOR PLAN — PDF or PNG/JPEG
+   ============================================================ */
+async function openPlanFile(file){
+  if(!file) return;
+  const name=file.name||"drawing";
+  const isImg=/\.(png|jpe?g|webp)$/i.test(name) || /^image\//.test(file.type||"");
+  const buf=new Uint8Array(await file.arrayBuffer());
+  if(isImg) await openPlanImage(buf, name);
+  else await openPdfBytes(buf, name);
+  const st=$("#planFileStatus");
+  if(st) st.textContent="Loaded · "+name;
+}
+async function openPlanImage(bytes,name){
+  try{
+    S.pdfDoc=null; S.page=null; S.planKind="img";
+    S.pdfBytes=bytes; S.pdfName=name||"drawing.png";
+    const blob=new Blob([bytes],{type:"image/png"});
+    const url=URL.createObjectURL(blob);
+    const img=await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url; });
+    URL.revokeObjectURL(url);
+    S.planImg=img;
+    S.pts={w:img.naturalWidth||img.width, h:img.naturalHeight||img.height};
+    S.pageCount=1; S.pageNum=1;
+    await idbPut("kv","pdf",{name:S.pdfName,bytes,kind:"img"});
+    $("#hint").style.display="none";
+    $("#pageNav").style.display="none";
+    fitPage(); refreshPins(); save();
+    toast(`Loaded ${S.pdfName}`);
+  }catch(e){toast("Couldn't read that image");console.error(e);}
+}
+async function openPdfBytes(bytes,name){
+  try{
+    if(!window.pdfjsLib) throw new Error("PDF.js not loaded");
+    S.planKind="pdf"; S.planImg=null;
+    S.pdfBytes=bytes; S.pdfName=name||"drawing.pdf";
+    S.pdfDoc=await pdfjsLib.getDocument({data:bytes.slice(0)}).promise;
+    S.pageCount=S.pdfDoc.numPages; S.pageNum=1;
+    await idbPut("kv","pdf",{name:S.pdfName,bytes,kind:"pdf"});
+    $("#hint").style.display="none";
+    $("#pageNav").style.display=S.pageCount>1?"flex":"none";
+    await renderPage(); fitPage(); refreshPins(); save();
+    toast(`Loaded ${S.pdfName} · ${S.pageCount} page${S.pageCount>1?"s":""}`);
+  }catch(e){toast("Couldn't read that PDF");console.error(e);}
+}
+const MAX_SIDE=(()=>{
+  try{
+    const mobile=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||"") || (navigator.maxTouchPoints||0)>0;
+    return mobile?4096:6144;
+  }catch(_){ return 4096; }
+})();
+// Load the current page, compute fit layout, render backing store, and center.
+async function renderPage(){
+  if(!S.pdfDoc)return;
+  S.page=await S.pdfDoc.getPage(S.pageNum);
+  const vp1=S.page.getViewport({scale:1});
+  S.pts={w:vp1.width,h:vp1.height};
+  $("#pageLbl").textContent=`${S.pageNum} / ${S.pageCount}`;
+  fitPage();          // compute fit layout, center, and render crisp at zoom 1
+}
+// Layout scale: PDF points -> CSS px at zoom 1 (whole page just fits the viewport).
+function computeFit(){
+  const vpW=$("#viewport").clientWidth,vpH=$("#viewport").clientHeight;
+  if(!S.pts || !vpW || !vpH)return;
+  S.fitScale=Math.min(vpW/S.pts.w,vpH/S.pts.h)*0.98;
+}
+// Backing store is always at zoom=1 (fit × dpr). Visual zoom resizes #page (NO CSS scale) —
+// Android WebView blanks when scale() is applied to a large canvas.
+async function renderCanvas(){
+  if(!S.pts || !S.fitScale)return;
+  if(S._rendering) return;
+  S._rendering=true;
+  try{
+    const dpr=Math.min(window.devicePixelRatio||1, 2);
+    let rs=S.fitScale*dpr;
+    const longest=Math.max(S.pts.w,S.pts.h)*rs;
+    if(longest>MAX_SIDE) rs*=MAX_SIDE/longest;
+    let w=Math.max(1, Math.round(S.pts.w*rs));
+    let h=Math.max(1, Math.round(S.pts.h*rs));
+    const area=w*h, maxArea=8e6; // stricter for Android WebView
+    if(area>maxArea){
+      const s=Math.sqrt(maxArea/area);
+      w=Math.max(1, Math.round(w*s));
+      h=Math.max(1, Math.round(h*s));
+    }
+    if(!S.buf)S.buf=document.createElement("canvas");
+    const buf=S.buf;
+    try{ buf.width=w; buf.height=h; }catch(_){ return; }
+    if(!buf.width || !buf.height) return;
+    const bctx=buf.getContext("2d",{alpha:false});
+    if(!bctx) return;
+    bctx.fillStyle="#fff";bctx.fillRect(0,0,w,h);
+    if(S.planKind==="img" && S.planImg){
+      try{ bctx.drawImage(S.planImg,0,0,w,h); }
+      catch(e){ console.error(e); return; }
+    } else if(S.page){
+      if(S.renderTask){try{S.renderTask.cancel();}catch(e){}}
+      try{
+        const vp=S.page.getViewport({scale:w/S.pts.w});
+        S.renderTask=S.page.render({canvasContext:bctx,viewport:vp});
+        await S.renderTask.promise;
+      }catch(e){
+        S.renderTask=null;
+        if(e&&e.name!=="RenderingCancelledException")console.error(e);
+        return;
+      }
+      S.renderTask=null;
+    } else return;
+    const cv=$("#pdfCanvas");
+    try{ cv.width=w; cv.height=h; }catch(_){ return; }
+    if(!cv.width || !cv.height) return;
+    const vctx=cv.getContext("2d",{alpha:false});
+    if(!vctx) return;
+    vctx.drawImage(buf,0,0);
+    cv.style.width="100%";cv.style.height="100%";
+    S.renderedZoom=1;
+  } finally {
+    S._rendering=false;
+  }
+}
+let rerenderT=null;
+function scheduleRerender(){clearTimeout(rerenderT);rerenderT=setTimeout(()=>{renderCanvas();},200);}
+function maxZoom(){
+  try{ if(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()) return 5; }catch(_){}
+  return 8;
+}
+// Fit whole page to viewport (zoom = 1, centered).
+function fitPage(){
+  if(!S.pts)return;
+  computeFit();
+  S.zoom=1;
+  const vpW=$("#viewport").clientWidth,vpH=$("#viewport").clientHeight;
+  const w=S.pts.w*S.fitScale,h=S.pts.h*S.fitScale;
+  S.panX=(vpW-w)/2; S.panY=(vpH-h)/2;
+  applyTransform(); renderCanvas();
+}
+// Zoom keeping the point (cx,cy) [viewport-relative px] stationary on screen.
+function zoomAt(nz,cx,cy){
+  nz=Math.max(0.4,Math.min(maxZoom(),nz));
+  const u=(cx-S.panX)/S.zoom, v=(cy-S.panY)/S.zoom;
+  S.panX=cx-u*nz; S.panY=cy-v*nz; S.zoom=nz;
+  applyTransform();
+}
+function applyTransform(){
+  if(!S.pts || !S.fitScale)return;
+  const pg=$("#page");
+  const w=S.pts.w*S.fitScale*S.zoom;
+  const h=S.pts.h*S.fitScale*S.zoom;
+  pg.style.width=w+"px";
+  pg.style.height=h+"px";
+  // translate only — never CSS scale() (black screen on Android WebView)
+  pg.style.transform="translate("+S.panX+"px,"+S.panY+"px)";
+  positionPins();
+}
+// Pins overlay — positions track layout zoom (page size), not CSS scale.
+function positionPins(){
+  if(!S.pts || !S.fitScale)return;
+  const pw=S.pts.w*S.fitScale*S.zoom, ph=S.pts.h*S.fitScale*S.zoom;
+  $$("#pinLayer .pin").forEach(node=>{
+    const p=S.pins.find(x=>x.id===node.dataset.id); if(!p)return;
+    node.style.left=(S.panX + p.x*pw)+"px";
+    node.style.top =(S.panY + p.y*ph)+"px";
+  });
+}
+
+/* ---------- pan / zoom / tap ---------- */
+(function gestures(){
+  const vpEl=$("#viewport");
+  const pts=new Map(); let startDist=0,startZoom=1,startMid=null,startPan=null;
+  let downPt=null,downTime=0,moved=false;
+  vpEl.addEventListener("pointerdown",e=>{
+    vpEl.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size===1){downPt={x:e.clientX,y:e.clientY};downTime=Date.now();moved=false;startPan={x:S.panX,y:S.panY};}
+    if(pts.size===2){const a=[...pts.values()];startDist=dist(a[0],a[1]);startZoom=S.zoom;startMid=mid(a[0],a[1]);startPan={x:S.panX,y:S.panY};}
+  });
+  vpEl.addEventListener("pointermove",e=>{
+    if(!pts.has(e.pointerId))return;
+    pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    const a=[...pts.values()];
+    if(pts.size===2){
+      const d=dist(a[0],a[1]),m=mid(a[0],a[1]);
+      let nz=Math.max(0.4,Math.min(maxZoom(),startZoom*(d/startDist)));
+      const r=vpEl.getBoundingClientRect();
+      const mx=startMid.x-r.left,my=startMid.y-r.top;
+      S.panX=mx-((mx-startPan.x)*(nz/startZoom))+(m.x-startMid.x);
+      S.panY=my-((my-startPan.y)*(nz/startZoom))+(m.y-startMid.y);
+      S.zoom=nz;moved=true;applyTransform();
+    }else if(pts.size===1){
+      const dx=e.clientX-downPt.x,dy=e.clientY-downPt.y;
+      if(Math.abs(dx)+Math.abs(dy)>6)moved=true;
+      if(S.mode==="move"||moved){S.panX=startPan.x+dx;S.panY=startPan.y+dy;applyTransform();}
+    }
+  });
+  function up(e){
+    const wasTap=!moved && Date.now()-downTime<350 && pts.size===1;
+    pts.delete(e.pointerId);
+    if(wasTap && S.pts){handleTap(downPt.x,downPt.y);}
+    // Zoom is CSS-only — no canvas rebuild after pinch (that blanked drawings on phones)
+  }
+  vpEl.addEventListener("pointerup",up);
+  vpEl.addEventListener("pointercancel",e=>pts.delete(e.pointerId));
+
+  // Mouse wheel / trackpad scroll = zoom in/out, centered on the cursor.
+  vpEl.addEventListener("wheel",e=>{
+    if(!S.pts)return;
+    e.preventDefault();
+    const r=vpEl.getBoundingClientRect();
+    const cx=e.clientX-r.left, cy=e.clientY-r.top;
+    const factor=Math.exp(-e.deltaY*(e.deltaMode===1?0.05:0.0016)); // line vs pixel deltas
+    zoomAt(S.zoom*factor,cx,cy);
+  },{passive:false});
+  const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+})();
+
+function handleTap(cx,cy){
+  const r=$("#page").getBoundingClientRect();
+  const x=(cx-r.left)/r.width, y=(cy-r.top)/r.height;
+  // hit test existing pins first
+  const hit=hitPin(cx,cy);
+  if(hit){selectPin(hit);return;}
+  if(x<0||x>1||y<0||y>1)return;
+  if(S.mode==="add"){addPin(x,y);}
+  else{ selectPin(null); }
+}
+function hitPin(cx,cy){
+  let best=null,bd=1e9;
+  $$("#pinLayer .pin").forEach(node=>{
+    const rr=node.querySelector(".num").getBoundingClientRect();
+    const inside=cx>=rr.left-8&&cx<=rr.right+8&&cy>=rr.top-8&&cy<=rr.bottom+16;
+    if(inside){const d=Math.hypot(cx-(rr.left+rr.right)/2,cy-(rr.top+rr.bottom)/2);if(d<bd){bd=d;best=node.dataset.id;}}
+  });
+  return best?S.pins.find(p=>p.id===best):null;
+}
+
+/* ============================================================
+   PINS
+   ============================================================ */
+function nextFreeNum(){let n=1;const used=new Set(S.pins.map(p=>p.seq));while(used.has(n))n++;return n;}
+function pinName(seq){return `${S.prefix} (${seq})`;}
+function photoFileName(p){return (p.name||pinName(p.seq))+".jpg";}
+function addPin(x,y){
+  const seq=parseInt($("#setNext").value)||nextFreeNum();
+  const p={id:"p"+Date.now()+Math.random().toString(36).slice(2,6),page:S.pageNum,x,y,seq,
+    name:pinName(seq),note:"",photoId:null,ts:null};
+  S.pins.push(p);
+  S.next=seq+1;$("#setNext").value=S.next;updateEg();
+  refreshPins();selectPin(p);save();
+}
+function refreshPins(){
+  const layer=$("#pinLayer");layer.innerHTML="";
+  S.pins.filter(p=>p.page===S.pageNum).forEach(p=>{
+    const node=el("div","pin");node.dataset.id=p.id;
+    if(p.photoId)node.classList.add("has");
+    if(S.selPin&&S.selPin.id===p.id)node.classList.add("sel");
+    node.innerHTML=`<div class="body">
+      <div class="num">${esc(p.name)}</div><div class="stem"></div><div class="dot"></div></div>`;
+    layer.appendChild(node);
+  });
+  positionPins();
+  $("#pinCount").textContent=`(${S.pins.length}, ${S.pins.filter(p=>p.photoId).length} shot)`;
+  updateCompleteBar();
+}
+function updateCompleteBar(){
+  const bar=$("#completeBar"); if(!bar) return;
+  const n=S.pins.length, shot=S.pins.filter(p=>p.photoId).length;
+  if(n>0){ bar.classList.add("show");
+    $("#completeSub").textContent=shot===n?`all ${n} pinned`:`${shot}/${n} photos · can still complete`;
+  } else bar.classList.remove("show");
+}
+function selectPin(p){
+  S.selPin=p; 
+  $$("#pinLayer .pin").forEach(n=>n.classList.toggle("sel", p&&n.dataset.id===p.id));
+  if(p){$$("#pinLayer .pin").forEach(n=>n.classList.remove("armed"));
+    const node=$(`#pinLayer .pin[data-id="${p.id}"]`);if(node)node.classList.add("armed");}
+  updateActionBar();
+}
+function isHttpsCapture(){
+  try{ if(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()) return false; }catch(_){}
+  return location.protocol==="https:";
+}
+function syncCamSheetMode(){
+  const https=isHttpsCapture();
+  const help=$("#camHttpsHelp"), osc=$("#camOscPanel"), title=$("#camSheetTitle");
+  if(help) help.style.display=https?"":"none";
+  if(osc) osc.style.display=https?"none":"";
+  if(title){
+    const label=https?"Import 360° photos":"Insta360 X5";
+    const x=title.querySelector(".x");
+    title.textContent="";
+    title.appendChild(document.createTextNode(label+" "));
+    if(x) title.appendChild(x);
+    else {
+      const b=el("button","x"); b.setAttribute("data-close",""); b.textContent="✕";
+      b.onclick=()=>closeSheet("#camSheet");
+      title.appendChild(b);
+    }
+  }
+}
+function updateActionBar(){
+  const p=S.selPin;
+  const https=isHttpsCapture();
+  $("#shootBtn").disabled=!p;
+  $("#attachBtn").disabled=!p;
+  if(https){
+    $("#attachBtn").style.display="none";
+    $("#shootLbl").textContent="IMPORT 360°";
+    $("#shootSub").textContent=p?(`→ ${p.name}${p.photoId?" (replace)":""} from phone`):"select a pin first";
+  } else {
+    $("#attachBtn").style.display="";
+    $("#shootLbl").textContent="SNAP 360°";
+    $("#shootSub").textContent=p?(`→ ${p.name}${p.photoId?" (recapture)":""}`):"select a pin first";
+  }
+}
+
+/* pin list + detail */
+function openPinList(){
+  const box=$("#pinList");box.innerHTML="";
+  if(!S.pins.length){box.innerHTML='<div class="note" style="text-align:center;padding:24px">No pins yet. Tap the plan to drop one.</div>';}
+  [...S.pins].sort((a,b)=>a.seq-b.seq).forEach(p=>{
+    const r=el("div","prow");
+    const thumb=el("div","thumb");thumb.textContent=p.photoId?"":"○";
+    if(p.photoId)loadThumb(p.photoId,thumb);
+    const info=el("div");info.style.flex="1";
+    info.innerHTML=`<div class="pn">${esc(p.name)}</div>
+      <div class="pmeta">pg ${p.page}${p.note?" · "+esc(p.note):""} 
+      ${p.photoId?'<span class="badge ok">✓ 360</span>':'<span class="badge">empty</span>'}</div>`;
+    r.appendChild(thumb);r.appendChild(info);
+    r.onclick=()=>{closeSheet("#pinSheet");if(p.page!==S.pageNum){S.pageNum=p.page;renderPage().then(()=>{refreshPins();selectPin(p);});}else{selectPin(p);}openPinDetail(p);};
+    box.appendChild(r);
+  });
+}
+async function loadThumb(pid,imgHolder){
+  const blob=await idbGet("photos",pid);if(!blob)return;
+  const img=el("img","thumb");img.src=URL.createObjectURL(blob);
+  imgHolder.replaceWith(img);
+}
+let pdPin=null;
+function openPinDetail(p){
+  pdPin=p;$("#pdTitle").textContent=p.name;
+  $("#pdName").value=p.name;$("#pdNote").value=p.note||"";
+  const w=$("#pdThumbWrap");w.innerHTML="";
+  if(p.photoId){idbGet("photos",p.photoId).then(b=>{if(b){const img=el("img");img.style.cssText="max-width:100%;max-height:220px;border-radius:10px;border:1px solid var(--line)";img.src=URL.createObjectURL(b);w.appendChild(img);}});}
+  else w.innerHTML='<div class="note">No photo yet — select this pin and SNAP or ATTACH.</div>';
+  openSheet("#pinDetail");
+}
+
+/* ============================================================
+   CAMERA — Insta360 OSC over Wi-Fi
+   ============================================================ */
+function logc(msg,cls="i"){const l=$("#log");const s=el("span",cls);s.textContent=msg+"\n";l.appendChild(s);l.scrollTop=l.scrollHeight;}
+function osc(path){return `http://${S.opt.ip}${path}`;}
+async function oscInfo(){
+  const r=await fetch(osc("/osc/info"),{headers:{"Accept":"application/json"}});
+  return r.json();
+}
+async function oscPost(path,payload){
+  const r=await fetch(osc(path),{method:"POST",
+    headers:{"Content-Type":"application/json;charset=utf-8","Accept":"application/json","X-XSRF-Protected":"1"},
+    body:payload?JSON.stringify(payload):"{}"});
+  return r.json();
+}
+async function camConnect(){
+  if(isHttpsCapture()){
+    syncCamSheetMode();
+    openSheet("#camSheet");
+    toast("Use Import — Connect is blocked on HTTPS");
+    return false;
+  }
+  $("#log").innerHTML="";logc(`Connecting to ${S.opt.ip}…`);
+  try{
+    const info=await oscInfo();
+    logc(`✓ ${info.manufacturer||""} ${info.model||"camera"}  fw ${info.firmwareVersion||"?"}`,"s");
+    const st=await oscPost("/osc/state");
+    const s=st.state||{};
+    $("#csBatt").textContent=s.batteryLevel!=null?Math.round(s.batteryLevel*100)+"%":"—";
+    $("#csCard").textContent=s._cardState==="pass"?"OK":(s._cardState||"—");
+    if(s.batteryLevel!=null)logc(`Battery ${Math.round(s.batteryLevel*100)}% · card ${s._cardState}`,"s");
+    try{const o=await oscPost("/osc/commands/execute",{name:"camera.getOptions",parameters:{optionNames:["remainingSpace","photoStitchingSupport"]}});
+      const opt=o.results&&o.results.options||{};
+      if(opt.remainingSpace)$("#csFree").textContent=(opt.remainingSpace/1e9).toFixed(1)+"G";
+      if(opt.photoStitchingSupport)logc("Stitching support: "+opt.photoStitchingSupport.join(", "),"i");
+    }catch(e){}
+    logc("Ready. Select a pin and press SNAP 360°.","s");
+    return true;
+  }catch(e){
+    logc("✗ "+describeNetErr(e),"e");
+    logc("Camera Wi-Fi joined? Page on http (not https)? Otherwise use IMPORT.","i");
+    return false;
+  }
+}
+function describeNetErr(e){
+  const m=(e&&e.message)||String(e);
+  if(location.protocol==="https:")return "Blocked: this page is https and the camera is http (mixed content). "+m;
+  return "Network/CORS error reaching camera. "+m;
+}
+async function snap(){
+  const p=S.selPin;if(!p){toast("Select a pin first");return;}
+  if(isHttpsCapture()){
+    $("#photoFile").click();
+    return;
+  }
+  openSheet("#camSheet");$("#log").innerHTML="";
+  const shoot=$("#shootBtn");shoot.disabled=true;$("#shootSub").textContent="capturing…";
+  try{
+    logc(`Pin ${p.name}: preparing camera…`);
+    const opts={captureMode:"image",hdr:S.opt.hdr?"hdr":"off"};
+    if(S.opt.stitch)opts.photoStitching="ondevice";
+    let so=await oscPost("/osc/commands/execute",{name:"camera.setOptions",parameters:{options:opts}});
+    if(so.error&&S.opt.stitch){ // retry without stitching if unsupported
+      logc("Stitching not accepted, retrying raw…","i");
+      delete opts.photoStitching;
+      so=await oscPost("/osc/commands/execute",{name:"camera.setOptions",parameters:{options:opts}});
+    }
+    if(so.error)throw new Error(so.error.message||"setOptions failed");
+    logc("Shooting…");
+    const tp=await oscPost("/osc/commands/execute",{name:"camera.takePicture"});
+    if(tp.state==="error")throw new Error((tp.error&&tp.error.message)||"takePicture error");
+    const id=tp.id;
+    let fileUrl=tp.results&&tp.results.fileUrl;
+    let tries=0;
+    while(!fileUrl && tries++<40){
+      await sleep(1000);
+      const st=await oscPost("/osc/commands/status",{id});
+      if(st.progress&&st.progress.completion!=null)$("#shootSub").textContent=`capturing ${Math.round(st.progress.completion*100)}%`;
+      if(st.state==="done"){fileUrl=st.results&&st.results.fileUrl;break;}
+      if(st.state==="error")throw new Error((st.error&&st.error.message)||"capture error");
+    }
+    if(!fileUrl)throw new Error("Timed out waiting for photo");
+    logc("Downloading "+fileUrl.split("/").pop(),"i");
+    const blob=await (await fetch(fileUrl)).blob();
+    await attachBlob(p,blob);
+    logc("✓ Saved as "+p.name+".jpg","s");
+    toast("✓ "+p.name+" captured");
+    closeSheet("#camSheet");
+    if(S.opt.advance)advancePin(p);
+  }catch(e){
+    logc("✗ "+describeNetErr(e),"e");
+    logc("Tip: shoot on the camera / Insta360 app, then use IMPORT for this pin.","i");
+    toast("Direct capture failed — see Camera log");
+  }finally{shoot.disabled=false;updateActionBar();}
+}
+async function listPhotos(){
+  $("#log").innerHTML="";logc("Listing recent photos…");
+  try{
+    const r=await oscPost("/osc/commands/execute",{name:"camera.listFiles",parameters:{fileType:"image",entryCount:5,maxThumbSize:0}});
+    const e=r.results&&r.results.entries||[];
+    if(!e.length)logc("No photos found.","i");
+    e.forEach(f=>logc(`${f.name}  ${(f.size/1e6).toFixed(1)}MB  ${f.width}×${f.height}`,"s"));
+  }catch(err){logc("✗ "+describeNetErr(err),"e");}
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+async function attachBlob(p,blob,opts){
+  opts=opts||{};
+  const pid="ph"+p.id;
+  await idbPut("photos",pid,blob);
+  p.photoId=pid;p.ts=Date.now();
+  if(p.name && !/\.jpg$/i.test(p.name)){ /* name is stem */ }
+  refreshPins();updateActionBar();save();
+  if(opts.download!==false){
+    try{ dl(blob, photoFileName(p)); }catch(_){}
+  }
+}
+function advancePin(cur){
+  const empties=[...S.pins].sort((a,b)=>a.seq-b.seq).filter(p=>!p.photoId);
+  const nextP=empties.find(p=>p.seq>cur.seq)||empties[0];
+  if(nextP){if(nextP.page!==S.pageNum){S.pageNum=nextP.page;renderPage().then(()=>{refreshPins();selectPin(nextP);});}else selectPin(nextP);toast("Next: "+nextP.name);}
+  else{selectPin(null);toast("All pins shot ✓");}
+}
+
+/* ============================================================
+   EXPORT — store-only .insp360 + tour.json v2
+   ============================================================ */
+function bytesToB64(bytes){
+  let s=""; const CH=0x8000;
+  const u8=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);
+  for(let i=0;i<u8.length;i+=CH) s+=String.fromCharCode.apply(null, u8.subarray(i,i+CH));
+  return btoa(s);
+}
+function shortStem(addr){
+  const a=String(addr||"").trim();
+  const m=a.match(/^(\d{1,6})\b\s*([A-Za-z][A-Za-z0-9'\.\-]*)/);
+  if(m) return (m[1]+" "+m[2]).trim();
+  const n=a.match(/^(\d{1,6})\b/);
+  return n?n[1]:(S.prefix||"site");
+}
+function inspFileName(){
+  const stem=shortStem(S.meta.address||(S.building&&S.building.address)||"");
+  let title=String(S.meta.name||"").trim()||"Capture";
+  title=title.replace(/[\\/:*?"<>|]+/g," ").replace(/\s+/g," ").trim();
+  if(stem){
+    const esc=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,function(ch){return "\\"+ch;});
+    const re=new RegExp("^"+esc(stem)+"\\s*[—–\\-:|]?\\s*","i");
+    if(re.test(title)) title=title.replace(re, stem+" ").replace(/\s+/g," ").trim();
+    else if(!title.toLowerCase().startsWith(stem.toLowerCase())) title=(stem+" "+title).replace(/\s+/g," ").trim();
+  }
+  return title+".insp360";
+}
+function cloudObjectKey(){
+  const addr=String(S.meta.address||(S.building&&S.building.address)||"tours").trim()
+    .replace(/[\\/:*?"<>|]+/g," ").replace(/\s+/g," ").trim()||"tours";
+  return sanitizeCloudKey(addr+"/"+inspFileName());
+}
+function sanitizeCloudKey(name){
+  let k=String(name||"").trim().replace(/\\/g,"/").replace(/^\/+/,"");
+  if(k.includes("..")) k=k.split("/").filter(p=>p&&p!=="..").join("/");
+  k=k.replace(/[\u0000-\u001f\u007f]/g,"");
+  if(!k) k="tour.insp360";
+  if(!/\.insp360$/i.test(k)) k+=".insp360";
+  if(k.length>512) k=k.slice(0,504)+".insp360";
+  return k;
+}
+function buildTourJson(){
+  const ordered=[...S.pins].sort((a,b)=>a.seq-b.seq);
+  const order=[], tours={};
+  for(const p of ordered){
+    if(!p.photoId) continue;
+    const fn=photoFileName(p);
+    order.push(fn);
+    tours[fn]={ objects:[], view:{ lon:0, lat:0, fov:90 } };
+  }
+  const now=new Date().toISOString();
+  if(!S.meta.created) S.meta.created=now;
+  S.meta.modified=now;
+  const out={
+    version:2,
+    lockView:true,
+    north:null,
+    tours,
+    order,
+    meta:{
+      name:S.meta.name||"",
+      address:S.meta.address||(S.building&&S.building.address)||"",
+      tenant:S.meta.tenant||"",
+      sf:S.meta.sf||(S.building&&S.building.sqft)||"",
+      creator:S.meta.creator||"",
+      type:S.meta.type||(S.building&&S.building.portfolio)||"",
+      created:S.meta.created,
+      modified:S.meta.modified
+    }
+  };
+  const grants=Array.isArray(S.meta.pendingGroupGrants)?S.meta.pendingGroupGrants.filter(g=>g&&g.id):[];
+  if(grants.length) out.meta.pendingGroupGrants=grants;
+  if(S.pdfBytes || S.pins.length){
+    const markers=ordered.filter(p=>p.photoId).map(p=>({
+      x:+(+p.x).toFixed(6), y:+(+p.y).toFixed(6),
+      target:photoFileName(p), label:p.note||p.name||""
+    }));
+    const plan={
+      name:S.pdfName||"Floor plan",
+      markers
+    };
+    if(S.pdfBytes){
+      const b64=bytesToB64(S.pdfBytes instanceof Uint8Array?S.pdfBytes:new Uint8Array(S.pdfBytes));
+      if(S.planKind==="img") plan.img="data:image/png;base64,"+b64;
+      else plan.pdf=b64;
+    }
+    out.plan={ active:0, plans:[plan] };
+  }
+  return out;
+}
+async function buildInsp360Blob(onProgress){
+  if(!window.JSZip) throw new Error("JSZip missing — reconnect once to cache libraries");
+  const zip=new JSZip();
+  const ordered=[...S.pins].sort((a,b)=>a.seq-b.seq);
+  const withPhoto=ordered.filter(p=>p.photoId);
+  if(!withPhoto.length) throw new Error("Attach at least one photo before completing");
+  let i=0;
+  for(const p of withPhoto){
+    const b=await idbGet("photos",p.photoId);
+    if(!b) continue;
+    zip.file(photoFileName(p), b, { compression:"STORE" });
+    i++;
+    if(onProgress) onProgress(i, withPhoto.length+1, "Packing "+photoFileName(p));
+  }
+  const tour=buildTourJson();
+  zip.file("tour.json", JSON.stringify(tour,null,2), { compression:"STORE" });
+  if(onProgress) onProgress(withPhoto.length+1, withPhoto.length+1, "Writing tour.json");
+  // Also embed a capture draft for resume on another device
+  zip.file("capture-draft.json", JSON.stringify(serialize(),null,2), { compression:"STORE" });
+  return zip.generateAsync({ type:"blob", compression:"STORE", streamFiles:true }, meta=>{
+    if(onProgress && meta && meta.percent!=null) onProgress(null,null,"Compressing "+Math.round(meta.percent)+"%");
+  });
+}
+function setUpProg(pct, lbl){
+  const fill=$("#upProgFill"), lab=$("#upProgLbl");
+  if(fill) fill.style.width=Math.max(0,Math.min(100,pct||0))+"%";
+  if(lab) lab.textContent=lbl||"";
+}
+function openCompleteSheet(){
+  const n=S.pins.length, shot=S.pins.filter(p=>p.photoId).length;
+  const missing=n-shot;
+  $("#completeSummary").innerHTML=
+    `<b>${esc(S.meta.name||"Untitled")}</b><br>${esc(S.meta.address||"No address")}<br>`+
+    `${shot} photo${shot===1?"":"s"} · ${n} pin${n===1?"":"s"}`+
+    (missing?` · <span style="color:var(--bad)">${missing} missing</span>`:"");
+  setUpProg(0,"");
+  openSheet("#completeSheet");
+  refreshAuthNote();
+}
+async function saveForUsb(){
+  try{
+    setUpProg(5,"Building .insp360…");
+    const blob=await buildInsp360Blob((a,b,ph)=>setUpProg(b?Math.round(5+40*(a/b)):20, ph||"Packing…"));
+    const name=inspFileName();
+    dl(blob, name);
+    setUpProg(100,"Saved "+name);
+    toast("Saved "+name+" — copy via USB to PC");
+    S.completed=true; save();
+  }catch(e){ toast(e.message||"Save failed"); setUpProg(0, String(e.message||e)); }
+}
+async function saveTourJsonOnly(){
+  try{
+    const tour=buildTourJson();
+    const name=inspFileName().replace(/\.insp360$/i,"")+".tour.json";
+    dl(new Blob([JSON.stringify(tour,null,2)],{type:"application/json"}), name);
+    toast("Saved "+name);
+  }catch(e){ toast(e.message||"Save failed"); }
+}
+
+/* ---- Cloud API (same-origin Worker cookies) ---- */
+function cloudApiOrigin(){
+  const host=(location.hostname||"").toLowerCase();
+  const port=String(location.port||"");
+  if(host==="127.0.0.1"||host==="localhost"){
+    if(port==="8788") return location.origin;
+    return "http://127.0.0.1:8788";
+  }
+  if(/workers\.dev$/i.test(host)) return location.origin;
+  if(location.protocol==="http:"||location.protocol==="https:") return location.origin;
+  return CLOUD_API_HOSTED;
+}
+function cloudCreds(base){
+  return (base.indexOf("127.0.0.1")>=0||base.indexOf("localhost")>=0)?"omit":"include";
+}
+function isLocalApi(base){ return !!(base&&(base.indexOf("127.0.0.1")>=0||base.indexOf("localhost")>=0)); }
+function encodeTourKeyPath(key){ return String(key||"").split("/").map(encodeURIComponent).join("/"); }
+async function cloudFetch(path, opts){
+  opts=opts||{};
+  const base=cloudApiOrigin();
+  const headers=new Headers(opts.headers||{});
+  if(isLocalApi(base)){
+    try{
+      const em=(localStorage.getItem("insp360.aclEmail")||"").trim()||"robert.piwin@quadreal.com";
+      headers.set("X-Insp360-Email", em);
+    }catch(_){ headers.set("X-Insp360-Email","robert.piwin@quadreal.com"); }
+  }
+  return fetch(base+path, { ...opts, headers, credentials:cloudCreds(base) });
+}
+async function refreshAuthNote(){
+  const note=$("#authNote"); if(!note) return;
+  try{
+    const res=await cloudFetch("/api/me");
+    if(res.status===401){
+      note.className="bad";
+      note.innerHTML='Not signed in — open <a href="/" style="color:var(--accent)">the viewer</a>, enter your email code, then return here.';
+      return null;
+    }
+    if(!res.ok){ note.className="bad"; note.textContent="Auth check failed ("+res.status+")"; return null; }
+    const me=await res.json();
+    note.className="ok";
+    note.textContent="Signed in as "+(me.email||me.name||"user")+(me.role?" · "+me.role:"");
+    return me;
+  }catch(e){
+    note.className="bad";
+    note.textContent="Offline or API unreachable — use Save for USB.";
+    return null;
+  }
+}
+async function uploadBlobPut(key, blob, contentType, onProgress){
+  const base=cloudApiOrigin();
+  const path="/api/tours/"+encodeTourKeyPath(key);
+  return new Promise((resolve,reject)=>{
+    const xhr=new XMLHttpRequest();
+    xhr.open("PUT", base+path);
+    xhr.withCredentials=cloudCreds(base)==="include";
+    xhr.responseType="text";
+    xhr.setRequestHeader("Content-Type", contentType||"application/zip");
+    if(isLocalApi(base)){
+      try{ xhr.setRequestHeader("X-Insp360-Email",(localStorage.getItem("insp360.aclEmail")||"robert.piwin@quadreal.com")); }catch(_){}
+    }
+    xhr.upload.onprogress=e=>{
+      if(typeof onProgress==="function"){
+        const total=e.lengthComputable?e.total:(blob&&blob.size)||0;
+        onProgress({ loaded:e.loaded||0, total:total||0 });
+      }
+    };
+    xhr.onload=()=>resolve({ ok:xhr.status>=200&&xhr.status<300, status:xhr.status, text:()=>xhr.responseText||"" });
+    xhr.onerror=()=>reject(new Error("Network error during upload"));
+    xhr.send(blob);
+  });
+}
+async function uploadMultipart(key, blob, contentType, onProgress){
+  const total=blob.size||0;
+  const base=cloudApiOrigin();
+  if(isLocalApi(base) || total<CLOUD_MPU_MIN_SIZE){
+    return uploadBlobPut(key, blob, contentType, onProgress);
+  }
+  const created=await cloudFetch("/api/tours/"+encodeTourKeyPath(key)+"/mpu", {
+    method:"POST", headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ size:total, contentType:contentType||"application/zip" })
+  });
+  if(!created.ok){
+    let msg="Could not start upload ("+created.status+")";
+    try{ const j=await created.json(); if(j&&j.error) msg=j.error; }catch(_){}
+    throw new Error(msg);
+  }
+  const j=await created.json();
+  const uploadId=j.uploadId;
+  const partSize=Number(j.partSize)||CLOUD_MPU_PART_SIZE;
+  if(!uploadId) throw new Error("No uploadId");
+  const totalParts=Math.max(1, Math.ceil(total/partSize));
+  const parts=[];
+  let loaded=0;
+  for(let partNumber=1; partNumber<=totalParts; partNumber++){
+    const start=(partNumber-1)*partSize;
+    const end=Math.min(total, start+partSize);
+    const chunk=blob.slice(start, end);
+    const res=await cloudFetch(
+      "/api/tours/"+encodeTourKeyPath(key)+"/mpu/"+encodeURIComponent(uploadId)+"/parts/"+partNumber,
+      { method:"PUT", headers:{ "Content-Type":"application/octet-stream" }, body:chunk }
+    );
+    if(!res.ok) throw new Error("Part "+partNumber+" failed ("+res.status+")");
+    let etag=(res.headers.get("ETag")||"").replace(/"/g,"");
+    if(!etag){
+      try{ const body=await res.json(); if(body&&body.etag) etag=String(body.etag).replace(/"/g,""); }catch(_){}
+    }
+    if(!etag) throw new Error("Missing ETag for part "+partNumber);
+    parts.push({ partNumber, etag });
+    loaded+=chunk.size;
+    if(onProgress) onProgress({ loaded, total });
+  }
+  const complete=await cloudFetch("/api/tours/"+encodeTourKeyPath(key)+"/mpu/"+encodeURIComponent(uploadId)+"/complete", {
+    method:"POST", headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ parts, size:total })
+  });
+  if(!complete.ok){
+    let msg="Finalize failed ("+complete.status+")";
+    try{ const jj=await complete.json(); if(jj&&jj.error) msg=jj.error; }catch(_){}
+    throw new Error(msg);
+  }
+  return { ok:true, status:complete.status };
+}
+async function uploadTourSidecar(key, tourText){
+  const res=await cloudFetch("/api/tours/"+encodeTourKeyPath(key)+"/tour", {
+    method:"PUT",
+    headers:{ "Content-Type":"application/json; charset=utf-8" },
+    body:tourText
+  });
+  return !!(res&&res.ok);
+}
+async function queueOfflineUpload(key, tourText){
+  const q=(await idbGet("kv","uploadQueue"))||[];
+  q.push({ key, tourText, at:Date.now(), name:inspFileName() });
+  await idbPut("kv","uploadQueue", q);
+}
+async function flushUploadQueue(){
+  if(!navigator.onLine) return;
+  const q=(await idbGet("kv","uploadQueue"))||[];
+  if(!q.length) return;
+  // Photos live in draft — rebuild from current draft if key matches, else skip with note
+  toast("Retrying queued cloud upload…");
+  try{
+    await uploadToCloud({ fromQueue:true });
+    await idbPut("kv","uploadQueue", []);
+  }catch(e){ console.warn("queue flush", e); }
+}
+async function uploadToCloud(opts){
+  opts=opts||{};
+  const me=await refreshAuthNote();
+  if(!me && !opts.force){
+    if(!navigator.onLine){
+      const tour=buildTourJson();
+      await queueOfflineUpload(cloudObjectKey(), JSON.stringify(tour,null,2));
+      toast("Offline — upload queued. Will retry on Wi‑Fi.");
+      return;
+    }
+    toast("Sign in on the viewer first (email code), then retry upload.", true);
+    return;
+  }
+  try{
+    setUpProg(5,"Building .insp360…");
+    const blob=await buildInsp360Blob((a,b,ph)=>setUpProg(b?Math.round(5+25*(a/b)):15, ph||"Packing…"));
+    const key=cloudObjectKey();
+    setUpProg(30,"Uploading "+inspFileName()+"…");
+    const res=await uploadMultipart(key, blob, "application/zip", p=>{
+      const tot=Math.max(1,p.total||blob.size||1);
+      const pct=30+Math.round((Math.max(0,p.loaded||0)/tot)*55);
+      setUpProg(pct, "Uploading "+Math.round((p.loaded||0)/1e6)+" / "+Math.round(tot/1e6)+" MB");
+    });
+    if(!res.ok) throw new Error("Upload failed ("+res.status+")");
+    setUpProg(90,"Uploading tour.json sidecar…");
+    const tourText=JSON.stringify(buildTourJson(),null,2);
+    const ok=await uploadTourSidecar(key, tourText);
+    if(!ok) toast("Archive uploaded; sidecar tour.json failed — open in viewer and Save", true);
+    setUpProg(100,"Uploaded · "+key);
+    S.completed=true; save();
+    toast("Uploaded to cloud ✓");
+    await idbPut("kv","uploadQueue", []);
+  }catch(e){
+    const msg=String((e&&e.message)||e||"Upload failed");
+    setUpProg(0, msg);
+    if(!navigator.onLine || /network|fetch/i.test(msg)){
+      try{
+        const tour=buildTourJson();
+        await queueOfflineUpload(cloudObjectKey(), JSON.stringify(tour,null,2));
+        toast("Queued for upload when back online");
+      }catch(_){}
+    } else toast(msg, true);
+  }
+}
+function saveProjJson(){
+  dl(new Blob([JSON.stringify(serialize(),null,2)],{type:"application/json"}),
+    `${(S.prefix||"site")}_capture_draft.json`);
+}
+function dl(blob,name){const a=el("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);}
+
+async function loadProjectFile(file){
+  try{
+    if(file.name.endsWith(".zip")||file.name.endsWith(".insp360")){
+      const zip=await JSZip.loadAsync(file);
+      const draft=zip.file("capture-draft.json")||zip.file("project.json");
+      const tourEntry=zip.file("tour.json");
+      if(draft){
+        const proj=JSON.parse(await draft.async("string"));
+        await restore(proj);
+        for(const p of S.pins){
+          if(p.photoId){
+            const match=Object.keys(zip.files).find(k=>k.endsWith("/"+p.name+".jpg")||k===p.name+".jpg"||k===photoFileName(p));
+            if(match){const b=await zip.file(match).async("blob");await idbPut("photos",p.photoId,b);}
+          }
+        }
+        const pdfKey=Object.keys(zip.files).find(k=>k.toLowerCase().endsWith(".pdf"));
+        if(pdfKey){const bytes=new Uint8Array(await zip.file(pdfKey).async("arraybuffer"));await openPdfBytes(bytes,pdfKey.split("/").pop());}
+      }else if(tourEntry){
+        const tour=JSON.parse(await tourEntry.async("string"));
+        S.meta=Object.assign(S.meta, tour.meta||{});
+        S.pins=[];
+        let seq=1;
+        const plan=(tour.plan&&tour.plan.plans&&tour.plan.plans[0])||null;
+        for(const name of (tour.order||Object.keys(tour.tours||{}))){
+          const stem=String(name).replace(/\.jpg$/i,"");
+          const m=stem.match(/\((\d+)\)\s*$/);
+          const n=m?+m[1]:seq;
+          const pin={id:"p"+Date.now()+seq, page:1, x:0.5, y:0.5, seq:n, name:stem, note:"", photoId:null, ts:null};
+          const mk=(plan&&plan.markers||[]).find(mm=>mm.target===name);
+          if(mk){ pin.x=+mk.x||0.5; pin.y=+mk.y||0.5; pin.note=mk.label||""; }
+          const match=Object.keys(zip.files).find(k=>k===name||k.endsWith("/"+name));
+          if(match){
+            const b=await zip.file(match).async("blob");
+            pin.photoId="ph"+pin.id;
+            await idbPut("photos",pin.photoId,b);
+          }
+          S.pins.push(pin); seq++;
+        }
+        S.next=nextFreeNum();
+        if(plan&&plan.pdf){
+          try{
+            const bin=Uint8Array.from(atob(plan.pdf),c=>c.charCodeAt(0));
+            await openPdfBytes(bin, plan.name||"drawing.pdf");
+          }catch(e){console.warn(e);}
+        }
+        if(S.meta.address){$("#bldgA").textContent=S.meta.address;$("#bldgB").textContent=S.meta.name||"Capture project";}
+        save();
+      }else{toast("No tour.json / draft in archive");return;}
+      refreshPins();openPinList();toast("Project loaded ✓");
+    }else{
+      const proj=JSON.parse(await file.text());
+      await restore(proj);toast("Project loaded (photos not in .json)");
+    }
+  }catch(e){toast("Couldn't load that file");console.error(e);}
+}
+async function restore(proj){
+  S.building=proj.building||null;S.prefix=proj.prefix||"SITE";S.next=proj.next||1;
+  S.opt=Object.assign(S.opt,proj.opt||{});S.pageCount=proj.pageCount||1;
+  S.meta=Object.assign(S.meta, proj.meta||{});
+  if(S.building && !S.meta.address) S.meta.address=S.building.address;
+  S.completed=!!proj.completed;
+  S.pins=(proj.pins||[]).map(p=>({...p}));
+  // Migrate old prefix-01 names toward "prefix (n)" when no custom rename
+  S.pins.forEach(p=>{
+    if(p.seq!=null && /^\d+[\w-]*-\d+$/.test(String(p.name||""))) p.name=pinName(p.seq);
+  });
+  if(S.building){$("#bldgA").textContent=S.building.address;$("#bldgB").textContent=`${S.building.portfolio.replace(" Business Park","")} · BU ${S.building.bu}`;}
+  else if(S.meta.address){$("#bldgA").textContent=S.meta.address;$("#bldgB").textContent=S.meta.name||"Capture project";}
+  $("#setPrefix").value=S.prefix;$("#setNext").value=S.next;updateEg();syncToggles();
+  refreshPins();save();
+}
+
+/* ============================================================
+   BOOT / restore last session
+   ============================================================ */
+function showHome(){
+  $("#home").classList.remove("hidden");
+  $("#app").style.display="none";
+  updateHomeResume();
+  if(location.protocol==="https:"){
+    $("#homeMixedNote").innerHTML="<b>Phone on HTTPS:</b> shoot with the X5 / Insta360 app, then use <b>IMPORT 360°</b> to attach stitched JPGs from this phone. Live Connect is blocked by the browser.";
+  } else {
+    $("#homeMixedNote").textContent="HTTP mode — SNAP to the X5 is available when you join camera Wi‑Fi.";
+  }
+}
+function showApp(){
+  $("#home").classList.add("hidden");
+  $("#app").style.display="flex";
+  if(isHttpsCapture()) $("#mixedBanner").classList.add("show");
+  else $("#mixedBanner").classList.remove("show");
+  syncCamSheetMode();
+  updateActionBar();
+}
+async function updateHomeResume(){
+  const proj=await idbGet("kv","project");
+  const sub=$("#homeResumeSub");
+  if(proj&&(proj.pins&&proj.pins.length||proj.meta&&proj.meta.name||proj.building)){
+    const n=(proj.pins||[]).length, shot=(proj.pins||[]).filter(p=>p.photoId).length;
+    const label=(proj.meta&&proj.meta.name)||(proj.building&&proj.building.address)||"Draft";
+    sub.textContent=`${label} · ${shot}/${n} photos`;
+    $("#homeResume").disabled=false;
+  } else {
+    sub.textContent="No draft on this phone yet";
+  }
+}
+async function boot(){
+  await idb();
+  updateActionBar();syncToggles();
+  const forceCapture=/(?:^|[?&])capture=1(?:&|$)/.test(location.search);
+  const proj=await idbGet("kv","project");
+  if(forceCapture && proj){
+    await restore(proj);
+    const pdf=await idbGet("kv","pdf");
+    if(pdf&&pdf.bytes){await openPdfBytes(pdf.bytes instanceof Uint8Array?pdf.bytes:new Uint8Array(pdf.bytes),pdf.name);}
+    showApp();
+  } else {
+    showHome();
+    // Warm restore into memory when resuming later
+    if(proj){ /* keep in IDB only until Resume */ }
+  }
+  if(!window.pdfjsLib||!window.JSZip)toast("Libraries didn't load — reconnect to internet once, then reopen");
+  window.addEventListener("online", ()=>{ flushUploadQueue(); refreshAuthNote(); });
+  try{ await flushUploadQueue(); }catch(_){}
+}
+
+/* ============================================================
+   WIRING
+   ============================================================ */
+function openSheet(sel){$(sel).classList.add("open");}
+function closeSheet(sel){$(sel).classList.remove("open");}
+$$(".sheet").forEach(s=>{s.addEventListener("click",e=>{if(e.target===s)s.classList.remove("open");});});
+$$("[data-close]").forEach(b=>b.onclick=()=>b.closest(".sheet").classList.remove("open"));
+
+$("#bldgBtn").onclick=()=>{renderPorts();renderBldgList();openSheet("#bldgSheet");$("#bldgSearch").value="";};
+$("#bldgSearch").oninput=renderBldgList;
+
+$("#addBtn").onclick=()=>{S.mode=S.mode==="add"?"move":"add";$("#addBtn").classList.toggle("on",S.mode==="add");
+  toast(S.mode==="add"?"Add-pin mode: tap the plan":"Move mode: drag to pan");};
+$("#addBtn").classList.add("on");
+
+$("#camBtn").onclick=()=>{syncCamSheetMode();openSheet("#camSheet");};
+$("#pinsBtn").onclick=()=>{openPinList();openSheet("#pinSheet");};
+$("#menuBtn").onclick=()=>openSheet("#menuSheet");
+
+$("#shootBtn").onclick=snap;
+function pickPhotoForPin(){
+  if(!S.selPin){toast("Select a pin first");return;}
+  $("#photoFile").click();
+}
+$("#attachBtn").onclick=pickPhotoForPin;
+$("#camImportBtn") && ($("#camImportBtn").onclick=()=>{
+  if(!S.selPin){
+    const next=[...S.pins].sort((a,b)=>a.seq-b.seq).find(p=>!p.photoId)||S.pins[0];
+    if(next) selectPin(next);
+    else { toast("Drop a pin on the plan first"); return; }
+  }
+  closeSheet("#camSheet");
+  $("#photoFile").click();
+});
+$("#photoFile").onchange=async e=>{
+  const files=[...e.target.files||[]];
+  e.target.value="";
+  if(!files.length) return;
+  let pin=S.selPin;
+  if(!pin){toast("Select a pin first");return;}
+  let n=0;
+  for(const f of files){
+    if(!pin) break;
+    await attachBlob(pin,f);
+    n++;
+    toast("✓ "+pin.name);
+    if(S.opt.advance){
+      const empties=[...S.pins].sort((a,b)=>a.seq-b.seq).filter(p=>!p.photoId);
+      const nextP=empties.find(p=>p.seq>pin.seq)||empties[0];
+      pin=nextP||null;
+      if(pin) selectPin(pin);
+      else selectPin(null);
+    } else break;
+  }
+  if(n>1) toast(n+" photos attached");
+};
+
+function zoomBtn(f){const v=$("#viewport");zoomAt(S.zoom*f, v.clientWidth/2, v.clientHeight/2);}
+$("#zin").onclick=()=>zoomBtn(1.35);
+$("#zout").onclick=()=>zoomBtn(1/1.35);
+$("#zfit").onclick=fitPage;
+$("#pprev").onclick=async()=>{if(S.pageNum>1){S.pageNum--;await renderPage();fitPage();refreshPins();save();}};
+$("#pnext").onclick=async()=>{if(S.pageNum<S.pageCount){S.pageNum++;await renderPage();fitPage();refreshPins();save();}};
+
+$("#loadPdf").onclick=()=>$("#pdfFile").click();
+$("#pdfFile").onchange=async e=>{const f=e.target.files[0];if(f){await openPlanFile(f);closeSheet("#menuSheet");}e.target.value="";};
+$("#loadPdfUrl").onclick=async()=>{const u=prompt("Direct PDF/PNG link (must allow cross-origin):");if(!u)return;try{const r=await fetch(u);const b=new Uint8Array(await r.arrayBuffer());const name=u.split("/").pop()||"drawing.pdf";if(/\.(png|jpe?g)$/i.test(name))await openPlanImage(b,name);else await openPdfBytes(b,name);closeSheet("#menuSheet");}catch(e){toast("Couldn't fetch that link (CORS?)");}};
+
+$("#camTest").onclick=camConnect;
+$("#camPreview").onclick=listPhotos;
+
+$("#setPrefix").oninput=e=>{S.prefix=e.target.value.trim();updateEg();
+  S.pins.forEach(p=>{if(!p.photoId||true)p.name=pinName(p.seq);});refreshPins();save();};
+$("#setNext").oninput=e=>{S.next=parseInt(e.target.value)||1;};
+function updateEg(){$("#egName").textContent=`${S.prefix||"SITE"} (1).jpg`;}
+
+function tog(id,key){const t=$(id);t.onclick=()=>{S.opt[key]=!S.opt[key];t.classList.toggle("on",S.opt[key]);save();};}
+tog("#togStitch","stitch");tog("#togHdr","hdr");tog("#togAdv","advance");
+$("#setIp").oninput=e=>{S.opt.ip=e.target.value.trim()||"192.168.42.1";save();};
+function syncToggles(){$("#togStitch").classList.toggle("on",S.opt.stitch);$("#togHdr").classList.toggle("on",S.opt.hdr);
+  $("#togAdv").classList.toggle("on",S.opt.advance);$("#setIp").value=S.opt.ip;}
+
+$("#clearPins").onclick=async()=>{if(!confirm("Delete all pins and their photos?"))return;
+  for(const p of S.pins)if(p.photoId)await idbDel("photos",p.photoId);
+  S.pins=[];S.selPin=null;refreshPins();updateActionBar();openPinList();save();};
+$("#pdSave").onclick=()=>{if(!pdPin)return;pdPin.name=$("#pdName").value.trim()||pdPin.name;pdPin.note=$("#pdNote").value.trim();refreshPins();save();closeSheet("#pinDetail");};
+$("#pdDelete").onclick=async()=>{if(!pdPin)return;if(pdPin.photoId)await idbDel("photos",pdPin.photoId);
+  S.pins=S.pins.filter(x=>x.id!==pdPin.id);if(S.selPin&&S.selPin.id===pdPin.id)S.selPin=null;
+  refreshPins();updateActionBar();closeSheet("#pinDetail");save();};
+
+$("#completeBtn").onclick=()=>openCompleteSheet();
+$("#completeMenuBtn").onclick=()=>{closeSheet("#menuSheet");openCompleteSheet();};
+$("#btnUploadCloud").onclick=()=>uploadToCloud();
+$("#btnSaveUsb").onclick=()=>saveForUsb();
+$("#btnSaveTourJson").onclick=()=>saveTourJsonOnly();
+$("#saveProj").onclick=saveProjJson;
+$("#loadProj").onclick=()=>$("#projFile").click();
+$("#projFile").onchange=e=>{const f=e.target.files[0];if(f){loadProjectFile(f);closeSheet("#menuSheet");showApp();}e.target.value="";};
+$("#resetProj").onclick=async()=>{if(!confirm("Reset everything on this device?"))return;
+  await idbClear("photos");await idbDel("kv","project");await idbDel("kv","pdf");await idbDel("kv","uploadQueue");location.reload();};
+$("#homeBackBtn").onclick=()=>{closeSheet("#menuSheet");showHome();};
+$("#openViewerBtn").onclick=()=>{ openExternalViewer(); };
+
+function readGroupPicks(){
+  return $$("#groupList input[type=checkbox]:checked").map(cb=>({
+    id:cb.value, name:cb.dataset.name||"", permission:"view"
+  })).filter(g=>g.id);
+}
+function renderGroupList(groups){
+  const box=$("#groupList"), note=$("#groupNote");
+  if(!box) return;
+  box.innerHTML="";
+  if(!groups||!groups.length){
+    if(note) note.textContent="No groups yet — sign in on the viewer (OTP), then reopen Capture.";
+    return;
+  }
+  if(note) note.textContent="Optional — selected groups are saved on the tour for ACL.";
+  const selected=new Set((S.meta.pendingGroupGrants||[]).map(g=>String(g.id)));
+  groups.forEach(g=>{
+    const id=String(g.id||"");
+    const row=el("label","grow");
+    row.innerHTML=`<input type="checkbox" value="${esc(id)}" data-name="${esc(g.name||"")}" ${selected.has(id)?"checked":""}><span class="gn">${esc(g.name||id)}</span>`;
+    box.appendChild(row);
+  });
+}
+async function loadAclGroups(){
+  try{
+    const res=await cloudFetch("/api/me");
+    if(!res.ok){ renderGroupList([]); return; }
+    const me=await res.json();
+    S.aclGroups=Array.isArray(me.groups)?me.groups:[];
+    if(me.name && !$("#metaCreator").value) $("#metaCreator").value=me.name;
+    renderGroupList(S.aclGroups);
+  }catch(_){ renderGroupList([]); }
+}
+
+$("#homeLoadPlan").onclick=()=>$("#planFileHome").click();
+$("#planFileHome").onchange=async e=>{const f=e.target.files[0];if(f)await openPlanFile(f);e.target.value="";};
+
+$("#homeResume").onclick=async()=>{
+  const proj=await idbGet("kv","project");
+  if(!proj){toast("No draft found");return;}
+  await restore(proj);
+  const pdf=await idbGet("kv","pdf");
+  if(pdf&&pdf.bytes){
+    const bytes=pdf.bytes instanceof Uint8Array?pdf.bytes:new Uint8Array(pdf.bytes);
+    if(pdf.kind==="img"||S.planKind==="img") await openPlanImage(bytes,pdf.name);
+    else await openPdfBytes(bytes,pdf.name);
+  }
+  showApp(); toast("Draft resumed");
+};
+$("#homeViewer").onclick=()=>{ openExternalViewer(); };
+$("#metaPickBldg").onclick=()=>{renderPorts();renderBldgList();openSheet("#bldgSheet");};
+$("#metaStart").onclick=async()=>{
+  try{
+    const name=$("#metaName").value.trim();
+    if(!name){toast("Enter a project name");return;}
+    if(!S.building && !S.meta.address){toast("Pick a building first");return;}
+    if(!S.pdfBytes){toast("Load a PDF or PNG floor plan first");return;}
+    const hadPlan=!!S.pdfBytes;
+    const planBytes=S.pdfBytes, planName=S.pdfName, planKind=S.planKind, planImg=S.planImg;
+    await idbClear("photos");
+    S.pins=[]; S.selPin=null;
+    // Keep loaded plan
+    S.pdfBytes=planBytes; S.pdfName=planName; S.planKind=planKind; S.planImg=planImg;
+    S.meta.name=name;
+    S.meta.tenant=$("#metaTenant").value.trim();
+    S.meta.creator=$("#metaCreator").value.trim();
+    S.meta.pendingGroupGrants=readGroupPicks();
+    S.meta.created=new Date().toISOString();
+    S.completed=false;
+    if(S.building){
+      S.meta.address=S.building.address;
+      S.prefix=S.building.prefix||S.prefix||"SITE";
+    }
+    $("#bldgA").textContent=S.meta.address||"Select building";
+    $("#bldgB").textContent=S.meta.name;
+    $("#pinLayer").innerHTML="";
+    $("#hint").style.display=hadPlan?"none":"";
+    save(); showApp();
+    if(hadPlan && S.pts){ fitPage(); refreshPins(); }
+    toast("Ready — tap the plan to drop pins");
+  }catch(e){toast("Couldn't start: "+(e.message||e));console.error(e);}
+};
+
+window.addEventListener("resize",()=>{if(S.pts){applyTransform();scheduleRerender();}});
+boot().then(()=>loadAclGroups()).catch(e=>{console.error(e);toast("Boot error — try refresh");});
+</script>
+
+<script>
+function openExternalViewer(){
+  var url="https://insp360-viewer.krutki11.workers.dev/?desktop=1";
+  window.open(url, "_system") || (location.href=url);
+}
+document.addEventListener("DOMContentLoaded", function(){
+  try{
+    if(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()){
+      document.body.classList.add("native-cap");
+      var b=document.getElementById("mixedBanner");
+      if(b){ b.classList.remove("show"); b.style.display="none"; }
+    }
+  }catch(_){}
+});
+</script>
+
+</body>
+</html>

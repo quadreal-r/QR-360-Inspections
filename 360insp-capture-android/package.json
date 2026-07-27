@@ -1,0 +1,25 @@
+{
+  "name": "insp-capture-android",
+  "version": "1.0.0",
+  "private": true,
+  "description": "QR360 Capture — Capacitor Android shell for Insta360 X5 OSC (cleartext)",
+  "type": "module",
+  "scripts": {
+    "sync-www": "node scripts/sync-www.mjs",
+    "cap:sync": "npm run sync-www && npx cap sync android",
+    "cap:open": "npx cap open android",
+    "build:android": "npm run cap:sync"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.4.2",
+    "@capacitor/app": "^7.0.1",
+    "@capacitor/core": "^7.4.2",
+    "@capacitor/filesystem": "^7.1.1",
+    "@capacitor/share": "^7.0.1",
+    "@capacitor/status-bar": "^7.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.2",
+    "typescript": "^5.9.2"
+  }
+}

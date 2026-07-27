@@ -1,0 +1,24 @@
+# Open link for INSP 360 viewer
+
+When working on this project, include a clickable open link in chat replies (especially after UI/feature changes) so the user can launch the viewer immediately:
+
+- Path: `QR-360-Inspections/QR-360-Inspections_v1.2.82.html`
+- Badge: **QR360-v1.2.82** (standalone). Map embed shows **Map360-v1.2.82** after sync.
+- File URL: [Open INSP 360 Viewer](file:///C:/Users/Robert/Projects/QR-360-Inspections/QR-360-Inspections/QR-360-Inspections_v1.2.82.html)
+- Capture (phone): `QR-360-Inspections/insp-capture.html` → served as `/capture.html` after sync. [Open Capture](file:///C:/Users/Robert/Projects/QR-360-Inspections/QR-360-Inspections/insp-capture.html)
+
+Prefer opening it with the `open_resource` MCP tool when finishing a change, and still paste the markdown link in the reply.
+
+## Publishing to Building Map Explorer
+
+Source of truth stays in this folder (QR360). After a new version:
+
+```powershell
+cd C:\Users\Robert\Projects\QR-East_Industrial_Database
+npm run sync:qr360-viewer
+```
+
+That copies the latest `QR-360-Inspections_v*.html` into:
+
+- `QR-East_Industrial_Database/qr360-viewer/` (versioned, stamped **Map360**)
+- `QR-East_Industrial_Database/public/insp360/viewer.html` (live iframe, stamped **Map360**)
