@@ -47,8 +47,9 @@
   .hbtn{width:44px;height:44px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);
     display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
   .hbtn:active{background:var(--line)}
-  .verbar{font-size:9px;line-height:1.4;color:var(--faint);text-align:right;letter-spacing:.3px;
-    padding:2px 10px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .verbar{font-size:12px;line-height:1.35;color:var(--ink);text-align:right;letter-spacing:.4px;
+    padding:5px 12px;background:var(--panel2);border-bottom:1px solid var(--line);font-weight:700}
+  .verbar b{color:var(--accent);font-weight:800}
 
   /* ---- cloud projects rail (left) ---- */
   #work{flex:1;display:flex;min-height:0;position:relative}
@@ -592,9 +593,9 @@ const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;}
 function toast(m,ms=1900){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),ms);}
 
 /* ---------- version (each segment rolls over at 99: 1.1.99 → 1.2.0, 1.99.x → 2.0.0) ---------- */
-const VERSION=[1,0,48];
+const VERSION=[1,0,49];
 function bumpVersion(v){v=v.slice();v[2]++;if(v[2]>99){v[2]=0;v[1]++;}if(v[1]>99){v[1]=0;v[0]++;}return v;}
-function verStr(v){return "QR360-Capture-v"+(v||VERSION).join(".");}
+function verStr(v){return "QR360 Capture <b>v"+(v||VERSION).join(".")+"</b>";}
 const CAPTURE_VER=VERSION.join(".");
 const CLOUD_API_HOSTED="https://insp360-viewer.krutki11.workers.dev";
 const CLOUD_MPU_PART_SIZE=8*1024*1024;
@@ -2522,7 +2523,7 @@ async function boot(){
   }
   if(!S.meta.creator){try{const c=await idbGet("kv","creator");if(c)S.meta.creator=c;}catch(e){}}
   updateActionBar();syncToggles();renderConnDots();updateHint();
-  $("#ver").textContent=verStr();
+  $("#ver").innerHTML=verStr();
   acquireWake();
   window.addEventListener("pointerdown",function once(){acquireWake();window.removeEventListener("pointerdown",once);});
   if(!window.pdfjsLib||!window.JSZip)toast("Libraries didn't load — reconnect to internet once, then reopen");
