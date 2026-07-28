@@ -504,11 +504,7 @@
       </div>
 
       <div class="fld"><label>Project</label>
-        <button class="btn primary" id="openProjBtn" style="width:100%;margin-bottom:8px">Project info</button>
-        <div class="row2">
-          <button class="btn" id="loadPdf">Open PDF or PNG</button>
-          <button class="btn" id="loadPdfUrl">From link…</button>
-        </div>
+        <button class="btn primary" id="openProjBtn" style="width:100%">Project info</button>
       </div>
 
       <div class="fld"><label>Photo naming</label>
@@ -593,7 +589,7 @@ const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;}
 function toast(m,ms=1900){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),ms);}
 
 /* ---------- version (each segment rolls over at 99: 1.1.99 → 1.2.0, 1.99.x → 2.0.0) ---------- */
-const VERSION=[1,0,56];
+const VERSION=[1,0,57];
 function bumpVersion(v){v=v.slice();v[2]++;if(v[2]>99){v[2]=0;v[1]++;}if(v[1]>99){v[1]=0;v[0]++;}return v;}
 function verStr(v){return "QR360 Capture <b>v"+(v||VERSION).join(".")+"</b>";}
 const CAPTURE_VER=VERSION.join(".");
@@ -2795,9 +2791,7 @@ $("#zfit").onclick=fitPage;
 $("#pprev").onclick=async()=>{if(S.pageNum>1){S.pageNum--;await renderPage();fitPage();refreshPins();save();}};
 $("#pnext").onclick=async()=>{if(S.pageNum<S.pageCount){S.pageNum++;await renderPage();fitPage();refreshPins();save();}};
 
-$("#loadPdf").onclick=()=>$("#pdfFile").click();
 $("#pdfFile").onchange=async e=>{const f=e.target.files[0];if(f){await loadPlanFile(f);closeSheet("#menuSheet");}e.target.value="";};
-$("#loadPdfUrl").onclick=async()=>{await loadPlanUrl();closeSheet("#menuSheet");};
 $("#hintLoadPlan").onclick=()=>$("#pdfFile").click();
 $("#hintLoadUrl").onclick=loadPlanUrl;
 
