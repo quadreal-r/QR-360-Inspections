@@ -1808,7 +1808,7 @@
   <button class="btn icon topbtn" id="btnBlurFaces" title="Privacy blur — faces or licence plates (auto or manual)"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/><path d="M8.6 8.2l-.8.8M15.4 8.2l.8.8M11 12.4h2"/></svg></button>
   <button class="btn icon topbtn" id="btnPrivacySettings" title="Privacy settings — automatic face &amp; licence-plate blur"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   <button type="button" class="btn" id="btnAdmin" title="Admin — people, groups, and tour access">Admin</button>
-  <span id="appVer" title="Standalone QR-360° viewer">QR360-v1.2.82</span>
+  <span id="appVer" title="Standalone QR-360° viewer">QR360-v1.2.83</span>
 </div>
 
 <div id="privacySettings">
@@ -10869,13 +10869,13 @@ async function loadSatellitePlan(force){
   if(!askGmapsKey(force)) return;
   const p=activePlan();
   let points=[], label='Satellite';
-  const b = p ? buildingForName(p.name) : null;                                  // prefer the matched building footprint
-  if(geoIndex && b){ geoIndex.polys.filter(q=>q.a===b.a).forEach(q=>q.path.forEach(v=>points.push([v[0],v[1]]))); label=b.a+' \u2014 satellite'; }
+  const b = buildingForMapLocation(p&&p.name);                                   // floor name, then Tour Info address
+  if(b){ pushBuildingFramePoints(points, b); if(points.length) label=b.a+' \u2014 satellite'; }
   if(!points.length){                                                            // else frame the photos' GPS
     if(items.length){ toast('Reading GPS from photos\u2026'); await Promise.all(items.map(it=>ensureMeta(it).catch(()=>{}))); }
     items.forEach(it=>{ if(it.gps && goodGps(it.gps.lat, it.gps.lon)) points.push([+it.gps.lat, +it.gps.lon]); });
   }
-  if(!points.length){ toast('I need a location to center the map. Either name a floor after a building in the DB (e.g. \u201C145 Carrier\u201D), or load photos that carry GPS.', true); return; }
+  if(!points.length){ toast('I need a location to center the map. Set Building address in Tour Info, name a floor after a building in the DB (e.g. \u201C145 Carrier\u201D), or load photos that carry GPS.', true); return; }
   const mp=frameFor(points);
   const plan={ id:planIdSeq++, name:label, isMap:true, mapParams:mp, img:gmStaticUrl(mp), aspect:1, markers:[], _renderedW:0 };
   planState.plans.push(plan); planState.active=planState.plans.length-1; planSel=null;
@@ -10931,8 +10931,8 @@ function loadGmapsApi(){
   return _gmapsLoading;
 }
 function liveMapPoints(p){
-  const pts=[]; const b=buildingForName(p&&p.name);
-  if(geoIndex && b) geoIndex.polys.filter(q=>q.a===b.a).forEach(q=>q.path.forEach(v=>pts.push([v[0],v[1]])));
+  const pts=[]; const b=buildingForMapLocation(p&&p.name);   // floor name → Tour Info Building address → GPS
+  pushBuildingFramePoints(pts, b);
   if(!pts.length) items.forEach(it=>{ if(it.gps&&goodGps(it.gps.lat,it.gps.lon)) pts.push([+it.gps.lat,+it.gps.lon]); });
   return {pts, building:b};
 }
@@ -10961,7 +10961,7 @@ async function addLiveMapPlan(force){
   const cur=activePlan();
   if(items.length){ toast('Reading photo GPS\u2026'); await Promise.all(items.map(it=>ensureMeta(it).catch(()=>{}))); }
   const {pts, building}=liveMapPoints(cur);
-  if(!pts.length){ toast('I need a location: name a floor after a building in the DB (e.g. \u201C145 Carrier\u201D), or load photos with GPS.', true); return; }
+  if(!pts.length){ toast('I need a location: set Building address in Tour Info, name a floor after a building in the DB (e.g. \u201C145 Carrier\u201D), or load photos with GPS.', true); return; }
   const fr=frameFor(pts);
   const plan={ id:planIdSeq++, name:(building?building.a+' \u2014 map':'Map'), isLiveMap:true, mapId:gmapsMapId,
     center:{lat:fr.lat,lng:fr.lng}, zoom:fr.zoom+1, heading:0, tilt:0, markers:[], _renderedW:0,
@@ -12197,6 +12197,29 @@ function buildingForName(name){
     if(score>bestScore){ bestScore=score; best=b; }
   }
   return bestScore>=2 ? best : null;                             // need at least a number match
+}
+/** Map center building: floor/plan name first, then Tour Info → Building address. */
+function buildingForMapLocation(planName){
+  let b=buildingForName(planName);
+  if(b) return b;
+  const addr=(typeof resolveProjectAddress==='function')
+    ? resolveProjectAddress(projectMeta)
+    : String((projectMeta&&projectMeta.address)||'').trim();
+  if(addr){ b=buildingForName(addr); if(b) return b; }
+  try{
+    const live=String((document.getElementById('piAddress')||{}).value||'').trim();
+    if(live && (!addr || live.toLowerCase()!==String(addr).toLowerCase())){
+      b=buildingForName(live); if(b) return b;
+    }
+  }catch(_){}
+  return null;
+}
+/** Frame points from a DB building: tenant polygon paths, else building lat/lng. */
+function pushBuildingFramePoints(pts, b){
+  if(!geoIndex || !b || !pts) return;
+  if(Array.isArray(geoIndex.polys))
+    geoIndex.polys.filter(q=>q.a===b.a).forEach(q=>{ if(Array.isArray(q.path)) q.path.forEach(v=>pts.push([v[0],v[1]])); });
+  if(!pts.length && goodGps(b.lat, b.lng)) pts.push([+b.lat, +b.lng]);
 }
 
 function resolvePhotoGeo(it){                                    // global GPS fallback (no plan-name match)
@@ -19814,7 +19837,7 @@ window.addEventListener('resize', ()=>{ if(isDoubleTour()){ resizeDoublePanes();
 /* __BME_INSP360_INTEGRATION__ */
 (function(){
   /** Semver only (no product prefix). Patch rolls 0–99 then middle number +1. */
-  const VERSION_NUM="1.2.82";
+  const VERSION_NUM="1.2.83";
   /**
    * Product line for this HTML copy:
    * - QR360 = standalone Inspections viewer (file / :8788 / workers.dev)
