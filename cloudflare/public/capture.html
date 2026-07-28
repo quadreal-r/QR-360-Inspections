@@ -592,7 +592,7 @@ const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;}
 function toast(m,ms=1900){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),ms);}
 
 /* ---------- version (each segment rolls over at 99: 1.1.99 → 1.2.0, 1.99.x → 2.0.0) ---------- */
-const VERSION=[1,0,47];
+const VERSION=[1,0,48];
 function bumpVersion(v){v=v.slice();v[2]++;if(v[2]>99){v[2]=0;v[1]++;}if(v[1]>99){v[1]=0;v[0]++;}return v;}
 function verStr(v){return "QR360-Capture-v"+(v||VERSION).join(".");}
 const CAPTURE_VER=VERSION.join(".");
@@ -1557,18 +1557,58 @@ async function applyTourJson(tour){
   const packed=tourJsonToProject(tour);
   await idbClear("photos");
   await restore(packed.proj);
-  if(packed.planPdfB64){
-    const bytes=b64ToBytes(packed.planPdfB64);
-    const nm=/\.pdf$/i.test(packed.planName)?packed.planName:(packed.planName+".pdf");
-    await openPdfBytes(bytes, nm);
-  }else if(packed.planImgDataUrl){
-    const bytes=b64ToBytes(packed.planImgDataUrl);
-    await openImageBytes(bytes, packed.planName||"plan.png");
-  }else{
-    toast("Opened pins — floor plan missing in tour.json");
-  }
+  const hasPlan=await loadFloorPlanFromPacked(packed);
   refreshPins();updateActionBar();updateHint();
-  return packed.proj.pins.length;
+  return { pins:packed.proj.pins.length, hasPlan };
+}
+/** Load floor plan bytes from tourJsonToProject() result. Returns true if a drawing was opened. */
+async function loadFloorPlanFromPacked(packed){
+  if(!packed) return false;
+  try{
+    if(packed.planPdfB64){
+      const bytes=b64ToBytes(packed.planPdfB64);
+      if(bytes&&bytes.length){
+        const nm=/\.pdf$/i.test(packed.planName)?packed.planName:(packed.planName+".pdf");
+        await openPdfBytes(bytes, nm);
+        return true;
+      }
+    }
+    if(packed.planImgDataUrl){
+      const bytes=b64ToBytes(packed.planImgDataUrl);
+      if(bytes&&bytes.length){
+        await openImageBytes(bytes, packed.planName||"plan.png");
+        return true;
+      }
+    }
+  }catch(e){ console.warn("plan decode failed", e); }
+  return false;
+}
+/** Pull a drawing out of an .insp360 zip (embedded tour.json or root PDF/PNG). */
+async function loadFloorPlanFromZip(zip){
+  if(!zip) return false;
+  try{
+    const tj=zip.file("tour.json");
+    if(tj){
+      const tour=JSON.parse(await tj.async("string"));
+      const packed=tourJsonToProject(tour);
+      if(await loadFloorPlanFromPacked(packed)) return true;
+    }
+  }catch(e){ console.warn(e); }
+  try{
+    let planKey=Object.keys(zip.files).find(k=>!zip.files[k].dir&&!k.includes("/")&&/\.pdf$/i.test(k));
+    if(!planKey)planKey=Object.keys(zip.files).find(k=>!zip.files[k].dir&&!k.includes("/")&&/\.(png|jpe?g|webp|gif|bmp)$/i.test(k));
+    // Also accept drawings/ or plan/ folders
+    if(!planKey)planKey=Object.keys(zip.files).find(k=>!zip.files[k].dir&&/\.pdf$/i.test(k)&&!/photos2d\//i.test(k));
+    if(!planKey)planKey=Object.keys(zip.files).find(k=>!zip.files[k].dir&&/\.(png|jpe?g|webp)$/i.test(k)&&!/photos2d\//i.test(k)&&!/\.cover\./i.test(k));
+    if(planKey){
+      const bytes=new Uint8Array(await zip.file(planKey).async("arraybuffer"));
+      const base=planKey.split("/").pop();
+      if(/\.pdf$/i.test(planKey)) await openPdfBytes(bytes, base);
+      else await openImageBytes(bytes, base);
+      return true;
+    }
+  }catch(e){ console.warn(e); }
+  return false;
 }
 async function cloudFetchTourJson(key){
   if(window.AndroidCloud && typeof AndroidCloud.getTourJson==="function"){
@@ -2112,20 +2152,48 @@ async function refreshCloudProjects(){
 async function openCloudTour(key){
   try{
     toast("Opening plan & pins…", 8000);
-    // Prefer lightweight tour.json sidecar (plan + markers) — not the full photo archive.
-    const tour=await cloudFetchTourJson(key);
+    let tour=null;
+    try{ tour=await cloudFetchTourJson(key); }catch(e){ console.warn(e); }
+    let pinCount=0;
+    let hasPlan=false;
     if(tour){
-      const n=await applyTourJson(tour);
-      closeCloudProjects();
-      toast("Opened for reshoot · "+n+" pin"+(n===1?"":"s"));
-      return;
+      const r=await applyTourJson(tour);
+      pinCount=r.pins;
+      hasPlan=r.hasPlan;
     }
-    toast("No sidecar — downloading archive…", 10000);
-    const blob=await cloudDownloadTourBlob(key);
-    const file=new File([blob], (String(key).split("/").pop()||"tour.insp360"), { type:"application/zip" });
-    await loadProjectFile(file, { reshoot:true });
+    // Sidecar often has markers only — floor plan usually lives inside the .insp360 archive.
+    if(!hasPlan){
+      toast(pinCount?"Pins loaded — downloading drawing…":"Downloading project archive…", 12000);
+      const blob=await cloudDownloadTourBlob(key);
+      const zip=await JSZip.loadAsync(blob);
+      if(!tour){
+        const draft=zip.file("project.json")||zip.file("capture-draft.json");
+        if(draft){
+          const proj=JSON.parse(await draft.async("string"));
+          proj.pins=(proj.pins||[]).map(p=>({...p, photoId:null, shotNo:null, ts:null}));
+          proj.shotSeq=0;
+          await idbClear("photos");
+          await restore(proj);
+          pinCount=S.pins.length;
+        }else{
+          const tj=zip.file("tour.json");
+          if(tj){
+            tour=JSON.parse(await tj.async("string"));
+            const r=await applyTourJson(tour);
+            pinCount=r.pins;
+            hasPlan=r.hasPlan;
+          }
+        }
+      }
+      if(!hasPlan){
+        hasPlan=await loadFloorPlanFromZip(zip);
+      }
+      refreshPins();updateActionBar();updateHint();
+    }
+    if(!pinCount && !hasPlan) throw new Error("No pins or drawing found in that cloud project");
     closeCloudProjects();
-    toast("Opened from cloud ✓");
+    if(hasPlan) toast("Opened for reshoot · "+pinCount+" pin"+(pinCount===1?"":"s")+" + drawing");
+    else toast("Opened "+pinCount+" pins — drawing not found in archive");
   }catch(e){ console.error(e); toast(String(e.message||e)); }
 }
 async function markCloudComplete(key){
@@ -2409,8 +2477,8 @@ async function loadProjectFile(file, opts){
       const tj=zip.file("tour.json");
       if(!tj){toast("No project.json / tour.json in archive");return;}
       const tour=JSON.parse(await tj.async("string"));
-      const n=await applyTourJson(tour);
-      toast("Opened from tour.json · "+n+" pins");
+      const r=await applyTourJson(tour);
+      toast("Opened from tour.json · "+r.pins+" pins");
     }else{
       const proj=JSON.parse(await file.text());
       await restore(proj);toast("Project loaded (photos not in .json)");
