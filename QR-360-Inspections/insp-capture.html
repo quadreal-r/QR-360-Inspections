@@ -499,8 +499,12 @@
         <div class="note" id="cloudAuthNote" style="margin-top:8px"></div>
       </div>
 
-      <div class="fld"><label>Export</label>
-        <button class="btn" id="uploadCloud" style="width:100%">Upload skeleton to cloud</button>
+      <div class="fld"><label>360skeleton</label>
+        <div class="row2">
+          <button class="btn primary" id="save360Skeleton">Save 360skeleton</button>
+          <button class="btn" id="load360Skeleton">Load 360skeleton</button>
+        </div>
+        <button class="btn" id="uploadCloud" style="width:100%;margin-top:8px">Save 360skeleton to cloud</button>
       </div>
 
       <div class="fld"><label>Project</label>
@@ -547,7 +551,8 @@
 <input type="file" id="photoCapture" accept="image/*" capture="environment" style="display:none">
 <input type="file" id="matchFiles" accept="image/*" multiple style="display:none">
 <input type="file" id="dbFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none">
-<input type="file" id="projFile" accept=".json,.zip,.insp360,application/json,application/zip,application/octet-stream" style="display:none">
+<input type="file" id="projFile" accept=".json,.zip,.insp360,.360skeleton,application/json,application/zip,application/octet-stream" style="display:none">
+<input type="file" id="skelFile" accept=".360skeleton,.insp360,.zip,application/zip,application/octet-stream" style="display:none">
 <div class="toast" id="toast"></div>
 <div id="matchZoom"><img alt=""></div>
 <div id="picPreview">
@@ -593,7 +598,7 @@ const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;}
 function toast(m,ms=1900){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),ms);}
 
 /* ---------- version (each segment rolls over at 99: 1.1.99 → 1.2.0, 1.99.x → 2.0.0) ---------- */
-const VERSION=[1,0,49];
+const VERSION=[1,0,50];
 function bumpVersion(v){v=v.slice();v[2]++;if(v[2]>99){v[2]=0;v[1]++;}if(v[1]>99){v[1]=0;v[0]++;}return v;}
 function verStr(v){return "QR360 Capture <b>v"+(v||VERSION).join(".")+"</b>";}
 const CAPTURE_VER=VERSION.join(".");
@@ -1630,7 +1635,7 @@ function shortStem(addr){
   const n=a.match(/^(\d{1,6})\b/);
   return n?n[1]:(S.prefix||"site");
 }
-function inspFileName(){
+function tourTitleStem(){
   const stem=shortStem(S.meta.address||(S.building&&S.building.address)||"");
   let title=String(S.meta.name||"").trim()||"FieldCapture";
   title=title.replace(/[\\/:*?"<>|]+/g," ").replace(/\s+/g," ").trim();
@@ -1640,21 +1645,25 @@ function inspFileName(){
     if(re.test(title)) title=title.replace(re, stem+" ").replace(/\s+/g," ").trim();
     else if(!title.toLowerCase().startsWith(stem.toLowerCase())) title=(stem+" "+title).replace(/\s+/g," ").trim();
   }
-  return title+".insp360";
+  return title;
 }
-function sanitizeCloudKey(name){
+function inspFileName(){ return tourTitleStem()+".insp360"; }
+function skeletonFileName(){ return tourTitleStem()+".360skeleton"; }
+function sanitizeCloudKey(name, preferExt){
   let k=String(name||"").trim().replace(/\\/g,"/").replace(/^\/+/,"");
   if(k.includes("..")) k=k.split("/").filter(p=>p&&p!=="..").join("/");
   k=k.replace(/[\u0000-\u001f\u007f]/g,"");
-  if(!k) k="tour.insp360";
-  if(!/\.insp360$/i.test(k)) k+=".insp360";
-  if(k.length>512) k=k.slice(0,504)+".insp360";
+  const defExt=preferExt==="skeleton"?".360skeleton":".insp360";
+  if(!k) k="tour"+defExt;
+  else if(!/\.(insp360|360skeleton)$/i.test(k)) k+=defExt;
+  if(k.length>512) k=k.slice(0,512-defExt.length)+defExt;
   return k;
 }
-function cloudObjectKey(){
+function cloudObjectKey(kind){
   const addr=String(S.meta.address||(S.building&&S.building.address)||"tours").trim()
     .replace(/[\\/:*?"<>|]+/g," ").replace(/\s+/g," ").trim()||"tours";
-  return sanitizeCloudKey(addr+"/"+inspFileName());
+  const file=kind==="skeleton"?skeletonFileName():inspFileName();
+  return sanitizeCloudKey(addr+"/"+file, kind==="skeleton"?"skeleton":"insp360");
 }
 function buildShootLog(){
   if(!S.sessionStarted) S.sessionStarted=new Date().toISOString();
@@ -1824,16 +1833,62 @@ async function buildSkeletonInsp360Blob(onProgress, statusOpt){
   if(onProgress) onProgress(total, total, "Writing tour.json");
   return zip.generateAsync({ type:"blob", compression:"STORE", streamFiles:true });
 }
-async function exportSkeleton(){
+/** Drawing + pins + building only — never packs media. */
+function serializeSkeletonDraft(){
+  const p=serialize();
+  p.pins=(p.pins||[]).map(pin=>({...pin, photoId:null, shotNo:null, ts:null, gps:null}));
+  p.shotSeq=0;
+  return p;
+}
+function buildShootLogSkeleton(){
+  const log=buildShootLog();
+  log.shots=[];
+  log.nextShot=1;
+  log.pins=(log.pins||[]).map(pin=>({...pin, photoId:null, shotIndex:null, ts:null, gps:null}));
+  return log;
+}
+function buildTourJson360Skeleton(){
+  const tour=buildTourJsonSkeleton("skeleton");
+  if(tour.photoPins) tour.photoPins=tour.photoPins.map(pp=>({...pp, image:null}));
+  if(tour.plan&&tour.plan.plans){
+    for(const pl of tour.plan.plans){
+      if(!pl.markers) continue;
+      pl.markers=pl.markers.map(m=>{
+        const o={x:m.x, y:m.y, label:m.label||"", kind:m.kind||"pano"};
+        if(m.target) o.target=m.target;
+        if(m.info) o.info=m.info;
+        return o;
+      });
+    }
+  }
+  return tour;
+}
+async function build360SkeletonBlob(onProgress){
+  if(!window.JSZip) throw new Error("JSZip missing");
+  if(!S.pins.length) throw new Error("Place at least one marker first");
+  const zip=new JSZip();
+  const tour=buildTourJson360Skeleton();
+  zip.file("tour.json", JSON.stringify(tour,null,2), { compression:"STORE" });
+  zip.file("shoot-log.json", JSON.stringify(buildShootLogSkeleton(),null,2), { compression:"STORE" });
+  zip.file("capture-draft.json", JSON.stringify(serializeSkeletonDraft(),null,2), { compression:"STORE" });
+  if(S.pdfBytes){
+    const name=S.pdfName||(S.planKind==="img"?"plan.png":"plan.pdf");
+    zip.file(name, S.pdfBytes, { compression:"STORE" });
+  }
+  if(onProgress) onProgress(1, 1, "Writing 360skeleton");
+  return zip.generateAsync({ type:"blob", compression:"STORE", streamFiles:true });
+}
+async function save360Skeleton(){
   try{
     if(!S.pins.length){ toast("Place markers first"); return; }
-    toast("Building skeleton .insp360…", 3000);
-    const blob=await buildSkeletonInsp360Blob();
-    const name=inspFileName();
+    toast("Building 360skeleton…", 3000);
+    const blob=await build360SkeletonBlob();
+    const name=skeletonFileName();
     dl(blob, name);
-    toast("Saved "+name+" (skeleton — hydrate photos on PC)");
+    toast("Saved "+name);
   }catch(e){ toast(String(e.message||e)); }
 }
+async function exportSkeleton(){ return save360Skeleton(); }
 function cloudApiOrigin(){
   const host=(location.hostname||"").toLowerCase();
   if(/workers\.dev$/i.test(host)) return location.origin;
@@ -1890,7 +1945,7 @@ async function refreshCloudAuth(){
     setNote("ok","Signed in as "+(me.email||me.name||"user")+(me.role?" · "+me.role:""));
     return me;
   }catch(e){
-    setNote("bad","Cloud unreachable — export skeleton and upload from PC.");
+    setNote("bad","Cloud unreachable — save 360skeleton locally and upload from PC.");
     return null;
   }
 }
@@ -1914,7 +1969,7 @@ window.onAndroidCloudReturned=async function(){
 async function uploadBlobPut(key, blob, contentType, onProgress){
   // Native Android: stage in cache (chunked) then PUT with WebView cookies
   if(window.AndroidCloud && typeof AndroidCloud.beginCache==="function" && typeof AndroidCloud.uploadCache==="function"){
-    const name="skel_"+Date.now()+".insp360";
+    const name="up_"+Date.now()+(/\.(360skeleton|insp360)$/i.exec(key)?.[0]||".insp360");
     const begin=JSON.parse(AndroidCloud.beginCache(name)||"{}");
     if(!begin.ok) throw new Error(begin.error||"Cache begin failed");
     const buf=new Uint8Array(await blob.arrayBuffer());
@@ -1979,16 +2034,16 @@ async function uploadSkeletonToCloud(){
       toast("Sign in to cloud first (email code), then retry");
       return;
     }
-    toast("Building skeleton…", 4000);
-    const blob=await buildSkeletonInsp360Blob(null, "skeleton");
-    const key=cloudObjectKey();
-    toast("Uploading "+inspFileName()+"…", 6000);
+    toast("Building 360skeleton…", 4000);
+    const blob=await build360SkeletonBlob();
+    const key=cloudObjectKey("skeleton");
+    toast("Uploading "+skeletonFileName()+"…", 6000);
     const res=await uploadBlobPut(key, blob, "application/zip");
     if(!res.ok) throw new Error("Upload failed ("+res.status+")");
-    const tourText=JSON.stringify(buildTourJsonSkeleton("skeleton"),null,2);
+    const tourText=JSON.stringify(buildTourJson360Skeleton(),null,2);
     const ok=await uploadTourSidecar(key, tourText);
     if(!ok) toast("Archive uploaded; sidecar failed — open in viewer and Save");
-    else toast("Cloud skeleton uploaded ✓");
+    else toast("360skeleton uploaded to cloud ✓");
     const note=$("#cloudAuthNote");
     if(note){ note.className="ok"; note.style.color=""; note.textContent="Uploaded · "+key; }
     refreshCloudProjects();
@@ -2004,9 +2059,25 @@ async function saveTourToCloud(){
       return;
     }
     const status=desiredCaptureStatus();
+    if(status==="skeleton"){
+      toast("Building 360skeleton…", 4000);
+      const blob=await build360SkeletonBlob();
+      const key=cloudObjectKey("skeleton");
+      toast("Uploading to cloud…", 8000);
+      const res=await uploadBlobPut(key, blob, "application/zip");
+      if(!res.ok) throw new Error("Upload failed ("+res.status+")");
+      const tourText=JSON.stringify(buildTourJson360Skeleton(),null,2);
+      const ok=await uploadTourSidecar(key, tourText);
+      if(!ok) toast("Archive uploaded; sidecar failed");
+      else toast("Saved 360skeleton to cloud ✓");
+      const note=$("#cloudAuthNote");
+      if(note){ note.className="ok"; note.style.color=""; note.textContent="Cloud · "+key; }
+      openCloudProjects(true);
+      return;
+    }
     toast("Building tour capture…", 4000);
     const blob=await buildSkeletonInsp360Blob(null, status);
-    const key=cloudObjectKey();
+    const key=cloudObjectKey("insp360");
     toast("Uploading to cloud…", 8000);
     const res=await uploadBlobPut(key, blob, "application/zip");
     if(!res.ok) throw new Error("Upload failed ("+res.status+")");
@@ -2024,7 +2095,7 @@ async function saveTourToCloud(){
 function escHtml(s){ return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
 function tourTitleFromKey(key){
   const base=String(key||"").split("/").pop()||key||"Tour";
-  return base.replace(/\.insp360$/i,"");
+  return base.replace(/\.(insp360|360skeleton)$/i,"");
 }
 function fmtWhen(iso){
   if(!iso) return "";
@@ -2068,7 +2139,7 @@ async function cloudListTours(){
 }
 async function cloudDownloadTourBlob(key){
   if(window.AndroidCloud && typeof AndroidCloud.downloadTour==="function"){
-    const name="dl_"+Date.now()+".insp360";
+    const name="dl_"+Date.now()+(/\.(360skeleton|insp360)$/i.exec(key)?.[0]||".insp360");
     const start=JSON.parse(AndroidCloud.downloadTour(key, name)||"{}");
     if(!start.ok) throw new Error(start.error||("Download failed ("+(start.status||"?")+")"));
     const size=Number(start.size||0);
@@ -2130,11 +2201,11 @@ async function refreshCloudProjects(){
       return;
     }
     list.innerHTML=tours.map(t=>{
-      const st=statusLabel(t.status);
+      const st=/\.360skeleton$/i.test(t.key)?"skeleton":statusLabel(t.status);
       const canEdit=t.permission==="edit"||t.permission==="admin"||!t.permission;
       return `<div class="cprow" data-key="${escHtml(t.key)}">
         <div class="ttl">${escHtml(tourTitleFromKey(t.key))}</div>
-        <div class="meta"><span class="chip ${st}">${st.replace("_"," ")}</span><span>${escHtml(fmtWhen(t.uploaded))}</span></div>
+        <div class="meta"><span class="chip ${st}">${st==="skeleton"?"360skeleton":st.replace("_"," ")}</span><span>${escHtml(fmtWhen(t.uploaded))}</span></div>
         <div class="cacts">
           <button class="btn primary" data-act="open">Open</button>
           <button class="btn" data-act="done"${st==="complete"?" disabled":""}>Done</button>
@@ -2427,20 +2498,21 @@ async function loadProjectFile(file, opts){
   opts=opts||{};
   try{
     const name=(file.name||"").toLowerCase();
-    const isArchive=/\.(zip|insp360)$/i.test(name);
+    const isArchive=/\.(zip|insp360|360skeleton)$/i.test(name);
+    // .insp360 always opens as 360skeleton (strip photos). .360skeleton never has media.
+    const stripPhotos=!!opts.reshoot || /\.(insp360|360skeleton)$/i.test(name);
     if(isArchive){
       const zip=await JSZip.loadAsync(file);
       const pj=zip.file("project.json")||zip.file("capture-draft.json");
       if(pj){
         const proj=JSON.parse(await pj.async("string"));
         await idbClear("photos");
-        // Reshoot from cloud: keep pin layout, drop attached photos so SHOOT can run again.
-        if(opts.reshoot){
-          proj.pins=(proj.pins||[]).map(p=>({...p, photoId:null, shotNo:null, ts:null}));
+        if(stripPhotos){
+          proj.pins=(proj.pins||[]).map(p=>({...p, photoId:null, shotNo:null, ts:null, gps:null}));
           proj.shotSeq=0;
         }
         await restore(proj);
-        if(!opts.reshoot){
+        if(!stripPhotos){
           for(const p of S.pins){
             if(!p.photoId)continue;
             const match=Object.keys(zip.files).find(k=>!zip.files[k].dir&&(k.endsWith("/"+p.name+".jpg")||k===p.name+".jpg"));
@@ -2472,14 +2544,18 @@ async function loadProjectFile(file, opts){
             }catch(e){ console.warn(e); }
           }
         }
-        refreshPins();openPinList();toast(opts.reshoot?"Opened for reshoot ✓":"Tour capture loaded ✓");
+        refreshPins();openPinList();
+        if(/\.360skeleton$/i.test(name)) toast("360skeleton loaded ✓");
+        else if(stripPhotos) toast("Opened as 360skeleton ✓");
+        else toast("Tour capture loaded ✓");
         return;
       }
       const tj=zip.file("tour.json");
       if(!tj){toast("No project.json / tour.json in archive");return;}
       const tour=JSON.parse(await tj.async("string"));
       const r=await applyTourJson(tour);
-      toast("Opened from tour.json · "+r.pins+" pins");
+      if(!r.hasPlan) await loadFloorPlanFromZip(zip);
+      toast((/\.360skeleton$/i.test(name)?"360skeleton":"Opened from tour.json")+" · "+r.pins+" pins");
     }else{
       const proj=JSON.parse(await file.text());
       await restore(proj);toast("Project loaded (photos not in .json)");
@@ -2690,7 +2766,10 @@ $("#cloudSignIn").onclick=()=>openCloudSignIn();
 $("#saveTourCapture").onclick=()=>{closeSheet("#menuSheet");exportZip();};
 $("#saveTourCloud").onclick=()=>{closeSheet("#menuSheet");saveTourToCloud();};
 $("#loadTourCapture").onclick=()=>{closeSheet("#menuSheet");$("#projFile").click();};
+$("#save360Skeleton").onclick=()=>{closeSheet("#menuSheet");save360Skeleton();};
+$("#load360Skeleton").onclick=()=>{closeSheet("#menuSheet");$("#skelFile").click();};
 $("#projFile").onchange=async e=>{const f=e.target.files[0];if(f)await loadProjectFile(f);e.target.value="";};
+$("#skelFile").onchange=async e=>{const f=e.target.files[0];if(f)await loadProjectFile(f,{reshoot:true});e.target.value="";};
 $("#projRailBtn").onclick=()=>openCloudProjects(true);
 $("#cloudRailClose").onclick=closeCloudProjects;
 $("#cloudScrim").onclick=closeCloudProjects;

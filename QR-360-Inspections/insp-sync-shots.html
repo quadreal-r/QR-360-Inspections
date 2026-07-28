@@ -36,13 +36,13 @@
 <body>
   <h1>QR<span>360</span> PC sync / hydrate</h1>
   <p class="sub">
-    Match field <b>shoot log</b> or a <b>skeleton .insp360</b> (markers without photos) to JPGs downloaded from the X5.
-    Rule: <b>shot N = Nth photo</b> sorted by capture time (fallback: file name).
+    Match field <b>shoot log</b> or a <b>360skeleton</b> (drawing + pins, no photos) to JPGs downloaded from the X5.
+    Rule: <b>shot N = Nth photo</b> sorted by capture time (fallback: file name). Output is a hydrated <b>.insp360</b>.
   </p>
 
   <div class="card">
-    <label>1. Shoot log or skeleton project (.json / .zip / .insp360)</label>
-    <input type="file" id="logFile" accept=".json,.zip,.insp360,application/json,application/zip">
+    <label>1. Shoot log or 360skeleton (.json / .zip / .360skeleton / .insp360)</label>
+    <input type="file" id="logFile" accept=".json,.zip,.360skeleton,.insp360,application/json,application/zip">
     <div class="note" id="logStatus">No project loaded.</div>
   </div>
 
@@ -75,7 +75,7 @@
 <script>
 const $=s=>document.querySelector(s);
 let LOG=null, PLAN_BYTES=null, PLAN_NAME=null, PLAN_KIND=null, DRAFT=null;
-let TOUR=null; // existing tour.json from skeleton .insp360
+let TOUR=null; // existing tour.json from 360skeleton / skeleton archive
 let SKEL_ZIP=null; // original skeleton zip (to preserve other entries)
 let PHOTOS=[]; // {file, name, lastMod, time, viaExif, url}
 let MATCHES=[]; // {shot, pin, file}
@@ -239,15 +239,15 @@ $("#logFile").onchange=async e=>{
   const f=e.target.files&&e.target.files[0]; if(!f) return;
   LOG=null; PLAN_BYTES=null; DRAFT=null; TOUR=null; SKEL_ZIP=null; MATCHES=[];
   try{
-    if(/\.(zip|insp360)$/i.test(f.name)){
+    if(/\.(zip|insp360|360skeleton)$/i.test(f.name)){
       await loadSkeletonZip(f);
     } else {
       LOG=JSON.parse(await f.text());
     }
-    if(!LOG||LOG.type!=="insp360-shoot-log") throw new Error("Not an insp360-shoot-log / skeleton project");
+    if(!LOG||LOG.type!=="insp360-shoot-log") throw new Error("Not an insp360-shoot-log / 360skeleton project");
     const n=(LOG.shots||[]).length;
-    const skel=TOUR&&TOUR.meta&&(TOUR.meta.status==="skeleton"||TOUR.meta.pendingPhotos);
-    const badge=skel?' <span class="badge skel">skeleton</span>':'';
+    const skel=TOUR&&TOUR.meta&&(TOUR.meta.status==="skeleton"||TOUR.meta.pendingPhotos)||/\.360skeleton$/i.test(f.name);
+    const badge=skel?' <span class="badge skel">360skeleton</span>':'';
     toast($("#logStatus"), `Loaded ${n} shot slot(s) · ${LOG.project&&LOG.project.name||TOUR&&TOUR.meta&&TOUR.meta.name||"project"} · prefix ${LOG.project&&LOG.project.prefix||"?"}`, true);
     $("#logStatus").innerHTML=$("#logStatus").textContent+badge;
     $("#matchBtn").disabled=!PHOTOS.length;

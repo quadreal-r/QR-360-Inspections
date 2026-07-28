@@ -151,7 +151,7 @@ function sanitizeKey(key) {
     .replace(/\\/g, '/')
     .replace(/^\/+/, '')
   if (!k || k.includes('..')) return null
-  if (!/\.insp360$/i.test(k)) k += '.insp360'
+  if (!/\.(insp360|360skeleton)$/i.test(k)) k += '.insp360'
   if (k.length > 512) return null
   return k
 }
@@ -401,13 +401,16 @@ async function listTours(env, prefix) {
   for (const o of objects) {
     const st = o.customMetadata?.captureStatus
     if (!st) continue
-    if (/\.insp360$/i.test(o.key)) statusFromList.set(o.key, normalizeCaptureStatus(st))
+    if (/\.(insp360|360skeleton)$/i.test(o.key)) statusFromList.set(o.key, normalizeCaptureStatus(st))
     else if (/\.tour\.json$/i.test(o.key)) {
-      statusFromList.set(o.key.replace(/\.tour\.json$/i, '.insp360'), normalizeCaptureStatus(st))
+      const stem = o.key.replace(/\.tour\.json$/i, '')
+      const norm = normalizeCaptureStatus(st)
+      statusFromList.set(stem + '.insp360', norm)
+      statusFromList.set(stem + '.360skeleton', norm)
     }
   }
   const tours = objects
-    .filter((o) => /\.insp360$/i.test(o.key))
+    .filter((o) => /\.(insp360|360skeleton)$/i.test(o.key))
     .map((o) => {
       const companion = coverCompanionKey(o.key)
       const hasCover = coverKeys.has(companion)
@@ -418,7 +421,7 @@ async function listTours(env, prefix) {
         etag: o.etag || null,
         hasCover,
         coverKey: hasCover ? companion : null,
-        status: statusFromList.get(o.key) || null,
+        status: statusFromList.get(o.key) || (/\.360skeleton$/i.test(o.key) ? 'skeleton' : null),
       }
     })
     .sort((a, b) => String(b.uploaded || '').localeCompare(String(a.uploaded || '')))

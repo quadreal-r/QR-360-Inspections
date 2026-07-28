@@ -9,17 +9,17 @@ const LOC_SIG = 0x04034b50
 const MAX_PREVIEW_COMP = 8 * 1024 * 1024
 
 export function coverCompanionKey(tourKey) {
-  return String(tourKey || '').replace(/\.insp360$/i, '') + '.cover.jpg'
+  return String(tourKey || '').replace(/\.(insp360|360skeleton)$/i, '') + '.cover.jpg'
 }
 
 /** Pin/map sidecar next to a tour: `building/tour.insp360` → `building/tour.tour.json` */
 export function tourCompanionKey(tourKey) {
-  return String(tourKey || '').replace(/\.(insp360|zip)$/i, '') + '.tour.json'
+  return String(tourKey || '').replace(/\.(insp360|360skeleton|zip)$/i, '') + '.tour.json'
 }
 
 /** Prefix for per-photo blur overlays: `Tour.insp360` → `Tour.photos/` */
 export function photosPrefix(tourKey) {
-  return String(tourKey || '').replace(/\.(insp360|zip)$/i, '') + '.photos/'
+  return String(tourKey || '').replace(/\.(insp360|360skeleton|zip)$/i, '') + '.photos/'
 }
 
 /** Sanitize a photo basename for overlay keys (no path segments). */

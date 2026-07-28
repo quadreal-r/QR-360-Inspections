@@ -125,7 +125,7 @@ function sanitizeKey(raw) {
     /* keep */
   }
   if (!k || k.includes('..')) return null
-  if (!/\.insp360$/i.test(k)) k += '.insp360'
+  if (!/\.(insp360|360skeleton)$/i.test(k)) k += '.insp360'
   if (k.length > 512) return null
   return k
 }
@@ -198,7 +198,7 @@ async function listTours(prefix) {
     objects.filter((o) => /\.cover\.jpe?g$/i.test(o.Key)).map((o) => o.Key),
   )
   const tours = objects
-    .filter((o) => /\.insp360$/i.test(o.Key))
+    .filter((o) => /\.(insp360|360skeleton)$/i.test(o.Key))
     .map((o) => {
       const companion = coverCompanionKey(o.Key)
       const hasCover = coverKeys.has(companion)
@@ -209,12 +209,13 @@ async function listTours(prefix) {
         etag: o.ETag || null,
         hasCover,
         coverKey: hasCover ? companion : null,
-        status: null,
+        status: /\.360skeleton$/i.test(o.Key) ? 'skeleton' : null,
       }
     })
   tours.sort((a, b) => String(b.uploaded || '').localeCompare(String(a.uploaded || '')))
   await Promise.all(
     tours.map(async (t) => {
+      if (t.status) return
       t.status = await readCaptureStatus(t.key)
     }),
   )
