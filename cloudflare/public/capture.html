@@ -495,14 +495,6 @@
         <div class="note" id="cloudAuthNote" style="margin-top:8px"></div>
       </div>
 
-      <div class="fld"><label>360skeleton</label>
-        <div class="row2">
-          <button class="btn" id="load360Skeleton">Load</button>
-          <button class="btn" id="download360Skeleton">Download</button>
-        </div>
-        <div class="note" style="margin-top:8px">Use <b>Cloud → Save to cloud</b> to upload. Load / Download are for local .360skeleton files.</div>
-      </div>
-
       <div class="fld"><label>Project</label>
         <button class="btn primary" id="openProjBtn" style="width:100%">Project info</button>
       </div>
@@ -543,7 +535,6 @@
 <input type="file" id="photoCapture" accept="image/*" capture="environment" style="display:none">
 <input type="file" id="matchFiles" accept="image/*" multiple style="display:none">
 <input type="file" id="dbFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none">
-<input type="file" id="skelFile" accept=".360skeleton,.insp360,.zip,application/zip,application/octet-stream" style="display:none">
 <div class="toast" id="toast"></div>
 <div id="matchZoom"><img alt=""></div>
 <div id="picPreview">
@@ -589,7 +580,7 @@ const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;}
 function toast(m,ms=1900){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),ms);}
 
 /* ---------- version (each segment rolls over at 99: 1.1.99 → 1.2.0, 1.99.x → 2.0.0) ---------- */
-const VERSION=[1,0,57];
+const VERSION=[1,0,58];
 function bumpVersion(v){v=v.slice();v[2]++;if(v[2]>99){v[2]=0;v[1]++;}if(v[1]>99){v[1]=0;v[0]++;}return v;}
 function verStr(v){return "QR360 Capture <b>v"+(v||VERSION).join(".")+"</b>";}
 const CAPTURE_VER=VERSION.join(".");
@@ -2851,9 +2842,6 @@ $("#pdDelete").onclick=async()=>{if(!pdPin)return;if(pdPin.photoId)await idbDel(
 
 $("#cloudSignIn").onclick=()=>openCloudSignIn();
 $("#saveTourCloud").onclick=()=>{closeSheet("#menuSheet");saveTourToCloud();};
-$("#download360Skeleton").onclick=()=>{closeSheet("#menuSheet");save360Skeleton();};
-$("#load360Skeleton").onclick=()=>{closeSheet("#menuSheet");$("#skelFile").click();};
-$("#skelFile").onchange=async e=>{const f=e.target.files[0];if(f)await loadProjectFile(f,{reshoot:true});e.target.value="";};
 $("#projRailBtn").onclick=()=>openCloudProjects(true);
 $("#cloudRailClose").onclick=closeCloudProjects;
 $("#cloudScrim").onclick=closeCloudProjects;
