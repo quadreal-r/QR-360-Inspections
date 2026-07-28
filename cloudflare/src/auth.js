@@ -74,19 +74,21 @@ function parseCookies(request) {
 }
 
 function sessionCookieHeader(value, maxAge) {
+  // SameSite=None so Capture on GitHub Pages / Android WebView can call the API
+  // with credentials:include (Lax cookies are not sent on cross-site XHR/fetch).
   const parts = [
     `${SESSION_COOKIE}=${encodeURIComponent(value)}`,
     'Path=/',
     'HttpOnly',
     'Secure',
-    'SameSite=Lax',
+    'SameSite=None',
   ]
   if (typeof maxAge === 'number') parts.push(`Max-Age=${maxAge}`)
   return parts.join('; ')
 }
 
 export function clearSessionCookieHeader() {
-  return `${SESSION_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`
+  return `${SESSION_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=0`
 }
 
 export async function createSessionToken(email, env) {
@@ -405,6 +407,46 @@ export async function handleAuthApi(request, env, path) {
       /* telemetry must not block logout */
     }
     return json({ ok: true }, 200, { 'Set-Cookie': clearSessionCookieHeader() })
+  }
+
+  // First-party bootstrap for Capture (GitHub Pages / Android): re-issue the session
+  // cookie as SameSite=None so cross-origin credentialed API calls work.
+  if (path === '/api/auth/ensure' && (request.method === 'GET' || request.method === 'POST')) {
+    const url = new URL(request.url)
+    const wantHtml =
+      url.searchParams.get('html') === '1' ||
+      String(request.headers.get('Accept') || '').includes('text/html')
+    const sess = await verifySession(request, env)
+    if (!sess.ok) {
+      if (wantHtml) {
+        return Response.redirect(new URL('/', url).toString(), 302)
+      }
+      return json({ ok: false, error: sess.error || 'Sign in required' }, 401)
+    }
+    try {
+      const token = await createSessionToken(sess.email, env)
+      const cookie = sessionCookieHeader(token, SESSION_TTL_SEC)
+      if (wantHtml) {
+        const email = String(sess.email || '').replace(/[<>&"]/g, '')
+        const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Signed in</title>
+<style>body{font:15px/1.45 system-ui,sans-serif;background:#0c1219;color:#e8eef4;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0;padding:24px;text-align:center}
+b{color:#3fa9ff}</style></head><body>
+<div><p>Signed in as <b>${email}</b></p><p>You can close this window and return to Capture.</p></div>
+<script>try{setTimeout(function(){window.close()},900)}catch(e){}</script>
+</body></html>`
+        return new Response(html, {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-store',
+            'Set-Cookie': cookie,
+          },
+        })
+      }
+      return json({ ok: true, email: sess.email }, 200, { 'Set-Cookie': cookie })
+    } catch (err) {
+      return json({ error: err?.message || 'Could not refresh session' }, 500)
+    }
   }
 
   return null

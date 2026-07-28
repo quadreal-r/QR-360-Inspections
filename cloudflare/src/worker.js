@@ -105,6 +105,7 @@ function corsHeaders(request) {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie, Range, X-Capture-Status, X-Insp360-Email, X-HTTP-Method-Override',
     'Access-Control-Expose-Headers':
       'ETag, Content-Length, Content-Type, Content-Range, Accept-Ranges, X-Tour-Key, X-Cover-Source',
+    'Vary': 'Origin',
   }
 }
 

@@ -594,7 +594,7 @@ const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;}
 function toast(m,ms=1900){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),ms);}
 
 /* ---------- version (each segment rolls over at 99: 1.1.99 → 1.2.0, 1.99.x → 2.0.0) ---------- */
-const VERSION=[1,0,52];
+const VERSION=[1,0,53];
 function bumpVersion(v){v=v.slice();v[2]++;if(v[2]>99){v[2]=0;v[1]++;}if(v[1]>99){v[1]=0;v[0]++;}return v;}
 function verStr(v){return "QR360 Capture <b>v"+(v||VERSION).join(".")+"</b>";}
 const CAPTURE_VER=VERSION.join(".");
@@ -1946,16 +1946,30 @@ async function refreshCloudAuth(){
   }
 }
 function openCloudSignIn(){
-  const url=CLOUD_API_HOSTED+"/";
+  // First-party ensure page re-issues the session cookie as SameSite=None so
+  // Capture (GitHub Pages / other origins) can call the API with credentials.
+  const ensureUrl=CLOUD_API_HOSTED+"/api/auth/ensure?html=1";
   if(window.AndroidCloud && typeof AndroidCloud.openLogin==="function"){
-    AndroidCloud.openLogin(url);
+    AndroidCloud.openLogin(ensureUrl);
+    toast("Sign in with email code — return here when done", 5000);
     return;
   }
-  const w=window.open(url,"_blank","noopener");
+  const w=window.open(ensureUrl,"qr360_cloud_signin","noopener,width=480,height=720");
   if(!w){ toast("Allow pop-ups to sign in"); return; }
-  const t=setInterval(()=>{
-    if(!w||w.closed){ clearInterval(t); refreshCloudAuth(); }
+  toast("Complete sign-in in the popup, then close it", 6000);
+  const t=setInterval(async()=>{
+    if(!w||w.closed){
+      clearInterval(t);
+      const me=await refreshCloudAuth();
+      if(me) toast("Signed in ✓");
+      else toast("Still not signed in — use Sign in again, then retry Save");
+    }
   },800);
+  const onFocus=async()=>{
+    const me=await refreshCloudAuth();
+    if(me){ window.removeEventListener("focus", onFocus); toast("Signed in ✓"); }
+  };
+  window.addEventListener("focus", onFocus);
 }
 window.onAndroidCloudReturned=async function(){
   const me=await refreshCloudAuth();
