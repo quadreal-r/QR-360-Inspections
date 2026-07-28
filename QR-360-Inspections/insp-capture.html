@@ -593,7 +593,7 @@ const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;}
 function toast(m,ms=1900){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),ms);}
 
 /* ---------- version (each segment rolls over at 99: 1.1.99 → 1.2.0, 1.99.x → 2.0.0) ---------- */
-const VERSION=[1,0,55];
+const VERSION=[1,0,56];
 function bumpVersion(v){v=v.slice();v[2]++;if(v[2]>99){v[2]=0;v[1]++;}if(v[1]>99){v[1]=0;v[0]++;}return v;}
 function verStr(v){return "QR360 Capture <b>v"+(v||VERSION).join(".")+"</b>";}
 const CAPTURE_VER=VERSION.join(".");
@@ -800,6 +800,20 @@ function saveProject(){
    ============================================================ */
 // A plan is ready once either a PDF document or an image element is loaded.
 function planReady(){return !!(S.pdfDoc||S.imgEl);}
+
+/** Drop the current drawing from memory, canvas, and IDB so a newly opened project cannot keep the old map. */
+async function clearPlan(){
+  S.pdfDoc=null; S.page=null; S.imgEl=null; S.pdfBytes=null; S.pdfName=null;
+  S.planKind=null; S.pageCount=1; S.pageNum=1; S.pts=null;
+  try{
+    const c=$("#pdfCanvas");
+    if(c){ const ctx=c.getContext("2d"); if(ctx) ctx.clearRect(0,0,c.width||0,c.height||0); c.width=0; c.height=0; }
+  }catch(_){}
+  const page=$("#page"); if(page) page.style.display="none";
+  const nav=$("#pageNav"); if(nav) nav.style.display="none";
+  try{ await idbDel("kv","pdf"); }catch(_){}
+  updateHint();
+}
 
 // Show/hide the home-screen empty state and switch its message + loaders
 // depending on whether the project info has been filled out yet.
@@ -1557,6 +1571,7 @@ function tourJsonToProject(tour){
 async function applyTourJson(tour){
   const packed=tourJsonToProject(tour);
   await idbClear("photos");
+  await clearPlan();
   await restore(packed.proj);
   const hasPlan=await loadFloorPlanFromPacked(packed);
   refreshPins();updateActionBar();updateHint();
@@ -2304,6 +2319,9 @@ async function refreshCloudProjects(){
 async function openCloudTour(key){
   try{
     toast("Opening plan & pins…", 8000);
+    // Always leave the previous drawing behind before swapping projects.
+    await clearPlan();
+    S.pins=[]; S.selPin=null; refreshPins();
     let tour=null;
     try{ tour=await cloudFetchTourJson(key); }catch(e){ console.warn(e); }
     let pinCount=0;
@@ -2313,7 +2331,7 @@ async function openCloudTour(key){
       pinCount=r.pins;
       hasPlan=r.hasPlan;
     }
-    // Sidecar often has markers only — floor plan usually lives inside the .insp360 archive.
+    // Sidecar often has markers only — floor plan usually lives inside the archive.
     if(!hasPlan){
       toast(pinCount?"Pins loaded — downloading drawing…":"Downloading project archive…", 12000);
       const blob=await cloudDownloadTourBlob(key);
@@ -2322,9 +2340,10 @@ async function openCloudTour(key){
         const draft=zip.file("project.json")||zip.file("capture-draft.json");
         if(draft){
           const proj=JSON.parse(await draft.async("string"));
-          proj.pins=(proj.pins||[]).map(p=>({...p, photoId:null, shotNo:null, ts:null}));
+          proj.pins=(proj.pins||[]).map(p=>({...p, photoId:null, shotNo:null, ts:null, gps:null}));
           proj.shotSeq=0;
           await idbClear("photos");
+          await clearPlan();
           await restore(proj);
           pinCount=S.pins.length;
         }else{
@@ -2594,6 +2613,7 @@ async function loadProjectFile(file, opts){
       if(pj){
         const proj=JSON.parse(await pj.async("string"));
         await idbClear("photos");
+        await clearPlan();
         if(stripPhotos){
           proj.pins=(proj.pins||[]).map(p=>({...p, photoId:null, shotNo:null, ts:null, gps:null}));
           proj.shotSeq=0;
