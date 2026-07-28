@@ -21,7 +21,8 @@
  *   PUT  /api/tours/<key>/mpu/<uploadId>/parts/n — upload one part
  *   POST /api/tours/<key>/mpu/<uploadId>/complete
  *   DELETE /api/tours/<key>/mpu/<uploadId>       — abort
- *   DELETE /api/tours/<key>                      — admin only (archive + companions + grants)
+ *   DELETE /api/tours/<key>                      — admin or edit permission
+ *   PATCH /api/tours/<key>/status                — captureStatus skeleton|in_progress|complete
  *   /api/admin/*  (admin role only; includes POST /api/admin/notify,
  *                 GET /api/admin/activity-log, POST /api/admin/activity-log/send)
  * Cron: daily activity digest → quadreal.rpiwin@gmail.com
@@ -101,7 +102,7 @@ function corsHeaders(request) {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Methods': 'GET, HEAD, PUT, DELETE, PATCH, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie, Range',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie, Range, X-Capture-Status, X-Insp360-Email, X-HTTP-Method-Override',
     'Access-Control-Expose-Headers':
       'ETag, Content-Length, Content-Type, Content-Range, Accept-Ranges, X-Tour-Key, X-Cover-Source',
   }
@@ -287,6 +288,69 @@ async function assertCanPutTour(env, user, key) {
   return { ok: true }
 }
 
+/** Capture workflow status stored on tour.json / object customMetadata. */
+const CAPTURE_STATUSES = new Set(['skeleton', 'in_progress', 'complete'])
+function normalizeCaptureStatus(raw, fallback = 'in_progress') {
+  const s = String(raw || '').trim().toLowerCase()
+  if (s === 'completed') return 'complete'
+  if (CAPTURE_STATUSES.has(s)) return s
+  return fallback
+}
+
+async function readCaptureStatus(env, tourKey) {
+  try {
+    const side = await env.INSP360_BUCKET.head(tourCompanionKey(tourKey))
+    const fromSide = side?.customMetadata?.captureStatus
+    if (fromSide) return normalizeCaptureStatus(fromSide)
+  } catch (_) {
+    /* ignore */
+  }
+  try {
+    const main = await env.INSP360_BUCKET.head(tourKey)
+    const fromMain = main?.customMetadata?.captureStatus
+    if (fromMain) return normalizeCaptureStatus(fromMain)
+  } catch (_) {
+    /* ignore */
+  }
+  return 'in_progress'
+}
+
+/** Update tour.json meta.status + companion customMetadata (small object; avoids re-uploading .insp360). */
+async function writeCaptureStatus(env, user, tourKey, status) {
+  const st = normalizeCaptureStatus(status)
+  const companion = tourCompanionKey(tourKey)
+  let tour = {}
+  try {
+    const obj = await env.INSP360_BUCKET.get(companion)
+    if (obj) {
+      tour = JSON.parse(await obj.text())
+      if (!tour || typeof tour !== 'object') tour = {}
+    }
+  } catch (_) {
+    tour = {}
+  }
+  if (!tour.meta || typeof tour.meta !== 'object') tour.meta = {}
+  tour.meta.status = st
+  if (st === 'complete') {
+    tour.meta.pendingPhotos = false
+    tour.meta.completedAt = new Date().toISOString()
+  } else if (st === 'skeleton') {
+    tour.meta.pendingPhotos = true
+  } else {
+    delete tour.meta.completedAt
+  }
+  await env.INSP360_BUCKET.put(companion, JSON.stringify(tour), {
+    httpMetadata: { contentType: 'application/json; charset=utf-8' },
+    customMetadata: {
+      forTour: tourKey,
+      captureStatus: st,
+      uploadedBy: user?.email || '',
+      updatedAt: new Date().toISOString(),
+    },
+  })
+  return st
+}
+
 /** Map of cloud_key → best permission for a non-admin user */
 async function loadUserTourPermissions(env, user) {
   const map = new Map()
@@ -333,6 +397,15 @@ async function listTours(env, prefix) {
   const coverKeys = new Set(
     objects.filter((o) => /\.cover\.jpe?g$/i.test(o.key)).map((o) => o.key),
   )
+  const statusFromList = new Map()
+  for (const o of objects) {
+    const st = o.customMetadata?.captureStatus
+    if (!st) continue
+    if (/\.insp360$/i.test(o.key)) statusFromList.set(o.key, normalizeCaptureStatus(st))
+    else if (/\.tour\.json$/i.test(o.key)) {
+      statusFromList.set(o.key.replace(/\.tour\.json$/i, '.insp360'), normalizeCaptureStatus(st))
+    }
+  }
   const tours = objects
     .filter((o) => /\.insp360$/i.test(o.key))
     .map((o) => {
@@ -345,9 +418,17 @@ async function listTours(env, prefix) {
         etag: o.etag || null,
         hasCover,
         coverKey: hasCover ? companion : null,
+        status: statusFromList.get(o.key) || null,
       }
     })
     .sort((a, b) => String(b.uploaded || '').localeCompare(String(a.uploaded || '')))
+  // Fill missing status from companion/object HEAD (list often omits customMetadata)
+  await Promise.all(
+    tours.map(async (t) => {
+      if (t.status) return
+      t.status = await readCaptureStatus(env, t.key)
+    }),
+  )
   return tours
 }
 
@@ -804,6 +885,44 @@ async function handleApi(request, env) {
     return json({ tours, email: user.email, role: user.role })
   }
 
+  // PATCH /api/tours/:key/status — capture workflow status
+  // Also accept POST + X-HTTP-Method-Override: PATCH (Android HttpURLConnection).
+  const statusMatch = path.match(/^\/api\/tours\/(.+)\/status$/)
+  const statusOverride =
+    request.method === 'POST' &&
+    String(request.headers.get('X-HTTP-Method-Override') || '').toUpperCase() === 'PATCH'
+  if (statusMatch && (request.method === 'PATCH' || statusOverride)) {
+    const key = sanitizeKey(decodeKey(statusMatch[1]))
+    if (!key) return json({ error: 'Invalid tour key' }, 400)
+    const head = await env.INSP360_BUCKET.head(key)
+    if (!head) return json({ error: 'Tour not found', key }, 404)
+    if (!(await canEditTour(env, user, key))) {
+      return json({ error: 'Forbidden — edit permission required' }, 403)
+    }
+    let body = {}
+    try {
+      body = await request.json()
+    } catch (_) {
+      body = {}
+    }
+    const wanted = normalizeCaptureStatus(body?.status, '')
+    if (!CAPTURE_STATUSES.has(wanted)) {
+      return json({ error: 'status must be skeleton, in_progress, or complete' }, 400)
+    }
+    const status = await writeCaptureStatus(env, user, key, wanted)
+    try {
+      await recordEvent(env, {
+        email: user.email,
+        event_type: 'tour_status',
+        tour_key: key,
+        meta: { status },
+      })
+    } catch (_) {
+      /* telemetry must not block */
+    }
+    return json({ ok: true, key, status })
+  }
+
   // ---- Resumable multipart upload (R2) ----
   // POST /api/tours/:key/mpu
   const mpuCreate = path.match(/^\/api\/tours\/(.+)\/mpu$/)
@@ -820,6 +939,7 @@ async function handleApi(request, env) {
     }
     const size = Number(body?.size || 0)
     if (size > MAX_UPLOAD_BYTES) return json({ error: 'File too large' }, 413)
+    const captureStatus = normalizeCaptureStatus(body?.captureStatus || body?.status, 'in_progress')
     const upload = await env.INSP360_BUCKET.createMultipartUpload(key, {
       httpMetadata: {
         contentType: String(body?.contentType || 'application/zip'),
@@ -827,6 +947,7 @@ async function handleApi(request, env) {
       customMetadata: {
         uploadedBy: user.email || '',
         uploadedAt: new Date().toISOString(),
+        captureStatus,
       },
     })
     return json({
@@ -1095,13 +1216,22 @@ async function handleApi(request, env) {
       const len = Number(request.headers.get('Content-Length') || 0)
       if (len > MAX_TOUR_JSON_BYTES) return json({ error: 'Tour JSON too large' }, 413)
       if (!request.body) return json({ error: 'Empty body' }, 400)
-      await env.INSP360_BUCKET.put(companion, request.body, {
+      const text = await request.text()
+      let captureStatus = 'in_progress'
+      try {
+        const parsed = JSON.parse(text)
+        if (parsed?.meta?.status) captureStatus = normalizeCaptureStatus(parsed.meta.status)
+      } catch (_) {
+        /* keep default */
+      }
+      await env.INSP360_BUCKET.put(companion, text, {
         httpMetadata: {
           contentType: request.headers.get('Content-Type') || 'application/json; charset=utf-8',
         },
         customMetadata: {
           forTour: key,
           uploadedBy: user.email || '',
+          captureStatus,
         },
       })
       try {
@@ -1180,6 +1310,9 @@ async function handleApi(request, env) {
     const len = Number(request.headers.get('Content-Length') || 0)
     if (len > MAX_UPLOAD_BYTES) return json({ error: 'File too large' }, 413)
     if (!request.body) return json({ error: 'Empty body' }, 400)
+    const captureStatus = normalizeCaptureStatus(
+      request.headers.get('X-Capture-Status') || 'in_progress',
+    )
     await env.INSP360_BUCKET.put(key, request.body, {
       httpMetadata: {
         contentType: request.headers.get('Content-Type') || 'application/zip',
@@ -1187,6 +1320,7 @@ async function handleApi(request, env) {
       customMetadata: {
         uploadedBy: user.email || '',
         uploadedAt: new Date().toISOString(),
+        captureStatus,
       },
     })
     try {
@@ -1194,17 +1328,18 @@ async function handleApi(request, env) {
         email: user.email,
         event_type: 'tour_upload',
         tour_key: key,
-        meta: { size: len || null },
+        meta: { size: len || null, status: captureStatus },
       })
     } catch (_) {
       /* telemetry must not block upload */
     }
-    return json({ ok: true, key, uploadedBy: user.email })
+    return json({ ok: true, key, uploadedBy: user.email, status: captureStatus })
   }
 
   if (request.method === 'DELETE') {
-    if (!user || user.role !== 'admin') {
-      return json({ error: 'Forbidden — admin only' }, 403)
+    const mayDelete = user?.role === 'admin' || (await canEditTour(env, user, key))
+    if (!mayDelete) {
+      return json({ error: 'Forbidden — edit permission required' }, 403)
     }
     await env.INSP360_BUCKET.delete(key)
     try {

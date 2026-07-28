@@ -110,7 +110,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, HEAD, PUT, DELETE, PATCH, POST, OPTIONS',
   'Access-Control-Allow-Headers':
-    'Content-Type, Authorization, Cf-Access-Jwt-Assertion, X-Insp360-Email, Range',
+    'Content-Type, Authorization, Cf-Access-Jwt-Assertion, X-Insp360-Email, Range, X-Capture-Status, X-HTTP-Method-Override',
   'Access-Control-Expose-Headers':
     'ETag, Content-Length, Content-Type, Content-Range, Accept-Ranges, X-Tour-Key',
 }
@@ -209,10 +209,87 @@ async function listTours(prefix) {
         etag: o.ETag || null,
         hasCover,
         coverKey: hasCover ? companion : null,
+        status: null,
       }
     })
   tours.sort((a, b) => String(b.uploaded || '').localeCompare(String(a.uploaded || '')))
+  await Promise.all(
+    tours.map(async (t) => {
+      t.status = await readCaptureStatus(t.key)
+    }),
+  )
   return tours
+}
+
+const CAPTURE_STATUSES = new Set(['skeleton', 'in_progress', 'complete'])
+function normalizeCaptureStatus(raw, fallback = 'in_progress') {
+  const s = String(raw || '').trim().toLowerCase()
+  if (s === 'completed') return 'complete'
+  if (CAPTURE_STATUSES.has(s)) return s
+  return fallback
+}
+
+async function readCaptureStatus(tourKey) {
+  try {
+    const side = await s3.send(
+      new HeadObjectCommand({ Bucket: bucket, Key: tourCompanionKey(tourKey) }),
+    )
+    const meta = side.Metadata || {}
+    const fromSide = meta.capturestatus || meta.captureStatus
+    if (fromSide) return normalizeCaptureStatus(fromSide)
+  } catch (_) {
+    /* ignore */
+  }
+  try {
+    const main = await s3.send(new HeadObjectCommand({ Bucket: bucket, Key: tourKey }))
+    const meta = main.Metadata || {}
+    const fromMain = meta.capturestatus || meta.captureStatus
+    if (fromMain) return normalizeCaptureStatus(fromMain)
+  } catch (_) {
+    /* ignore */
+  }
+  return 'in_progress'
+}
+
+async function writeCaptureStatus(user, tourKey, status) {
+  const st = normalizeCaptureStatus(status)
+  const companion = tourCompanionKey(tourKey)
+  let tour = {}
+  try {
+    const obj = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: companion }))
+    const chunks = []
+    for await (const c of obj.Body) chunks.push(c)
+    tour = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+    if (!tour || typeof tour !== 'object') tour = {}
+  } catch (_) {
+    tour = {}
+  }
+  if (!tour.meta || typeof tour.meta !== 'object') tour.meta = {}
+  tour.meta.status = st
+  if (st === 'complete') {
+    tour.meta.pendingPhotos = false
+    tour.meta.completedAt = new Date().toISOString()
+  } else if (st === 'skeleton') {
+    tour.meta.pendingPhotos = true
+  } else {
+    delete tour.meta.completedAt
+  }
+  const body = Buffer.from(JSON.stringify(tour), 'utf8')
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: companion,
+      Body: body,
+      ContentType: 'application/json; charset=utf-8',
+      Metadata: {
+        fortour: tourKey,
+        capturestatus: st,
+        uploadedby: String(user?.email || ''),
+        updatedat: new Date().toISOString(),
+      },
+    }),
+  )
+  return st
 }
 
 async function listToursForUser(user, prefix) {
@@ -661,6 +738,32 @@ const server = http.createServer(async (req, res) => {
       return json(res, { tours, email: user.email, role: user.role })
     }
 
+    const statusMatch = pathname.match(/^\/api\/tours\/(.+)\/status$/)
+    const statusOverride =
+      req.method === 'POST' &&
+      String(req.headers['x-http-method-override'] || '').toUpperCase() === 'PATCH'
+    if (statusMatch && (req.method === 'PATCH' || statusOverride)) {
+      const key = sanitizeKey(statusMatch[1])
+      if (!key) return json(res, { error: 'Invalid tour key' }, 400)
+      try {
+        await s3.send(new HeadObjectCommand({ Bucket: bucket, Key: key }))
+      } catch (err) {
+        const st = err?.$metadata?.httpStatusCode
+        if (st === 404) return json(res, { error: 'Tour not found', key }, 404)
+        throw err
+      }
+      if (!(await canEdit(user, key))) {
+        return json(res, { error: 'Forbidden — edit permission required' }, 403)
+      }
+      const body = (await readJsonBody(req)) || {}
+      const wanted = normalizeCaptureStatus(body?.status, '')
+      if (!CAPTURE_STATUSES.has(wanted)) {
+        return json(res, { error: 'status must be skeleton, in_progress, or complete' }, 400)
+      }
+      const status = await writeCaptureStatus(user, key, wanted)
+      return json(res, { ok: true, key, status })
+    }
+
     const photosListMatch = pathname.match(/^\/api\/tours\/(.+)\/photos$/)
     if (photosListMatch) {
       const key = sanitizeKey(photosListMatch[1])
@@ -846,15 +949,27 @@ const server = http.createServer(async (req, res) => {
         const body = await readBody(req)
         if (!body.length) return json(res, { error: 'Empty body' }, 400)
         if (body.length > 8 * 1024 * 1024) return json(res, { error: 'Tour JSON too large' }, 413)
+        let captureStatus = 'in_progress'
+        try {
+          const parsed = JSON.parse(body.toString('utf8'))
+          if (parsed?.meta?.status) captureStatus = normalizeCaptureStatus(parsed.meta.status)
+        } catch (_) {
+          /* keep default */
+        }
         await s3.send(
           new PutObjectCommand({
             Bucket: bucket,
             Key: companion,
             Body: body,
             ContentType: req.headers['content-type'] || 'application/json; charset=utf-8',
+            Metadata: {
+              fortour: key,
+              uploadedby: String(user.email || ''),
+              capturestatus: captureStatus,
+            },
           }),
         )
-        return json(res, { ok: true, key: companion, tourKey: key })
+        return json(res, { ok: true, key: companion, tourKey: key, status: captureStatus })
       }
 
       return json(res, { error: 'Method not allowed' }, 405)
@@ -880,6 +995,7 @@ const server = http.createServer(async (req, res) => {
           Metadata: {
             uploadedby: String(user.email || ''),
             uploadedat: new Date().toISOString(),
+            capturestatus: normalizeCaptureStatus(body?.captureStatus || body?.status, 'in_progress'),
           },
         }),
       )
@@ -1078,20 +1194,29 @@ const server = http.createServer(async (req, res) => {
         }
         const body = await readBody(req)
         if (!body.length) return json(res, { error: 'Empty body' }, 400)
+        const captureStatus = normalizeCaptureStatus(
+          req.headers['x-capture-status'] || 'in_progress',
+        )
         await s3.send(
           new PutObjectCommand({
             Bucket: bucket,
             Key: key,
             Body: body,
             ContentType: req.headers['content-type'] || 'application/zip',
+            Metadata: {
+              uploadedby: String(user.email || ''),
+              uploadedat: new Date().toISOString(),
+              capturestatus: captureStatus,
+            },
           }),
         )
-        return json(res, { ok: true, key, uploadedBy: user.email })
+        return json(res, { ok: true, key, uploadedBy: user.email, status: captureStatus })
       }
 
       if (req.method === 'DELETE') {
-        if (!user || user.role !== 'admin') {
-          return json(res, { error: 'Forbidden — admin only' }, 403)
+        const mayDelete = user?.role === 'admin' || (await canEdit(user, key))
+        if (!mayDelete) {
+          return json(res, { error: 'Forbidden — edit permission required' }, 403)
         }
         await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }))
         try {
