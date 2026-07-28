@@ -18,6 +18,7 @@
     --ok:#25c274;         /* captured */
     --bad:#ff5252;        /* error / delete */
     --pin:#3fa9ff;        /* placed, empty */
+    --pic:#c77dff;        /* 2D picture pin */
     --accent:#3fa9ff;
     --tap:56px;
     font-synthesis:none;
@@ -49,6 +50,33 @@
   .verbar{font-size:9px;line-height:1.4;color:var(--faint);text-align:right;letter-spacing:.3px;
     padding:2px 10px;background:var(--panel);border-bottom:1px solid var(--line)}
 
+  /* ---- cloud projects rail (left) ---- */
+  #work{flex:1;display:flex;min-height:0;position:relative}
+  #cloudProjRail{width:0;flex:none;overflow:hidden;background:var(--panel);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;transition:none;z-index:25}
+  #cloudProjRail.open{width:min(280px,86vw)}
+  #cloudProjRail .railHd{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:10px 10px 8px;border-bottom:1px solid var(--line);flex:none}
+  #cloudProjRail .railHd h3{margin:0;font-size:13px;font-weight:700;letter-spacing:.3px}
+  #cloudProjRail .railBody{flex:1;overflow:auto;padding:6px 8px 12px;-webkit-overflow-scrolling:touch}
+  #cloudProjRail .railNote{font-size:11px;color:var(--faint);line-height:1.45;padding:10px 6px}
+  #cloudProjRail .cprow{border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px;background:var(--panel2)}
+  #cloudProjRail .cprow .ttl{font-size:12px;font-weight:650;line-height:1.3;word-break:break-word}
+  #cloudProjRail .cprow .meta{font-size:10px;color:var(--dim);margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  #cloudProjRail .chip{font-size:9px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;
+    padding:2px 6px;border-radius:999px;border:1px solid var(--line);color:var(--dim)}
+  #cloudProjRail .chip.complete{color:#04121f;background:var(--ok);border-color:transparent}
+  #cloudProjRail .chip.skeleton{color:var(--arm);border-color:var(--arm)}
+  #cloudProjRail .chip.in_progress{color:var(--accent);border-color:var(--accent)}
+  #cloudProjRail .cacts{display:flex;gap:6px;margin-top:8px}
+  #cloudProjRail .cacts .btn{flex:1;padding:7px 6px;font-size:11px}
+  #cloudScrim{display:none;position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:24}
+  #cloudScrim.show{display:block}
+  @media (max-width:720px){
+    #cloudProjRail{position:absolute;left:0;top:0;bottom:0;width:0;box-shadow:8px 0 24px rgba(0,0,0,.45)}
+    #cloudProjRail.open{width:min(300px,88vw)}
+  }
+
   main{flex:1;position:relative;overflow:hidden;background:#0a1119;touch-action:none}
   #viewport{position:absolute;inset:0;overflow:hidden}
   #page{position:absolute;left:0;top:0;transform-origin:0 0;background:#fff;box-shadow:0 0 0 1px #000;display:none}
@@ -64,6 +92,8 @@
   .pin.shot .num,.pin.shot .dot{background:var(--arm);color:#1a0d00}
   .pin.has .num,.pin.has .dot{background:var(--ok)}
   .pin.armed .num,.pin.armed .dot{background:var(--arm);color:#1a0d00}
+  .pin.pic:not(.has):not(.armed) .num,.pin.pic:not(.has):not(.armed) .dot{background:var(--pic);color:#1a0820}
+  .pin.pic .num{border-radius:4px}
   .pin.sel .num{outline:3px solid #fff;outline-offset:1px}
   .pin .tick{position:absolute;top:-7px;right:-7px;background:#04121f;color:#fff;border-radius:8px;
     font-size:9px;font-weight:800;padding:1px 4px;border:1px solid var(--arm)}
@@ -97,7 +127,12 @@
   .rbtn .lb{font-size:9px;letter-spacing:.3px;color:var(--dim)}
   .rbtn.on{border-color:var(--arm);background:#2a1c08}
   .rbtn.on .lb{color:var(--arm)}
+  .rbtn.on.pic{border-color:var(--pic);background:#241833}
+  .rbtn.on.pic .lb{color:var(--pic)}
   .rbtn:disabled{opacity:.35}
+  .rbtn .rdot{position:absolute;top:5px;right:5px;width:12px;height:12px;border-radius:50%;
+    background:var(--bad);border:2px solid var(--panel);pointer-events:none}
+  .rbtn .rdot.on{background:var(--ok)}
 
   /* zoom cluster bottom-right */
   #zoom{position:absolute;right:max(8px,env(safe-area-inset-right));bottom:96px;display:flex;flex-direction:column;gap:6px;z-index:20}
@@ -148,9 +183,10 @@
   .card .body{overflow:auto;padding:12px 14px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   .card .foot{padding:10px 14px;padding-bottom:max(10px,env(safe-area-inset-bottom));border-top:1px solid var(--line);display:flex;gap:8px}
 
-  input[type=text],input[type=search]{width:100%;background:var(--panel2);border:1px solid var(--line);
+  input[type=text],input[type=search],textarea{width:100%;background:var(--panel2);border:1px solid var(--line);
     border-radius:9px;padding:11px 12px;color:var(--ink);font-size:16px}
-  input:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+  textarea{min-height:84px;resize:vertical;font-family:inherit;line-height:1.35}
+  input:focus,textarea:focus{outline:2px solid var(--accent);border-color:var(--accent)}
   .filters{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
   .chip{padding:7px 11px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);font-size:12px;color:var(--dim)}
   .chip.on{background:var(--accent);color:#04121f;border-color:var(--accent);font-weight:700}
@@ -170,8 +206,11 @@
   .btn{border-radius:10px;padding:12px;font-weight:700;font-size:14px;text-align:center;
     background:var(--panel2);border:1px solid var(--line);flex:1}
   .btn.primary{background:var(--accent);color:#04121f;border-color:var(--accent)}
-  .btn.warn{background:#2a1010;color:var(--bad);border-color:#5a2020}
+  .btn.warn{background:#ff5252;color:#1a0606;border-color:#ff5252}
   .btn:active{filter:brightness(1.15)}
+  #cloudAuthNote{font-size:12px;font-weight:600;line-height:1.35;color:var(--ink)}
+  #cloudAuthNote.bad{color:#ff8a8a}
+  #cloudAuthNote.ok{color:#5ee0a0}
   .switch{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
   .switch .t{font-size:14px}
   .switch .t small{display:block;color:var(--dim);font-size:11px}
@@ -201,6 +240,19 @@
   .mrow select{width:100%;margin-top:6px;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px;font-size:13px;font-family:ui-monospace,monospace}
   #matchZoom{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:120;display:none;align-items:center;justify-content:center;padding:16px}
   #matchZoom img{max-width:100%;max-height:100%;border-radius:10px}
+  #picPreview{position:fixed;inset:0;z-index:70;background:rgba(4,8,12,.55);display:none;align-items:flex-end;justify-content:center;
+    padding:12px;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+  #picPreview.open{display:flex}
+  #picPreview .card{position:relative;width:min(360px,100%);background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.55)}
+  #picPreview .x{position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:8px;background:var(--panel2);
+    font-size:18px;display:flex;align-items:center;justify-content:center;z-index:2}
+  #picPreview .empty{height:160px;display:flex;align-items:center;justify-content:center;color:var(--faint);
+    background:var(--panel2);border:1px solid var(--line);border-radius:10px;font-size:13px;text-align:center;padding:12px}
+  #picPreview img{display:block;width:100%;max-height:42vh;object-fit:contain;border-radius:10px;background:#0a1119;
+    border:1px solid var(--line);cursor:zoom-in}
+  #picPreview .pn{font-weight:700;font-family:ui-monospace,monospace;margin-top:10px;padding-right:36px}
+  #picPreview .pmeta{font-size:12px;color:var(--dim);margin-top:4px;white-space:pre-wrap;word-break:break-word}
 
   /* camera log */
   #camState{display:flex;gap:8px;margin-bottom:8px}
@@ -222,12 +274,25 @@
 <body>
 <div id="app">
   <header>
+    <button class="hbtn" id="projRailBtn" title="Cloud projects">📁</button>
     <div class="title">INSP&nbsp;<b>360</b></div>
     <button id="bldgBtn"><span class="a" id="bldgA">Select building</span><span class="b" id="bldgB">tap to choose from portfolio</span></button>
     <button class="hbtn" id="pinsBtn" title="Pins">☰</button>
     <button class="hbtn" id="menuBtn" title="Menu">⋮</button>
   </header>
   <div id="ver" class="verbar"></div>
+
+  <div id="work">
+  <aside id="cloudProjRail" aria-label="Recent capture projects">
+    <div class="railHd">
+      <h3>Cloud projects</h3>
+      <button class="hbtn" id="cloudRailClose" title="Close" style="width:34px;height:34px;font-size:16px">✕</button>
+    </div>
+    <div class="railBody" id="cloudProjList">
+      <div class="railNote">Sign in to see recent captures on the Inspections cloud.</div>
+    </div>
+  </aside>
+  <div id="cloudScrim"></div>
 
   <main>
     <div id="viewport">
@@ -251,7 +316,8 @@
     </div></div>
 
     <div id="rail">
-      <button class="rbtn" id="addBtn"><span class="ic">📍</span><span class="lb">ADD</span></button>
+      <button class="rbtn" id="addBtn" style="position:relative"><span class="ic">📍</span><span class="lb">ADD</span><span class="rdot" id="addDot"></span></button>
+      <button class="rbtn" id="picBtn" style="position:relative"><span class="ic">🖼</span><span class="lb">PIC</span><span class="rdot" id="picDot"></span></button>
       <button class="rbtn" id="camBtn" style="position:relative"><span class="ic">📷</span><span class="lb">CAMERA</span><span id="camDot"></span></button>
     </div>
 
@@ -267,6 +333,7 @@
       <button id="pnext">›</button>
     </div>
   </main>
+  </div><!-- /work -->
 
   <div id="actionBar" class="safe">
     <div id="armWrap">
@@ -348,12 +415,32 @@
     <h2><span id="pdTitle">Pin</span> <button class="x" data-close>✕</button></h2>
     <div class="body">
       <div id="pdThumbWrap" style="text-align:center;margin-bottom:12px"></div>
-      <div class="fld"><label>Photo name</label><input type="text" id="pdName" class="mono"></div>
+      <div class="fld"><label id="pdNameLbl">Photo name</label><input type="text" id="pdName" class="mono"></div>
       <div class="fld"><label>Note (optional)</label><input type="text" id="pdNote" placeholder="e.g. RTU-3 north, roof access"></div>
+      <div class="fld" id="pdInfoFld" style="display:none"><label>Extra info</label>
+        <textarea id="pdInfo" placeholder="Condition, equipment ID, follow-up…"></textarea></div>
+      <div id="pdAttachRow" style="display:none;margin-bottom:4px">
+        <div class="row2">
+          <button class="btn primary" id="pdTake">Take photo</button>
+          <button class="btn" id="pdPick">From device</button>
+        </div>
+      </div>
     </div>
     <div class="foot">
       <button class="btn warn" id="pdDelete">Delete</button>
       <button class="btn primary" id="pdSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ATTACH SOURCE ============ -->
+<div class="sheet center" id="attachSheet">
+  <div class="card">
+    <h2>Add picture <button class="x" data-close>✕</button></h2>
+    <div class="body" style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn primary" id="attachTake">Take photo</button>
+      <button class="btn" id="attachPick">From device</button>
+      <div class="note">Use the phone camera, or pick an existing image from this device.</div>
     </div>
   </div>
 </div>
@@ -379,7 +466,7 @@
           <button class="btn primary" id="blePower">Power Off</button>
         </div>
         <button class="btn" id="bleSyncTime" style="width:100%;margin-top:6px">Sync clock</button>
-        <div class="note" style="margin-top:6px">Photos come off the card, not over Bluetooth — download them, then <b>⋮ → Import &amp; match</b>. Battery shows if your X5 exposes it over BLE.</div>
+        <div class="note" style="margin-top:6px">Photos come off the card, not over Bluetooth — download them on a PC to hydrate. Battery shows if your X5 exposes it over BLE.</div>
         <div id="bleLog" class="i" style="background:#0a1119;border:1px solid var(--line);border-radius:9px;padding:8px;height:104px;overflow:auto;font-family:ui-monospace,monospace;font-size:11px;line-height:1.5;white-space:pre-wrap;margin-top:8px">Not connected.\n</div>
       </div>
 
@@ -399,16 +486,20 @@
   <div class="card">
     <h2>Menu <button class="x" data-close>✕</button></h2>
     <div class="body">
-      <div class="fld"><label>Export</label>
+      <div class="fld"><label>Tour capture</label>
         <div class="row2">
-          <button class="btn primary" id="exportSkeleton">Export skeleton .insp360</button>
-          <button class="btn" id="exportShootLog">Export shoot log</button>
+          <button class="btn primary" id="saveTourCapture">Save Tour Capture</button>
+          <button class="btn" id="loadTourCapture">Load Tour Capture</button>
         </div>
         <div class="row2" style="margin-top:8px">
-          <button class="btn primary" id="uploadCloud">Upload skeleton to cloud</button>
+          <button class="btn primary" id="saveTourCloud">Save to cloud</button>
           <button class="btn" id="cloudSignIn">Sign in</button>
         </div>
         <div class="note" id="cloudAuthNote" style="margin-top:8px"></div>
+      </div>
+
+      <div class="fld"><label>Export</label>
+        <button class="btn" id="uploadCloud" style="width:100%">Upload skeleton to cloud</button>
       </div>
 
       <div class="fld"><label>Project</label>
@@ -417,11 +508,6 @@
           <button class="btn" id="loadPdf">Open PDF or PNG</button>
           <button class="btn" id="loadPdfUrl">From link…</button>
         </div>
-      </div>
-
-      <div class="fld"><label>Address database</label>
-        <button class="btn" id="loadDb" style="width:100%">Load database (.xlsx)</button>
-        <div class="note" id="dbStatus">Built-in list.</div>
       </div>
 
       <div class="fld"><label>Photo naming</label>
@@ -437,9 +523,6 @@
       <div class="switch"><div class="t">Sync camera clock on connect</div><div class="tog on" id="togSync"><i></i></div></div>
 
       <div class="fld" style="margin-top:12px">
-        <button class="btn primary" id="importPhotos" style="width:100%">Import &amp; match photos</button>
-      </div>
-      <div class="fld">
         <button class="btn warn" id="resetProj" style="width:100%">Reset</button>
       </div>
     </div>
@@ -453,7 +536,6 @@
     <div class="body" id="matchBody"></div>
     <div class="foot">
       <button class="btn" id="matchPick">Select photos</button>
-      <button class="btn" id="matchPickFolder">Select folder</button>
       <button class="btn primary" id="matchApply">Apply matches</button>
     </div>
   </div>
@@ -461,11 +543,20 @@
 
 <input type="file" id="pdfFile" accept="application/pdf,image/png,image/jpeg,image/webp,image/*" style="display:none">
 <input type="file" id="photoFile" accept="image/*" style="display:none">
+<input type="file" id="photoCapture" accept="image/*" capture="environment" style="display:none">
 <input type="file" id="matchFiles" accept="image/*" multiple style="display:none">
 <input type="file" id="dbFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none">
-<input type="file" id="projFile" accept=".json,.zip,application/json,application/zip" style="display:none">
+<input type="file" id="projFile" accept=".json,.zip,.insp360,application/json,application/zip,application/octet-stream" style="display:none">
 <div class="toast" id="toast"></div>
 <div id="matchZoom"><img alt=""></div>
+<div id="picPreview">
+  <div class="card">
+    <button class="x" id="picPrevClose" type="button" aria-label="Close">✕</button>
+    <div id="picPrevMedia"></div>
+    <div class="pn" id="picPrevName"></div>
+    <div class="pmeta" id="picPrevMeta"></div>
+  </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -486,7 +577,7 @@ const S = {
   pageNum:1, pageCount:1,
   pins:[], selPin:null,
   zoom:1, panX:0, panY:0, baseW:0, baseH:0,
-  mode:"add",                 // "add" | "move"
+  mode:"move",                // "add" | "add2d" | "move" — pin edit only when add/add2d
   prefix:"", next:1, shotSeq:0,
   meta:{name:"", address:"", suite:"", tenant:"", sqft:"", cluster:"", ptype:"", creator:"", created:null, modified:null},
   ble:null,                   // {device,char,notify} when BLE connected
@@ -501,7 +592,7 @@ const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;}
 function toast(m,ms=1900){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),ms);}
 
 /* ---------- version (each segment rolls over at 99: 1.1.99 → 1.2.0, 1.99.x → 2.0.0) ---------- */
-const VERSION=[1,0,39];
+const VERSION=[1,0,46];
 function bumpVersion(v){v=v.slice();v[2]++;if(v[2]>99){v[2]=0;v[1]++;}if(v[1]>99){v[1]=0;v[0]++;}return v;}
 function verStr(v){return "QR360-Capture-v"+(v||VERSION).join(".");}
 const CAPTURE_VER=VERSION.join(".");
@@ -528,8 +619,8 @@ function save(){clearTimeout(saveT);saveT=setTimeout(async()=>{
 function serialize(){
   return {v:2, captureVer:CAPTURE_VER, building:S.building, pdfName:S.pdfName, planKind:S.planKind||null, pageCount:S.pageCount,
     prefix:S.prefix, next:S.next, shotSeq:S.shotSeq, sessionStarted:S.sessionStarted||null, opt:S.opt, meta:S.meta,
-    pins:S.pins.map(p=>({id:p.id,page:p.page,x:p.x,y:p.y,seq:p.seq,name:p.name,note:p.note,
-      photoId:p.photoId,ts:p.ts,shotNo:p.shotNo||null,gps:p.gps||null}))};
+    pins:S.pins.map(p=>({id:p.id,kind:p.kind||"pano",page:p.page,x:p.x,y:p.y,seq:p.seq,name:p.name,note:p.note||"",
+      info:p.info||"",photoId:p.photoId,ts:p.ts,shotNo:p.shotNo||null,gps:p.gps||null}))};
 }
 
 /* ============================================================
@@ -678,7 +769,7 @@ function openProject(){
   $("#pmCreator").value=m.creator||"";
   $("#pmCreated").value=m.created?new Date(m.created).toLocaleString():"—";
   $("#pmMod").value=m.modified?new Date(m.modified).toLocaleString():"—";
-  $("#cnPano").textContent=S.pins.filter(p=>p.photoId).length;
+  $("#cnPano").textContent=S.pins.filter(p=>!isPhoto2d(p)&&p.photoId).length;
   $("#cnMark").textContent=S.pins.length;
   $("#cnPlan").textContent=planReady()?S.pageCount:0;
   openSheet("#projSheet");
@@ -902,8 +993,11 @@ function positionPins(){
     vpEl.setPointerCapture(e.pointerId);
     pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pts.size===1){downPt={x:e.clientX,y:e.clientY};downTime=Date.now();moved=false;longPressed=false;startPan={x:S.panX,y:S.panY};
-      dragPin=planReady()?hitPin(e.clientX,e.clientY):null;      // grabbed a pin?
-      if(dragPin){const gp=dragPin;lpTimer=setTimeout(()=>{longPressed=true;selectPin(gp);openPinDetail(gp);},500);}}  // hold to edit/delete
+      const hit=planReady()?hitPin(e.clientX,e.clientY):null;
+      // Drag / long-press edit only while ADD or PIC is armed
+      dragPin=(hit&&pinsEditable(hit))?hit:null;
+      if(dragPin){const gp=dragPin;lpTimer=setTimeout(()=>{longPressed=true;selectPin(gp);openPinDetail(gp);},500);}
+      else if(hit&&!pinsEditable(hit)){lpTimer=setTimeout(()=>{longPressed=true;toast("Turn on ADD or PIC to edit pins");},500);}}
     if(pts.size===2){dragPin=null;clearTimeout(lpTimer);const a=[...pts.values()];startDist=dist(a[0],a[1]);startZoom=S.zoom;startMid=mid(a[0],a[1]);startPan={x:S.panX,y:S.panY};}
   });
   vpEl.addEventListener("pointermove",e=>{
@@ -957,12 +1051,13 @@ function positionPins(){
       }
       lastTapT=now; lastTapX=downPt.x; lastTapY=downPt.y;
       const hit=hitPin(downPt.x,downPt.y);
-      if(hit){selectPin(hit);}                         // selecting is instant
-      else{
+      if(hit){selectPin(hit); if(isPhoto2d(hit)) showPicPreview(hit); else hidePicPreview();}
+      else{ hidePicPreview();
         const r=$("#page").getBoundingClientRect();
         const x=(downPt.x-r.left)/r.width, y=(downPt.y-r.top)/r.height;
-        if(S.mode==="add" && x>=0&&x<=1&&y>=0&&y<=1){  // defer add so a 2nd tap can zoom instead
-          const px=x,py=y; addTimer=setTimeout(()=>{addPin(px,py);addTimer=null;},270);
+        if((S.mode==="add"||S.mode==="add2d") && x>=0&&x<=1&&y>=0&&y<=1){  // defer add so a 2nd tap can zoom instead
+          const px=x,py=y,k=S.mode==="add2d"?"photo2d":"pano";
+          addTimer=setTimeout(()=>{addPin(px,py,k);addTimer=null;},270);
         }else{selectPin(null);}
       }
     }
@@ -992,7 +1087,8 @@ function handleTap(cx,cy){
   const hit=hitPin(cx,cy);
   if(hit){selectPin(hit);return;}
   if(x<0||x>1||y<0||y>1)return;
-  if(S.mode==="add"){addPin(x,y);}
+  if(S.mode==="add"){addPin(x,y,"pano");}
+  else if(S.mode==="add2d"){addPin(x,y,"photo2d");}
   else{ selectPin(null); }
 }
 function hitPin(cx,cy){
@@ -1008,22 +1104,34 @@ function hitPin(cx,cy){
 /* ============================================================
    PINS
    ============================================================ */
+function isPhoto2d(p){return !!(p&&p.kind==="photo2d");}
+function isPano(p){return !isPhoto2d(p);}
+/** Pin move / long-press edit: ADD arms 360 pins, PIC arms 2D pins. */
+function pinsEditable(p){
+  if(S.mode==="add") return !p||isPano(p);
+  if(S.mode==="add2d") return !p||isPhoto2d(p);
+  return false;
+}
 function nextFreeNum(){let n=1;const used=new Set(S.pins.map(p=>p.seq));while(used.has(n))n++;return n;}
 function pad(n){return String(n).padStart(2,"0");}
 function pinName(seq){return `${S.prefix} (${seq})`;}
-function photoFileName(p){return (p.name||pinName(p.seq))+".jpg";}
-function addPin(x,y){
+function picName(seq){return `PIC (${seq})`;}
+function photoFileName(p){return (p.name||(isPhoto2d(p)?picName(p.seq):pinName(p.seq)))+".jpg";}
+function addPin(x,y,kind){
+  kind=kind||"pano";
   const seq=parseInt($("#setNext").value)||nextFreeNum();
-  const p={id:"p"+Date.now()+Math.random().toString(36).slice(2,6),page:S.pageNum,x,y,seq,
-    name:pinName(seq),note:"",photoId:null,ts:null};
+  const p={id:"p"+Date.now()+Math.random().toString(36).slice(2,6),kind,page:S.pageNum,x,y,seq,
+    name:kind==="photo2d"?picName(seq):pinName(seq),note:"",info:"",photoId:null,ts:null};
   S.pins.push(p);
   S.next=seq+1;$("#setNext").value=S.next;updateEg();
   refreshPins();selectPin(p);save();
+  if(kind==="photo2d") openPinDetail(p);
 }
 function refreshPins(){
   const layer=$("#pinLayer");layer.innerHTML="";
   S.pins.filter(p=>p.page===S.pageNum).forEach(p=>{
     const node=el("div","pin");node.dataset.id=p.id;
+    if(isPhoto2d(p))node.classList.add("pic");
     if(p.photoId)node.classList.add("has");
     else if(p.shotNo)node.classList.add("shot");
     if(S.selPin&&S.selPin.id===p.id)node.classList.add("sel");
@@ -1033,45 +1141,90 @@ function refreshPins(){
     layer.appendChild(node);
   });
   positionPins();
-  const shot=S.pins.filter(p=>p.shotNo||p.photoId).length, ph=S.pins.filter(p=>p.photoId).length;
-  $("#pinCount").textContent=`(${S.pins.length} pins · ${shot} logged · ${ph} matched)`;
+  const panos=S.pins.filter(isPano), pics=S.pins.filter(isPhoto2d);
+  const shot=panos.filter(p=>p.shotNo||p.photoId).length, ph=panos.filter(p=>p.photoId).length;
+  const picPh=pics.filter(p=>p.photoId).length;
+  $("#pinCount").textContent=`(${panos.length}×360 · ${pics.length}×2D · ${shot} logged · ${ph} matched · ${picPh} pics)`;
 }
 function selectPin(p){
   S.selPin=p; 
   $$("#pinLayer .pin").forEach(n=>n.classList.toggle("sel", p&&n.dataset.id===p.id));
   if(p){$$("#pinLayer .pin").forEach(n=>n.classList.remove("armed"));
     const node=$(`#pinLayer .pin[data-id="${p.id}"]`);if(node)node.classList.add("armed");}
+  else hidePicPreview();
   updateActionBar();
 }
+let _picPrevUrl=null,_picPrevId=null;
+function hidePicPreview(){
+  const box=$("#picPreview"); if(!box)return;
+  box.classList.remove("open");
+  _picPrevId=null;
+  const media=$("#picPrevMedia"); if(media)media.innerHTML="";
+  if(_picPrevUrl){try{URL.revokeObjectURL(_picPrevUrl);}catch(e){} _picPrevUrl=null;}
+}
+async function showPicPreview(p){
+  if(!p||!isPhoto2d(p)){hidePicPreview();return;}
+  const token=p.id; _picPrevId=token;
+  $("#picPrevName").textContent=p.name||picName(p.seq);
+  const bits=[p.note,p.info].filter(Boolean);
+  $("#picPrevMeta").textContent=bits.length?bits.join(" · "):"2D picture pin";
+  const media=$("#picPrevMedia");
+  if(_picPrevUrl){try{URL.revokeObjectURL(_picPrevUrl);}catch(e){} _picPrevUrl=null;}
+  media.innerHTML=p.photoId?'<div class="empty">Loading…</div>':'<div class="empty">No picture yet — tap PHOTO to take or pick one</div>';
+  $("#picPreview").classList.add("open");
+  if(!p.photoId)return;
+  const blob=await idbGet("photos",p.photoId);
+  if(_picPrevId!==token)return; // user selected another pin meanwhile
+  media.innerHTML="";
+  if(!blob){media.innerHTML='<div class="empty">Picture missing from storage</div>';return;}
+  _picPrevUrl=URL.createObjectURL(blob);
+  const img=el("img"); img.alt=p.name||"2D picture"; img.src=_picPrevUrl;
+  img.onclick=e=>{e.stopPropagation(); const z=$("#matchZoom"); z.querySelector("img").src=_picPrevUrl; z.style.display="flex";};
+  media.appendChild(img);
+}
 function updateActionBar(){
-  const p=S.selPin, nm=$("#armName"), wrap=$("#armWrap");
-  $("#shootBtn").disabled=!p; $("#attachBtn").disabled=!p; nm.disabled=!p;
+  const p=S.selPin, nm=$("#armName"), wrap=$("#armWrap"), pic=isPhoto2d(p);
+  $("#shootBtn").disabled=!p||pic; $("#attachBtn").disabled=!p; nm.disabled=!p;
   if(p){
     nm.value=p.name;
     wrap.classList.add("has-val");
-    const method=S.ble?"fire + log":"log shot";
-    $("#shootLbl").textContent="SHOOT";
-    $("#shootSub").textContent = p.shotNo&&!p.photoId ? `logged #${p.shotNo} · re-log` : `${method} → ${p.name}`;
+    if(pic){
+      $("#shootLbl").textContent="—";
+      $("#shootSub").textContent="2D pin · use ATTACH";
+      $("#attachBtn").querySelector("span:not(.sub)").textContent="PHOTO";
+      $("#attachBtn").querySelector(".sub").textContent=p.photoId?"camera or device":"take or pick";
+    }else{
+      const method=S.ble?"fire + log":"log shot";
+      $("#shootLbl").textContent="SHOOT";
+      $("#shootSub").textContent = p.shotNo&&!p.photoId ? `logged #${p.shotNo} · re-log` : `${method} → ${p.name}`;
+      $("#attachBtn").querySelector("span:not(.sub)").textContent="ATTACH";
+      $("#attachBtn").querySelector(".sub").textContent="camera or device";
+    }
   }else{
     nm.value="";
     wrap.classList.remove("has-val");
     $("#shootLbl").textContent="SHOOT";
     $("#shootSub").textContent="select a pin first";
+    $("#attachBtn").querySelector("span:not(.sub)").textContent="ATTACH";
+    $("#attachBtn").querySelector(".sub").textContent="camera or device";
   }
 }
 
 /* pin list + detail */
 function openPinList(){
   const box=$("#pinList");box.innerHTML="";
-  if(!S.pins.length){box.innerHTML='<div class="note" style="text-align:center;padding:24px">No pins yet. Tap the plan to drop one.</div>';}
+  if(!S.pins.length){box.innerHTML='<div class="note" style="text-align:center;padding:24px">No pins yet. Tap ADD for 360° or PIC for a 2D picture pin.</div>';}
   [...S.pins].sort((a,b)=>a.seq-b.seq).forEach(p=>{
     const r=el("div","prow");
-    const thumb=el("div","thumb");thumb.textContent=p.photoId?"":"○";
+    const thumb=el("div","thumb");thumb.textContent=p.photoId?"":(isPhoto2d(p)?"🖼":"○");
     if(p.photoId)loadThumb(p.photoId,thumb);
     const info=el("div");info.style.flex="1";
+    const badge=p.photoId
+      ?(isPhoto2d(p)?'<span class="badge ok">✓ 2D</span>':'<span class="badge ok">✓ 360</span>')
+      :(isPhoto2d(p)?'<span class="badge warn">2D</span>':'<span class="badge">empty</span>');
+    const extra=[p.note,isPhoto2d(p)&&p.info?String(p.info).slice(0,40):""].filter(Boolean).map(esc).join(" · ");
     info.innerHTML=`<div class="pn">${esc(p.name)}</div>
-      <div class="pmeta">pg ${p.page}${p.note?" · "+esc(p.note):""} 
-      ${p.photoId?'<span class="badge ok">✓ 360</span>':'<span class="badge">empty</span>'}</div>`;
+      <div class="pmeta">pg ${p.page}${extra?" · "+extra:""} ${badge}</div>`;
     r.appendChild(thumb);r.appendChild(info);
     r.onclick=()=>{closeSheet("#pinSheet");if(p.page!==S.pageNum){S.pageNum=p.page;renderPage().then(()=>{refreshPins();selectPin(p);});}else{selectPin(p);}openPinDetail(p);};
     box.appendChild(r);
@@ -1084,11 +1237,19 @@ async function loadThumb(pid,imgHolder){
 }
 let pdPin=null;
 function openPinDetail(p){
-  pdPin=p;$("#pdTitle").textContent=p.name;
+  pdPin=p;
+  const pic=isPhoto2d(p);
+  $("#pdTitle").textContent=pic?"2D picture pin":p.name;
+  $("#pdNameLbl").textContent=pic?"Pin name":"Photo name";
   $("#pdName").value=p.name;$("#pdNote").value=p.note||"";
+  $("#pdInfo").value=p.info||"";
+  $("#pdInfoFld").style.display=pic?"":"none";
+  $("#pdAttachRow").style.display=pic?"":"none";
   const w=$("#pdThumbWrap");w.innerHTML="";
   if(p.photoId){idbGet("photos",p.photoId).then(b=>{if(b){const img=el("img");img.style.cssText="max-width:100%;max-height:220px;border-radius:10px;border:1px solid var(--line)";img.src=URL.createObjectURL(b);w.appendChild(img);}});}
-  else w.innerHTML='<div class="note">No photo yet — select this pin and SNAP or ATTACH.</div>';
+  else w.innerHTML=pic
+    ?'<div class="note">No 2D picture yet — take a photo or pick one from this device.</div>'
+    :'<div class="note">No photo yet — select this pin and SHOOT or ATTACH.</div>';
   openSheet("#pinDetail");
 }
 
@@ -1112,6 +1273,7 @@ async function logShot(p){
 }
 async function fireShot(){
   const p=S.selPin; if(!p){toast("Select a pin first");return;}
+  if(isPhoto2d(p)){toast("2D pins use ATTACH, not SHOOT");return;}
   const shoot=$("#shootBtn"); shoot.disabled=true;
   try{
     if(S.ble){$("#shootSub").textContent="firing camera…";
@@ -1300,11 +1462,12 @@ async function attachBlob(p,blob){
   refreshPins();updateActionBar();save();
 }
 function advancePin(cur){
+  const sameKind=p=>isPhoto2d(p)===isPhoto2d(cur);
   const done=p=>p.photoId||p.shotNo;                 // logged OR matched = handled
-  const pending=[...S.pins].sort((a,b)=>a.seq-b.seq).filter(p=>!done(p));
+  const pending=[...S.pins].sort((a,b)=>a.seq-b.seq).filter(p=>sameKind(p)&&!done(p));
   const nextP=pending.find(p=>p.seq>cur.seq)||pending[0];
   if(nextP){if(nextP.page!==S.pageNum){S.pageNum=nextP.page;renderPage().then(()=>{refreshPins();selectPin(nextP);});}else selectPin(nextP);toast("Next: "+nextP.name);}
-  else{selectPin(null);toast("All pins logged ✓");}
+  else{selectPin(null);toast(isPhoto2d(cur)?"All 2D pins done ✓":"All 360 pins logged ✓");}
 }
 
 /* ============================================================
@@ -1385,8 +1548,8 @@ function buildShootLog(){
     planKind:S.planKind||null,
     pageCount:S.pageCount||1,
     pins:ordered.map(p=>({
-      id:p.id, page:p.page, x:p.x, y:p.y, seq:p.seq, name:p.name, note:p.note||"",
-      shotIndex:p.shotNo||null, photoId:p.photoId||null, ts:p.ts||null, gps:p.gps||null
+      id:p.id, kind:p.kind||"pano", page:p.page, x:p.x, y:p.y, seq:p.seq, name:p.name, note:p.note||"",
+      info:p.info||"", shotIndex:p.shotNo||null, photoId:p.photoId||null, ts:p.ts||null, gps:p.gps||null
     })),
     shots
   };
@@ -1413,10 +1576,19 @@ async function exportShootLog(){
   toast("Exported "+stem+".json ("+log.shots.length+" shots)");
 }
 /** Photo-less (or partial) tour.json v2 — markers + pending targets for PC hydrate / cloud. */
-function buildTourJsonSkeleton(){
-  const ordered=[...S.pins].sort((a,b)=>a.seq-b.seq);
+function desiredCaptureStatus(){
+  const panos=S.pins.filter(isPano);
+  if(!panos.length) return "in_progress";
+  if(panos.every(p=>p.photoId)) return "complete";
+  if(panos.some(p=>p.photoId)) return "in_progress";
+  return "skeleton";
+}
+function buildTourJsonSkeleton(statusOpt){
+  const all=[...S.pins].sort((a,b)=>a.seq-b.seq);
+  const panos=all.filter(isPano);
+  const pics=all.filter(isPhoto2d);
   const order=[], tours={};
-  for(const p of ordered){
+  for(const p of panos){
     const fn=photoFileName(p);
     order.push(fn);
     tours[fn]={ objects:[], view:{ lon:0, lat:0, fov:90 } };
@@ -1424,6 +1596,7 @@ function buildTourJsonSkeleton(){
   const now=new Date().toISOString();
   if(!S.meta.created) S.meta.created=now;
   S.meta.modified=now;
+  const status=statusOpt||desiredCaptureStatus();
   const out={
     version:2,
     lockView:true,
@@ -1439,16 +1612,31 @@ function buildTourJsonSkeleton(){
       type:S.meta.ptype||(S.building&&S.building.portfolio)||"",
       created:S.meta.created,
       modified:S.meta.modified,
-      status:"skeleton",
-      pendingPhotos:true,
+      status,
+      pendingPhotos:status==="skeleton"||status==="in_progress",
       captureVer:CAPTURE_VER
     }
   };
-  if(S.pdfBytes || ordered.length){
-    const markers=ordered.map(p=>({
-      x:+(+p.x).toFixed(6), y:+(+p.y).toFixed(6),
-      target:photoFileName(p), label:p.note||p.name||""
+  if(status==="complete"){ out.meta.pendingPhotos=false; out.meta.completedAt=now; }
+  if(pics.length){
+    out.photoPins=pics.map(p=>({
+      id:p.id, page:p.page, x:+(+p.x).toFixed(6), y:+(+p.y).toFixed(6),
+      seq:p.seq, name:p.name, note:p.note||"", info:p.info||"",
+      image:p.photoId?("photos2d/"+photoFileName(p)):null
     }));
+  }
+  if(S.pdfBytes || all.length){
+    const markers=all.map(p=>{
+      const m={
+        x:+(+p.x).toFixed(6), y:+(+p.y).toFixed(6),
+        label:p.note||p.name||"", kind:p.kind||"pano"
+      };
+      if(isPhoto2d(p)){
+        if(p.photoId) m.image="photos2d/"+photoFileName(p);
+        if(p.info) m.info=p.info;
+      }else m.target=photoFileName(p);
+      return m;
+    });
     const plan={ name:S.pdfName||"Floor plan", markers };
     if(S.pdfBytes){
       const b64=bytesToB64(S.pdfBytes instanceof Uint8Array?S.pdfBytes:new Uint8Array(S.pdfBytes));
@@ -1459,30 +1647,37 @@ function buildTourJsonSkeleton(){
   }
   return out;
 }
-async function buildSkeletonInsp360Blob(onProgress){
+async function buildSkeletonInsp360Blob(onProgress, statusOpt){
   if(!window.JSZip) throw new Error("JSZip missing");
   if(!S.pins.length) throw new Error("Place at least one marker first");
   const zip=new JSZip();
-  const ordered=[...S.pins].sort((a,b)=>a.seq-b.seq);
+  const all=[...S.pins].sort((a,b)=>a.seq-b.seq);
+  const panos=all.filter(isPano);
+  const pics=all.filter(isPhoto2d);
+  const total=panos.length+pics.length+2;
   let i=0;
-  for(const p of ordered){
+  for(const p of panos){
     if(!p.photoId) continue;
     const b=await idbGet("photos",p.photoId);
     if(!b) continue;
     zip.file(photoFileName(p), b, { compression:"STORE" });
     i++;
-    if(onProgress) onProgress(i, ordered.length+2, "Packing "+photoFileName(p));
+    if(onProgress) onProgress(i, total, "Packing "+photoFileName(p));
   }
-  const tour=buildTourJsonSkeleton();
-  // If any photos packed, clear pending when complete; otherwise keep skeleton flag
-  if(i>=ordered.length && ordered.length){
-    delete tour.meta.status;
-    delete tour.meta.pendingPhotos;
+  for(const p of pics){
+    if(!p.photoId) continue;
+    const b=await idbGet("photos",p.photoId);
+    if(!b) continue;
+    zip.file("photos2d/"+photoFileName(p), b, { compression:"STORE" });
+    i++;
+    if(onProgress) onProgress(i, total, "Packing 2D "+photoFileName(p));
   }
+  const status=statusOpt||desiredCaptureStatus();
+  const tour=buildTourJsonSkeleton(status);
   zip.file("tour.json", JSON.stringify(tour,null,2), { compression:"STORE" });
   zip.file("shoot-log.json", JSON.stringify(buildShootLog(),null,2), { compression:"STORE" });
   zip.file("capture-draft.json", JSON.stringify(serialize(),null,2), { compression:"STORE" });
-  if(onProgress) onProgress(ordered.length+2, ordered.length+2, "Writing tour.json");
+  if(onProgress) onProgress(total, total, "Writing tour.json");
   return zip.generateAsync({ type:"blob", compression:"STORE", streamFiles:true });
 }
 async function exportSkeleton(){
@@ -1524,18 +1719,34 @@ async function cloudFetch(path, opts){
 }
 async function refreshCloudAuth(){
   const note=$("#cloudAuthNote");
+  const setNote=(cls,text)=>{ if(!note)return; note.className=cls||""; note.style.color=""; note.textContent=text; };
+  // Android: CookieManager session (cross-origin fetch from the asset page cannot see it).
+  if(window.AndroidCloud && typeof AndroidCloud.checkSession==="function"){
+    try{
+      const r=JSON.parse(AndroidCloud.checkSession()||"{}");
+      if(r&&r.ok){
+        setNote("ok","Signed in as "+(r.email||r.name||"user")+(r.role?" · "+r.role:""));
+        return r;
+      }
+      setNote("bad","Not signed in — tap Sign in, then Upload.");
+      return null;
+    }catch(e){
+      setNote("bad","Auth check failed");
+      return null;
+    }
+  }
   try{
     const res=await cloudFetch("/api/me");
     if(res.status===401){
-      if(note){ note.className="note"; note.style.color="var(--bad)"; note.textContent="Not signed in — tap Sign in, enter email code, then Upload."; }
+      setNote("bad","Not signed in — tap Sign in, then Upload.");
       return null;
     }
-    if(!res.ok){ if(note){ note.textContent="Auth check failed ("+res.status+")"; } return null; }
+    if(!res.ok){ setNote("bad","Auth check failed ("+res.status+")"); return null; }
     const me=await res.json();
-    if(note){ note.className="note"; note.style.color="var(--ok)"; note.textContent="Signed in as "+(me.email||me.name||"user")+(me.role?" · "+me.role:""); }
+    setNote("ok","Signed in as "+(me.email||me.name||"user")+(me.role?" · "+me.role:""));
     return me;
   }catch(e){
-    if(note){ note.textContent="Cloud unreachable — export skeleton and upload from PC."; }
+    setNote("bad","Cloud unreachable — export skeleton and upload from PC.");
     return null;
   }
 }
@@ -1545,8 +1756,17 @@ function openCloudSignIn(){
     AndroidCloud.openLogin(url);
     return;
   }
-  window.open(url, "_blank");
+  const w=window.open(url,"_blank","noopener");
+  if(!w){ toast("Allow pop-ups to sign in"); return; }
+  const t=setInterval(()=>{
+    if(!w||w.closed){ clearInterval(t); refreshCloudAuth(); }
+  },800);
 }
+window.onAndroidCloudReturned=async function(){
+  const me=await refreshCloudAuth();
+  if(me){ toast("Signed in ✓"); openSheet("#menuSheet"); refreshCloudProjects(); }
+  else toast("Sign-in not detected — try Sign in again");
+};
 async function uploadBlobPut(key, blob, contentType, onProgress){
   // Native Android: stage in cache (chunked) then PUT with WebView cookies
   if(window.AndroidCloud && typeof AndroidCloud.beginCache==="function" && typeof AndroidCloud.uploadCache==="function"){
@@ -1579,29 +1799,18 @@ async function uploadBlobPut(key, blob, contentType, onProgress){
     xhr.open("PUT", base+path);
     xhr.withCredentials=cloudCreds(base)==="include";
     xhr.responseType="text";
-    xhr.timeout=180000; // hard cap so a dead connection can't hang the upload forever
     xhr.setRequestHeader("Content-Type", contentType||"application/zip");
     if(isLocalApi(base)){
       try{ xhr.setRequestHeader("X-Insp360-Email",(localStorage.getItem("insp360.aclEmail")||"robert.piwin@quadreal.com")); }catch(_){}
     }
-    // Stall watchdog: a frozen connection fires no error, so abort when no bytes move for 45s.
-    let lastTick=Date.now();
-    let stalled=false;
-    const watchdog=setInterval(()=>{
-      if(Date.now()-lastTick>45000){ stalled=true; clearInterval(watchdog); try{ xhr.abort(); }catch(_){} }
-    }, 5000);
-    const stopWatchdog=()=>{ try{ clearInterval(watchdog); }catch(_){} };
     xhr.upload.onprogress=e=>{
-      lastTick=Date.now();
       if(typeof onProgress==="function"){
         const total=e.lengthComputable?e.total:(blob&&blob.size)||0;
         onProgress({ loaded:e.loaded||0, total:total||0 });
       }
     };
-    xhr.onload=()=>{ stopWatchdog(); resolve({ ok:xhr.status>=200&&xhr.status<300, status:xhr.status, text:()=>xhr.responseText||"" }); };
-    xhr.onerror=()=>{ stopWatchdog(); reject(new Error("Network error during upload")); };
-    xhr.ontimeout=()=>{ stopWatchdog(); reject(new Error("Upload timed out (no response)")); };
-    xhr.onabort=()=>{ stopWatchdog(); reject(new Error(stalled?"Upload stalled (no data for 45s)":"Upload cancelled")); };
+    xhr.onload=()=>resolve({ ok:xhr.status>=200&&xhr.status<300, status:xhr.status, text:()=>xhr.responseText||"" });
+    xhr.onerror=()=>reject(new Error("Network error during upload"));
     xhr.send(blob);
   });
 }
@@ -1627,30 +1836,220 @@ async function uploadSkeletonToCloud(){
       return;
     }
     toast("Building skeleton…", 4000);
-    const blob=await buildSkeletonInsp360Blob();
+    const blob=await buildSkeletonInsp360Blob(null, "skeleton");
     const key=cloudObjectKey();
     toast("Uploading "+inspFileName()+"…", 6000);
     const res=await uploadBlobPut(key, blob, "application/zip");
     if(!res.ok) throw new Error("Upload failed ("+res.status+")");
-    const tourText=JSON.stringify(buildTourJsonSkeleton(),null,2);
+    const tourText=JSON.stringify(buildTourJsonSkeleton("skeleton"),null,2);
     const ok=await uploadTourSidecar(key, tourText);
     if(!ok) toast("Archive uploaded; sidecar failed — open in viewer and Save");
     else toast("Cloud skeleton uploaded ✓");
     const note=$("#cloudAuthNote");
-    if(note) note.textContent="Uploaded · "+key+" · hydrate photos on PC when X5 batch is ready";
+    if(note){ note.className="ok"; note.style.color=""; note.textContent="Uploaded · "+key; }
+    refreshCloudProjects();
+  }catch(e){ toast(String(e.message||e)); }
+}
+async function saveTourToCloud(){
+  try{
+    if(!S.pins.length){ toast("Place markers first"); return; }
+    if(!(S.meta.address||(S.building&&S.building.address)||S.meta.name)){ toast("Set project name or address first"); return; }
+    const me=await refreshCloudAuth();
+    if(!me && !(window.AndroidCloud && typeof AndroidCloud.uploadBytes==="function")){
+      toast("Sign in to cloud first (email code), then retry");
+      return;
+    }
+    const status=desiredCaptureStatus();
+    toast("Building tour capture…", 4000);
+    const blob=await buildSkeletonInsp360Blob(null, status);
+    const key=cloudObjectKey();
+    toast("Uploading to cloud…", 8000);
+    const res=await uploadBlobPut(key, blob, "application/zip");
+    if(!res.ok) throw new Error("Upload failed ("+res.status+")");
+    const tourText=JSON.stringify(buildTourJsonSkeleton(status),null,2);
+    const ok=await uploadTourSidecar(key, tourText);
+    if(!ok) toast("Archive uploaded; sidecar failed");
+    else toast("Saved to cloud ✓ · "+status.replace("_"," "));
+    const note=$("#cloudAuthNote");
+    if(note){ note.className="ok"; note.style.color=""; note.textContent="Cloud · "+key; }
+    openCloudProjects(true);
+  }catch(e){ toast(String(e.message||e)); }
+}
+
+/* ---- Cloud projects rail ---- */
+function escHtml(s){ return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+function tourTitleFromKey(key){
+  const base=String(key||"").split("/").pop()||key||"Tour";
+  return base.replace(/\.insp360$/i,"");
+}
+function fmtWhen(iso){
+  if(!iso) return "";
+  try{
+    const d=new Date(iso), now=Date.now(), ms=now-d.getTime();
+    if(ms<60000) return "just now";
+    if(ms<3600000) return Math.floor(ms/60000)+"m ago";
+    if(ms<86400000) return Math.floor(ms/3600000)+"h ago";
+    if(ms<604800000) return Math.floor(ms/86400000)+"d ago";
+    return d.toLocaleDateString();
+  }catch(_){ return ""; }
+}
+function statusLabel(st){
+  const s=String(st||"in_progress").toLowerCase();
+  if(s==="complete"||s==="completed") return "complete";
+  if(s==="skeleton") return "skeleton";
+  return "in_progress";
+}
+function openCloudProjects(forceRefresh){
+  const rail=$("#cloudProjRail"), scrim=$("#cloudScrim");
+  if(rail) rail.classList.add("open");
+  if(scrim && window.matchMedia("(max-width:720px)").matches) scrim.classList.add("show");
+  if(forceRefresh!==false) refreshCloudProjects();
+}
+function closeCloudProjects(){
+  const rail=$("#cloudProjRail"), scrim=$("#cloudScrim");
+  if(rail) rail.classList.remove("open");
+  if(scrim) scrim.classList.remove("show");
+}
+async function cloudListTours(){
+  if(window.AndroidCloud && typeof AndroidCloud.listTours==="function"){
+    const raw=JSON.parse(AndroidCloud.listTours("")||"{}");
+    if(!raw.ok) throw new Error(raw.error||("List failed ("+(raw.status||"?")+")"));
+    return raw.tours||[];
+  }
+  const res=await cloudFetch("/api/tours");
+  if(res.status===401) throw new Error("auth");
+  if(!res.ok) throw new Error("List failed ("+res.status+")");
+  const data=await res.json();
+  return data.tours||[];
+}
+async function cloudDownloadTourBlob(key){
+  if(window.AndroidCloud && typeof AndroidCloud.downloadTour==="function"){
+    const name="dl_"+Date.now()+".insp360";
+    const start=JSON.parse(AndroidCloud.downloadTour(key, name)||"{}");
+    if(!start.ok) throw new Error(start.error||("Download failed ("+(start.status||"?")+")"));
+    const size=Number(start.size||0);
+    const parts=[];
+    let offset=0;
+    const CHUNK=240000;
+    while(offset<size){
+      const chunk=JSON.parse(AndroidCloud.readCacheB64(name, offset, Math.min(CHUNK, size-offset))||"{}");
+      if(!chunk.ok) throw new Error(chunk.error||"Read failed");
+      const n=Number(chunk.n||0);
+      if(n<=0) break;
+      const bin=atob(chunk.b64||"");
+      const u8=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+      parts.push(u8);
+      offset+=n;
+    }
+    try{ AndroidCloud.deleteCache(name); }catch(_){}
+    return new Blob(parts, { type:"application/zip" });
+  }
+  const res=await cloudFetch("/api/tours/"+encodeTourKeyPath(key));
+  if(!res.ok) throw new Error("Download failed ("+res.status+")");
+  return await res.blob();
+}
+async function cloudPatchStatus(key, status){
+  if(window.AndroidCloud && typeof AndroidCloud.patchTourStatus==="function"){
+    const r=JSON.parse(AndroidCloud.patchTourStatus(key, status)||"{}");
+    if(!r.ok) throw new Error(r.error||("Status failed ("+(r.status||"?")+")"));
+    return;
+  }
+  const res=await cloudFetch("/api/tours/"+encodeTourKeyPath(key)+"/status", {
+    method:"PATCH",
+    headers:{ "Content-Type":"application/json; charset=utf-8" },
+    body:JSON.stringify({ status })
+  });
+  if(!res.ok) throw new Error("Status failed ("+res.status+")");
+}
+async function cloudDeleteTour(key){
+  if(window.AndroidCloud && typeof AndroidCloud.deleteTour==="function"){
+    const r=JSON.parse(AndroidCloud.deleteTour(key)||"{}");
+    if(!r.ok) throw new Error(r.error||("Delete failed ("+(r.status||"?")+")"));
+    return;
+  }
+  const res=await cloudFetch("/api/tours/"+encodeTourKeyPath(key), { method:"DELETE" });
+  if(!res.ok) throw new Error("Delete failed ("+res.status+")");
+}
+async function refreshCloudProjects(){
+  const list=$("#cloudProjList"); if(!list) return;
+  list.innerHTML='<div class="railNote">Loading…</div>';
+  try{
+    const me=await refreshCloudAuth();
+    if(!me && !(window.AndroidCloud && typeof AndroidCloud.listTours==="function")){
+      list.innerHTML='<div class="railNote">Not signed in. Tap <b>Sign in</b> in the menu (email code), then reopen Projects.</div>';
+      return;
+    }
+    const tours=await cloudListTours();
+    if(!tours.length){
+      list.innerHTML='<div class="railNote">No cloud captures yet. Use <b>Save to cloud</b> after placing markers.</div>';
+      return;
+    }
+    list.innerHTML=tours.map(t=>{
+      const st=statusLabel(t.status);
+      const canEdit=t.permission==="edit"||t.permission==="admin"||!t.permission;
+      return `<div class="cprow" data-key="${escHtml(t.key)}">
+        <div class="ttl">${escHtml(tourTitleFromKey(t.key))}</div>
+        <div class="meta"><span class="chip ${st}">${st.replace("_"," ")}</span><span>${escHtml(fmtWhen(t.uploaded))}</span></div>
+        <div class="cacts">
+          <button class="btn primary" data-act="open">Open</button>
+          <button class="btn" data-act="done"${st==="complete"?" disabled":""}>Done</button>
+          <button class="btn warn" data-act="del"${canEdit?"":" disabled"}>Del</button>
+        </div>
+      </div>`;
+    }).join("");
+  }catch(e){
+    if(String(e.message||e)==="auth"){
+      list.innerHTML='<div class="railNote">Not signed in. Tap <b>Sign in</b> in the menu, then reopen Projects.</div>';
+    }else{
+      list.innerHTML=`<div class="railNote">Could not load projects.<br>${escHtml(e.message||e)}</div>`;
+    }
+  }
+}
+async function openCloudTour(key){
+  try{
+    toast("Downloading…", 6000);
+    const blob=await cloudDownloadTourBlob(key);
+    const file=new File([blob], (String(key).split("/").pop()||"tour.insp360"), { type:"application/zip" });
+    await loadProjectFile(file);
+    closeCloudProjects();
+    toast("Opened from cloud ✓");
+  }catch(e){ toast(String(e.message||e)); }
+}
+async function markCloudComplete(key){
+  try{
+    await cloudPatchStatus(key, "complete");
+    toast("Marked complete ✓");
+    refreshCloudProjects();
+  }catch(e){ toast(String(e.message||e)); }
+}
+async function deleteCloudTour(key){
+  if(!confirm("Delete this cloud capture?\n"+key)) return;
+  try{
+    await cloudDeleteTour(key);
+    toast("Deleted ✓");
+    refreshCloudProjects();
   }catch(e){ toast(String(e.message||e)); }
 }
 async function exportZip(){
-  if(!S.pins.length){toast("Nothing to export yet");return;}
-  toast("Building ZIP…",3000);
+  if(!S.pins.length && !S.pdfBytes){toast("Nothing to save yet — add a plan or pins");return;}
+  toast("Building tour capture…",3000);
   const zip=new JSZip();
-  const folder=(S.building?S.building.address.replace(/[^\w -]/g,"").trim():"site").replace(/\s+/g,"_");
+  const folder=(S.building?S.building.address.replace(/[^\w -]/g,"").trim():(S.meta.name||"site")).replace(/\s+/g,"_")||"site";
   const photos=zip.folder(folder);
   const manifest={project:S.meta,building:S.building,pdf:S.pdfName,exported:new Date().toISOString(),prefix:S.prefix,pins:[]};
   for(const p of [...S.pins].sort((a,b)=>a.seq-b.seq)){
-    const entry={name:p.name,shot:p.shotNo||null,page:p.page,x:+p.x.toFixed(4),y:+p.y.toFixed(4),
-      note:p.note||"",captured:p.ts?new Date(p.ts).toISOString():null,gps:p.gps||null,file:null};
-    if(p.photoId){const b=await idbGet("photos",p.photoId);if(b){const fn=photoFileName(p);photos.file(fn,b);entry.file=folder+"/"+fn;}}
+    const entry={name:p.name,kind:p.kind||"pano",shot:p.shotNo||null,page:p.page,x:+p.x.toFixed(4),y:+p.y.toFixed(4),
+      note:p.note||"",info:p.info||"",captured:p.ts?new Date(p.ts).toISOString():null,gps:p.gps||null,file:null};
+    if(p.photoId){
+      const b=await idbGet("photos",p.photoId);
+      if(b){
+        const sub=isPhoto2d(p)?"photos2d":folder;
+        const fn=photoFileName(p);
+        zip.folder(sub).file(fn,b);
+        entry.file=sub+"/"+fn;
+      }
+    }
     manifest.pins.push(entry);
   }
   zip.file("manifest.json",JSON.stringify(manifest,null,2));
@@ -1660,17 +2059,17 @@ async function exportZip(){
   if(S.pdfBytes)zip.file(S.pdfName||"drawing.pdf",S.pdfBytes);
   const out=await zip.generateAsync({type:"blob"});
   dl(out,`${folder}_360capture.zip`);
-  toast("ZIP ready ✓");
+  toast("Tour capture saved ✓");
 }
 /* the "hidden" side log: shot order + timestamp + GPS, to reconcile against camera EXIF */
 function captureLogRows(){
   return [...S.pins].filter(p=>p.shotNo||p.photoId).sort((a,b)=>(a.shotNo||1e9)-(b.shotNo||1e9))
-    .map(p=>({shot:p.shotNo||"",name:p.name,time:p.ts?new Date(p.ts).toISOString():"",
+    .map(p=>({shot:p.shotNo||"",name:p.name,kind:p.kind||"pano",time:p.ts?new Date(p.ts).toISOString():"",
       lat:p.gps?p.gps.lat:"",lng:p.gps?p.gps.lng:"",acc_m:p.gps?p.gps.acc:"",
-      page:p.page,x:+p.x.toFixed(4),y:+p.y.toFixed(4),note:p.note||"",matched:p.photoId?"yes":"no"}));
+      page:p.page,x:+p.x.toFixed(4),y:+p.y.toFixed(4),note:p.note||"",info:p.info||"",matched:p.photoId?"yes":"no"}));
 }
 function captureLogCsv(){
-  const cols=["shot","name","time","lat","lng","acc_m","page","x","y","note","matched"];
+  const cols=["shot","name","kind","time","lat","lng","acc_m","page","x","y","note","info","matched"];
   const rows=captureLogRows();
   return [cols.join(",")].concat(rows.map(r=>cols.map(c=>`"${String(r[c]).replace(/"/g,'""')}"`).join(","))).join("\n");
 }
@@ -1684,52 +2083,11 @@ function exportCaptureLog(){
 /* ============================================================
    IMPORT & MATCH  — pair downloaded photos to logged pins
    ============================================================ */
-let MATCH={files:[],pick:{},shift:0,folderName:null,addrConfirmed:false};
+let MATCH={files:[],pick:{},shift:0};
 // Free thumbnail/preview object URLs so re-importing doesn't leak memory.
 function clearMatch(){
   for(const f of (MATCH.files||[])){if(f.thumb)URL.revokeObjectURL(f.thumb);if(f.full)URL.revokeObjectURL(f.full);}
-  MATCH={files:[],pick:{},shift:0,folderName:null,addrConfirmed:false};
-}
-// Normalize an address / folder name for comparison: trim, lowercase,
-// collapse whitespace, and treat _ and - as spaces.
-function normAddr(s){return String(s||"").trim().toLowerCase().replace(/[_-]/g," ").replace(/\s+/g," ").trim();}
-// Folder pick via the File System Access API, falling back to the multi-file input.
-// Reads only .jpg/.jpeg/.png files from the chosen folder.
-async function pickMatchFolder(){
-  if(!window.showDirectoryPicker){ toast("Folder pick not supported here — using file select"); $("#matchFiles").click(); return; }
-  let dir;
-  try{ dir=await window.showDirectoryPicker(); }
-  catch(e){ return; } // user cancelled the picker
-  const files=[];
-  try{
-    for await (const entry of dir.values()){
-      if(entry.kind==="file" && /\.(jpe?g|png)$/i.test(entry.name)){
-        try{ files.push(await entry.getFile()); }catch(_){}
-      }
-    }
-  }catch(e){ toast("Couldn't read that folder"); return; }
-  if(!files.length){ toast("No .jpg/.png photos found in that folder"); return; }
-  handleMatchFiles(files, dir.name);
-}
-// Inline warning shown when a picked folder name doesn't match the project address.
-function showAddrWarn(folderName, projAddr){
-  const body=$("#matchBody"); if(!body)return;
-  const old=$("#matchAddrWarn"); if(old)old.remove();
-  const div=document.createElement("div");
-  div.id="matchAddrWarn";
-  div.style.cssText="margin:0 0 10px;padding:12px;border:1px solid var(--bad);border-radius:10px;background:rgba(210,60,60,.10)";
-  div.innerHTML=`<b style="color:var(--bad)">⚠ Folder / address mismatch</b>
-    <div class="pmeta" style="margin-top:6px">Folder: <b>${esc(folderName)}</b></div>
-    <div class="pmeta">Project: <b>${esc(projAddr)}</b></div>
-    <div class="pmeta" style="margin-top:6px">These don't match — make sure these photos belong to this project before applying.</div>
-    <div class="row2" style="margin-top:8px">
-      <button class="btn" id="matchAddrCancel">Cancel</button>
-      <button class="btn primary" id="matchAddrContinue">Continue anyway</button>
-    </div>`;
-  body.prepend(div);
-  body.scrollTop=0;
-  $("#matchAddrContinue").onclick=()=>{MATCH.addrConfirmed=true; div.remove(); applyMatch();};
-  $("#matchAddrCancel").onclick=()=>{div.remove();};
+  MATCH={files:[],pick:{},shift:0};
 }
 // Small JPEG thumbnail so the review list stays light even with big 360 files.
 async function makeThumb(file){
@@ -1741,7 +2099,7 @@ async function makeThumb(file){
     return await new Promise(r=>cnv.toBlob(b=>r(b?URL.createObjectURL(b):null),"image/jpeg",0.72));
   }catch(e){ try{return URL.createObjectURL(file);}catch(_){return null;} }
 }
-async function handleMatchFiles(fileList, folderName){
+async function handleMatchFiles(fileList){
   const arr=[...fileList]; if(!arr.length)return;
   clearMatch();
   const infos=[];
@@ -1755,14 +2113,15 @@ async function handleMatchFiles(fileList, folderName){
     infos.push({file:f,name:f.name,time,gps,viaExif,thumb,full:null});
   }
   infos.sort((a,b)=>a.time-b.time);
-  MATCH={files:infos,pick:{},shift:0,folderName:folderName||null,addrConfirmed:false};
+  MATCH={files:infos,pick:{},shift:0};
   autoSequential();          // first pass: pair in capture order for verification
 }
 function loggedPinsOrdered(){
-  const logged=[...S.pins].filter(p=>p.shotNo).sort((a,b)=>a.shotNo-b.shotNo);
+  // Import & match is for 360 camera downloads — skip 2D picture pins.
+  const logged=[...S.pins].filter(p=>isPano(p)&&p.shotNo).sort((a,b)=>a.shotNo-b.shotNo);
   if(logged.length) return logged;
-  // No SHOOT log yet — still auto-pair Import photos to empty pins in seq order.
-  return [...S.pins].filter(p=>!p.photoId).sort((a,b)=>a.seq-b.seq);
+  // No SHOOT log yet — still auto-pair Import photos to empty 360 pins in seq order.
+  return [...S.pins].filter(p=>isPano(p)&&!p.photoId).sort((a,b)=>a.seq-b.seq);
 }
 
 // Pair marker #i with photo #i (capture order), shifted by MATCH.shift.
@@ -1862,16 +2221,6 @@ async function openMatchZoom(idx){
 }
 async function applyMatch(){
   const pins=loggedPinsOrdered();
-  // Folder uploads: warn if the folder name doesn't match the project address.
-  // Individual file picks (no folderName) skip this check.
-  if(MATCH.folderName && !MATCH.addrConfirmed){
-    const projAddr=S.meta.address||(S.building&&S.building.address)||"";
-    if(projAddr && normAddr(MATCH.folderName)!==normAddr(projAddr)){
-      toast(`Folder "${MATCH.folderName}" ≠ project "${projAddr}" — confirm to continue`,3200);
-      showAddrWarn(MATCH.folderName, projAddr);
-      return;
-    }
-  }
   // block if any photo is assigned to more than one marker
   const useCount={}; Object.values(MATCH.pick).forEach(idx=>{if(idx!=null)useCount[idx]=(useCount[idx]||0)+1;});
   if(Object.values(useCount).some(c=>c>1)){toast("Two markers point at the same photo — fix the duplicates first");return;}
@@ -1895,23 +2244,23 @@ function dl(blob,name){const a=el("a");a.href=URL.createObjectURL(blob);a.downlo
 
 async function loadProjectFile(file){
   try{
-    if(file.name.endsWith(".zip")){
+    const name=(file.name||"").toLowerCase();
+    const isArchive=/\.(zip|insp360)$/i.test(name);
+    if(isArchive){
       const zip=await JSZip.loadAsync(file);
-      const pj=zip.file("project.json");
-      if(!pj){toast("No project.json in ZIP");return;}
+      const pj=zip.file("project.json")||zip.file("capture-draft.json");
+      if(!pj){toast("No project.json in archive");return;}
       const proj=JSON.parse(await pj.async("string"));
+      await idbClear("photos");
       await restore(proj);
-      // photos
+      // photos — match by pin name in any folder
       for(const p of S.pins){
-        if(p.photoId){
-          const m=await (zip.file("manifest.json")?zip.file("manifest.json").async("string"):null);
-          // find file by pin name in any folder
-          const match=Object.keys(zip.files).find(k=>k.endsWith("/"+p.name+".jpg")||k===p.name+".jpg");
-          if(match){const b=await zip.file(match).async("blob");await idbPut("photos",p.photoId,b);}
-        }
+        if(!p.photoId)continue;
+        const match=Object.keys(zip.files).find(k=>!zip.files[k].dir&&(k.endsWith("/"+p.name+".jpg")||k===p.name+".jpg"));
+        if(match){const b=await zip.file(match).async("blob");await idbPut("photos",p.photoId,b);}
       }
       // floor plan (PDF or image) — stored at the ZIP root; photos live in a subfolder
-      const planName=proj.pdf||proj.pdfName;
+      const planName=proj.pdfName||proj.pdf;
       let planKey=planName&&zip.files[planName]?planName:null;
       if(!planKey)planKey=Object.keys(zip.files).find(k=>!k.includes("/")&&/\.pdf$/i.test(k));
       if(!planKey)planKey=Object.keys(zip.files).find(k=>!k.includes("/")&&/\.(png|jpe?g|webp|gif|bmp)$/i.test(k));
@@ -1920,7 +2269,7 @@ async function loadProjectFile(file){
         if(/\.pdf$/i.test(planKey))await openPdfBytes(bytes,planKey.split("/").pop());
         else await openImageBytes(bytes,planKey.split("/").pop());
       }
-      refreshPins();openPinList();toast("Project loaded ✓");
+      refreshPins();openPinList();toast("Tour capture loaded ✓");
     }else{
       const proj=JSON.parse(await file.text());
       await restore(proj);toast("Project loaded (photos not in .json)");
@@ -1935,7 +2284,7 @@ async function restore(proj){
   S.meta=Object.assign(S.meta,proj.meta||{});
   if(S.building && !S.meta.address) S.meta.address=S.building.address;
   if(S.opt.bleCmd==="FC EF FE 86 00 03 01 02 00")S.opt.bleCmd="FC EF FE 86 00 03 01 00 00"; // migrate old default
-  S.pins=(proj.pins||[]).map(p=>({...p}));
+  S.pins=(proj.pins||[]).map(p=>({...p,kind:p.kind||"pano",info:p.info||"",note:p.note||""}));
   if(S.building){$("#bldgA").textContent=S.meta.address||S.building.address;
     $("#bldgB").textContent=S.building.custom?"Custom address":`${S.building.portfolio.replace(" Business Park","")} · BU ${S.building.bu}`;}
   else if(S.meta.address||S.meta.name){$("#bldgA").textContent=S.meta.address||S.meta.name;$("#bldgB").textContent=S.meta.name||"tap to edit project";}
@@ -1986,13 +2335,25 @@ $("#pmSave").onclick=saveProject;
 $("#pmSuite").oninput=e=>{S.meta.suite=e.target.value.trim();
   if(S.building)$("#pmTenant").value=tenantSummary(S.building,S.meta.suite);};
 $("#openProjBtn").onclick=()=>{closeSheet("#menuSheet");openProject();};
-$("#loadDb").onclick=()=>$("#dbFile").click();
 $("#dbFile").onchange=e=>{const f=e.target.files[0];if(f)loadDbFile(f);e.target.value="";};
 $("#bldgSearch").oninput=renderBldgList;
 
-$("#addBtn").onclick=()=>{S.mode=S.mode==="add"?"move":"add";$("#addBtn").classList.toggle("on",S.mode==="add");
-  toast(S.mode==="add"?"Tap to add · drag pin to move · double-tap to zoom":"Drag to pan · double-tap to zoom");};
-$("#addBtn").classList.add("on");
+function setAddMode(mode,quiet){
+  S.mode=mode;
+  const addOn=mode==="add", picOn=mode==="add2d";
+  $("#addBtn").classList.toggle("on",addOn);
+  $("#picBtn").classList.toggle("on",picOn);
+  $("#picBtn").classList.toggle("pic",picOn);
+  $("#addDot").classList.toggle("on",addOn);
+  $("#picDot").classList.toggle("on",picOn);
+  if(quiet)return;
+  if(addOn) toast("ADD on · tap to place 360° · drag/hold to edit");
+  else if(picOn) toast("PIC on · tap to place 2D · drag/hold to edit");
+  else toast("ADD/PIC off · pins locked · select to shoot");
+}
+$("#addBtn").onclick=()=>setAddMode(S.mode==="add"?"move":"add");
+$("#picBtn").onclick=()=>setAddMode(S.mode==="add2d"?"move":"add2d");
+setAddMode("move",true);
 
 $("#camBtn").onclick=()=>{openSheet("#camSheet");};
 $("#pinsBtn").onclick=()=>{openPinList();openSheet("#pinSheet");};
@@ -2011,19 +2372,41 @@ $("#gpsStartBtn").onclick=()=>{
 $("#armName").oninput=e=>{if(!S.selPin)return;S.selPin.name=e.target.value;refreshPins();updateActionBar();save();};
 $("#armName").onfocus=e=>e.target.select();
 let _attachPinId=null;
-$("#attachBtn").onclick=()=>{
-  if(!S.selPin){toast("Select a pin first");return;}
-  _attachPinId=S.selPin.id; // survive Android file-picker blur/deselect
-  $("#photoFile").click();
-};
-$("#photoFile").onchange=async e=>{
+function beginAttach(pin){
+  if(!pin){toast("Select a pin first");return false;}
+  _attachPinId=pin.id; // survive Android file-picker blur/deselect
+  return true;
+}
+function openAttachChooser(pin){
+  if(!beginAttach(pin))return;
+  selectPin(pin);
+  openSheet("#attachSheet");
+}
+function pickAttach(mode){
+  const pin=(_attachPinId&&S.pins.find(p=>p.id===_attachPinId))||S.selPin||pdPin;
+  if(!beginAttach(pin))return;
+  closeSheet("#attachSheet");
+  // Defer click so the sheet closes first (WebView file-chooser quirk).
+  setTimeout(()=>{(mode==="capture"?$("#photoCapture"):$("#photoFile")).click();},60);
+}
+async function onPhotoPicked(e){
   const f=e.target.files[0];
   const pin=(_attachPinId&&S.pins.find(p=>p.id===_attachPinId))||S.selPin;
   _attachPinId=null;
-  if(f&&pin){await attachBlob(pin,f);selectPin(pin);toast("✓ "+pin.name+" attached");if(S.opt.advance)advancePin(pin);}
+  if(f&&pin){
+    await attachBlob(pin,f);selectPin(pin);toast("✓ "+pin.name+" attached");
+    if(pdPin&&pdPin.id===pin.id && $("#pinDetail").classList.contains("open")) openPinDetail(pin);
+    if(isPhoto2d(pin)) showPicPreview(pin);
+    else if(S.opt.advance) advancePin(pin);
+  }
   else if(f) toast("Select a pin first");
   e.target.value="";
-};
+}
+$("#attachBtn").onclick=()=>openAttachChooser(S.selPin);
+$("#attachTake").onclick=()=>pickAttach("capture");
+$("#attachPick").onclick=()=>pickAttach("gallery");
+$("#photoFile").onchange=onPhotoPicked;
+$("#photoCapture").onchange=onPhotoPicked;
 
 function zoomBtn(f){const v=$("#viewport");zoomAt(S.zoom*f, v.clientWidth/2, v.clientHeight/2);}
 $("#zin").onclick=()=>zoomBtn(1.35);
@@ -2040,7 +2423,7 @@ $("#hintLoadUrl").onclick=loadPlanUrl;
 
 
 $("#setPrefix").oninput=e=>{S.prefix=e.target.value.trim();updateEg();
-  S.pins.forEach(p=>{if(!p.photoId||true)p.name=pinName(p.seq);});refreshPins();save();};
+  S.pins.forEach(p=>{if(isPano(p))p.name=pinName(p.seq);});refreshPins();save();};
 $("#setNext").oninput=e=>{S.next=parseInt(e.target.value)||1;};
 function updateEg(){const e=$("#egName");if(e)e.textContent=`${S.prefix||"SITE"} (1).jpg`;}
 
@@ -2071,10 +2454,11 @@ function syncToggles(){
   const c=$("#bleCur");if(c)c.innerHTML='SHOOT frame: <span class="mono">'+(S.opt.bleCmd||"FC EF FE 86 00 03 01 00 00")+'</span>';
 }
 
-$("#importPhotos").onclick=()=>{closeSheet("#menuSheet");clearMatch();renderMatch();openSheet("#matchSheet");};
 $("#matchZoom").onclick=()=>{$("#matchZoom").style.display="none";$("#matchZoom").querySelector("img").src="";};
+$("#picPrevClose").onclick=e=>{e.stopPropagation();hidePicPreview();};
+$("#picPreview").onclick=e=>{if(e.target===$("#picPreview"))hidePicPreview();};
+$("#picPreview .card").onclick=e=>e.stopPropagation();
 $("#matchPick").onclick=()=>$("#matchFiles").click();
-$("#matchPickFolder").onclick=pickMatchFolder;
 $("#matchFiles").onchange=e=>{if(e.target.files.length)handleMatchFiles(e.target.files);e.target.value="";};
 $("#matchApply").onclick=applyMatch;
 
@@ -2082,15 +2466,33 @@ $("#clearPins").onclick=async()=>{if(!confirm("Delete all pins, their photos, an
   for(const p of S.pins)if(p.photoId)await idbDel("photos",p.photoId);
   S.pins=[];S.selPin=null;S.shotSeq=0;S.next=1;$("#setNext").value=1;
   refreshPins();updateActionBar();openPinList();save();toast("Pins cleared · shot counter reset");};
-$("#pdSave").onclick=()=>{if(!pdPin)return;pdPin.name=$("#pdName").value.trim()||pdPin.name;pdPin.note=$("#pdNote").value.trim();refreshPins();save();closeSheet("#pinDetail");};
+$("#pdSave").onclick=()=>{if(!pdPin)return;pdPin.name=$("#pdName").value.trim()||pdPin.name;pdPin.note=$("#pdNote").value.trim();
+  if(isPhoto2d(pdPin)) pdPin.info=$("#pdInfo").value.trim();
+  refreshPins();updateActionBar();save();closeSheet("#pinDetail");};
+$("#pdTake").onclick=()=>{if(!pdPin)return;beginAttach(pdPin);pickAttach("capture");};
+$("#pdPick").onclick=()=>{if(!pdPin)return;beginAttach(pdPin);pickAttach("gallery");};
 $("#pdDelete").onclick=async()=>{if(!pdPin)return;if(pdPin.photoId)await idbDel("photos",pdPin.photoId);
   S.pins=S.pins.filter(x=>x.id!==pdPin.id);if(S.selPin&&S.selPin.id===pdPin.id)S.selPin=null;
   refreshPins();updateActionBar();closeSheet("#pinDetail");save();};
 
-$("#exportSkeleton").onclick=exportSkeleton;
-$("#exportShootLog").onclick=exportShootLog;
 $("#uploadCloud").onclick=uploadSkeletonToCloud;
-$("#cloudSignIn").onclick=()=>{ openCloudSignIn(); setTimeout(refreshCloudAuth, 1500); };
+$("#cloudSignIn").onclick=()=>openCloudSignIn();
+$("#saveTourCapture").onclick=()=>{closeSheet("#menuSheet");exportZip();};
+$("#saveTourCloud").onclick=()=>{closeSheet("#menuSheet");saveTourToCloud();};
+$("#loadTourCapture").onclick=()=>{closeSheet("#menuSheet");$("#projFile").click();};
+$("#projFile").onchange=async e=>{const f=e.target.files[0];if(f)await loadProjectFile(f);e.target.value="";};
+$("#projRailBtn").onclick=()=>openCloudProjects(true);
+$("#cloudRailClose").onclick=closeCloudProjects;
+$("#cloudScrim").onclick=closeCloudProjects;
+$("#cloudProjList").onclick=e=>{
+  const btn=e.target.closest("[data-act]"); if(!btn) return;
+  const row=btn.closest(".cprow"); if(!row) return;
+  const key=row.getAttribute("data-key"); if(!key) return;
+  const act=btn.getAttribute("data-act");
+  if(act==="open") openCloudTour(key);
+  else if(act==="done") markCloudComplete(key);
+  else if(act==="del") deleteCloudTour(key);
+};
 $("#resetProj").onclick=async()=>{if(!confirm("Reset everything on this device?"))return;
   await idbClear("photos");await idbDel("kv","project");await idbDel("kv","pdf");location.reload();};
 $("#newProjBtn").onclick=async()=>{if(!confirm("Discard the current project and start a new one? Its pins and photos on this device will be removed."))return;
