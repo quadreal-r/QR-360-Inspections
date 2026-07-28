@@ -594,7 +594,7 @@ const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;}
 function toast(m,ms=1900){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),ms);}
 
 /* ---------- version (each segment rolls over at 99: 1.1.99 → 1.2.0, 1.99.x → 2.0.0) ---------- */
-const VERSION=[1,0,53];
+const VERSION=[1,0,54];
 function bumpVersion(v){v=v.slice();v[2]++;if(v[2]>99){v[2]=0;v[1]++;}if(v[1]>99){v[1]=0;v[0]++;}return v;}
 function verStr(v){return "QR360 Capture <b>v"+(v||VERSION).join(".")+"</b>";}
 const CAPTURE_VER=VERSION.join(".");
@@ -1585,32 +1585,95 @@ async function loadFloorPlanFromPacked(packed){
   }catch(e){ console.warn("plan decode failed", e); }
   return false;
 }
-/** Pull a drawing out of an .insp360 zip (embedded tour.json or root PDF/PNG). */
-async function loadFloorPlanFromZip(zip){
+/** True if a zip entry looks like a pin/pano photo, not a floor-plan drawing. */
+function looksLikePinPhotoName(name, pinNames){
+  const base=String(name||"").replace(/^.*\//,"").toLowerCase();
+  if(!base) return false;
+  if(/^preview\.jpe?g$/i.test(base)||/\.cover\.jpe?g$/i.test(base)) return true;
+  if(/\(\d+\)\s*\.jpe?g$/i.test(base)) return true; // "145 (1).jpg"
+  if(pinNames&&pinNames.has(base.replace(/\.jpe?g$/i,""))) return true;
+  if(pinNames&&pinNames.has(base)) return true;
+  return false;
+}
+function pinNameSetFromProj(proj, tour){
+  const set=new Set();
+  for(const p of (proj&&proj.pins)||[]){
+    const n=String(p.name||"").toLowerCase();
+    if(n){ set.add(n); set.add(n+".jpg"); set.add(n+".jpeg"); }
+  }
+  for(const fn of (tour&&tour.order)||[]){
+    const b=String(fn||"").replace(/^.*\//,"").toLowerCase();
+    if(b){ set.add(b); set.add(b.replace(/\.jpe?g$/i,"")); }
+  }
+  return set;
+}
+/**
+ * Pick floor-plan bytes from a zip. Never treats pin/pano JPEGs as the drawing.
+ * Prefers: preferred name → PDF → plan/drawing-named raster → tour.json embed.
+ */
+async function resolveFloorPlanFromZip(zip, opts){
+  opts=opts||{};
   if(!zip) return false;
+  const preferred=opts.preferredName?String(opts.preferredName):"";
+  const pinNames=opts.pinNames||new Set();
+  const entries=Object.keys(zip.files).filter(k=>zip.files[k]&&!zip.files[k].dir);
+
+  async function openEntry(key){
+    const bytes=new Uint8Array(await zip.file(key).async("arraybuffer"));
+    const base=key.split("/").pop();
+    // Sniff PDF magic even when the extension is wrong
+    const isPdf=/\.pdf$/i.test(key)||(bytes.length>4&&bytes[0]===0x25&&bytes[1]===0x50&&bytes[2]===0x44&&bytes[3]===0x46);
+    if(isPdf) await openPdfBytes(bytes, /\.pdf$/i.test(base)?base:(base.replace(/\.[^.]+$/,"")+".pdf"));
+    else await openImageBytes(bytes, base);
+    return true;
+  }
+  function isRoot(k){ return !k.includes("/"); }
+  function isPlanRaster(k){
+    if(!/\.(png|jpe?g|webp|gif|bmp)$/i.test(k)) return false;
+    if(/photos2d\//i.test(k)) return false;
+    if(looksLikePinPhotoName(k, pinNames)) return false;
+    return true;
+  }
+  function isPlanNamed(k){
+    const b=k.split("/").pop().toLowerCase();
+    return /^(drawing|plan|floor|floorplan|siteplan)/i.test(b)||/\b(drawing|plan|floor)\b/i.test(b);
+  }
+
   try{
+    if(preferred && zip.files[preferred] && !zip.files[preferred].dir){
+      if(!looksLikePinPhotoName(preferred, pinNames)||/\.pdf$/i.test(preferred))
+        return await openEntry(preferred);
+    }
+    // Root PDFs first (real drawings)
+    let key=entries.find(k=>isRoot(k)&&/\.pdf$/i.test(k));
+    if(!key) key=entries.find(k=>/\.pdf$/i.test(k)&&!/photos2d\//i.test(k));
+    if(key) return await openEntry(key);
+
+    // Named plan rasters (drawing.png / plan.jpg) — not pin shots
+    key=entries.find(k=>isRoot(k)&&isPlanRaster(k)&&isPlanNamed(k));
+    if(!key) key=entries.find(k=>isPlanRaster(k)&&isPlanNamed(k));
+    if(key) return await openEntry(key);
+
+    // tour.json embedded plan (pdf / img) — before any leftover JPEG
     const tj=zip.file("tour.json");
     if(tj){
-      const tour=JSON.parse(await tj.async("string"));
-      const packed=tourJsonToProject(tour);
-      if(await loadFloorPlanFromPacked(packed)) return true;
+      try{
+        const tour=JSON.parse(await tj.async("string"));
+        const packed=tourJsonToProject(tour);
+        if(await loadFloorPlanFromPacked(packed)) return true;
+      }catch(e){ console.warn(e); }
     }
-  }catch(e){ console.warn(e); }
-  try{
-    let planKey=Object.keys(zip.files).find(k=>!zip.files[k].dir&&!k.includes("/")&&/\.pdf$/i.test(k));
-    if(!planKey)planKey=Object.keys(zip.files).find(k=>!zip.files[k].dir&&!k.includes("/")&&/\.(png|jpe?g|webp|gif|bmp)$/i.test(k));
-    // Also accept drawings/ or plan/ folders
-    if(!planKey)planKey=Object.keys(zip.files).find(k=>!zip.files[k].dir&&/\.pdf$/i.test(k)&&!/photos2d\//i.test(k));
-    if(!planKey)planKey=Object.keys(zip.files).find(k=>!zip.files[k].dir&&/\.(png|jpe?g|webp)$/i.test(k)&&!/photos2d\//i.test(k)&&!/\.cover\./i.test(k));
-    if(planKey){
-      const bytes=new Uint8Array(await zip.file(planKey).async("arraybuffer"));
-      const base=planKey.split("/").pop();
-      if(/\.pdf$/i.test(planKey)) await openPdfBytes(bytes, base);
-      else await openImageBytes(bytes, base);
-      return true;
-    }
-  }catch(e){ console.warn(e); }
+
+    // Last resort: a root raster that is not a pin photo (e.g. floor plan scan as PNG)
+    key=entries.find(k=>isRoot(k)&&isPlanRaster(k)&&/\.png$/i.test(k));
+    if(!key) key=entries.find(k=>isRoot(k)&&isPlanRaster(k));
+    if(key) return await openEntry(key);
+  }catch(e){ console.warn("resolveFloorPlanFromZip", e); }
   return false;
+}
+/** Pull a drawing out of an .insp360 / .360skeleton zip (embedded tour.json or loose drawing). */
+async function loadFloorPlanFromZip(zip, opts){
+  return resolveFloorPlanFromZip(zip, opts||{});
 }
 async function cloudFetchTourJson(key){
   if(window.AndroidCloud && typeof AndroidCloud.getTourJson==="function"){
@@ -1866,11 +1929,19 @@ async function build360SkeletonBlob(onProgress){
   const tour=buildTourJson360Skeleton();
   zip.file("tour.json", JSON.stringify(tour,null,2), { compression:"STORE" });
   zip.file("shoot-log.json", JSON.stringify(buildShootLogSkeleton(),null,2), { compression:"STORE" });
-  zip.file("capture-draft.json", JSON.stringify(serializeSkeletonDraft(),null,2), { compression:"STORE" });
+  const draft=serializeSkeletonDraft();
+  // Canonical drawing entry so load never confuses a pin JPG with the plan
   if(S.pdfBytes){
-    const name=S.pdfName||(S.planKind==="img"?"plan.png":"plan.pdf");
-    zip.file(name, S.pdfBytes, { compression:"STORE" });
+    const isImg=S.planKind==="img"||/\.(png|jpe?g|webp|gif|bmp)$/i.test(S.pdfName||"");
+    const drawName=isImg?"drawing.png":"drawing.pdf";
+    draft.pdfName=drawName;
+    draft.planKind=isImg?"img":"pdf";
+    zip.file(drawName, S.pdfBytes, { compression:"STORE" });
+    if(tour.plan&&tour.plan.plans&&tour.plan.plans[0]) tour.plan.plans[0].name=drawName;
   }
+  zip.file("capture-draft.json", JSON.stringify(draft,null,2), { compression:"STORE" });
+  // Re-write tour.json after name normalize
+  zip.file("tour.json", JSON.stringify(tour,null,2), { compression:"STORE" });
   if(onProgress) onProgress(1, 1, "Writing 360skeleton");
   return zip.generateAsync({ type:"blob", compression:"STORE", streamFiles:true });
 }
@@ -2268,7 +2339,14 @@ async function openCloudTour(key){
         }
       }
       if(!hasPlan){
-        hasPlan=await loadFloorPlanFromZip(zip);
+        const pinNames=pinNameSetFromProj(
+          { pins:S.pins },
+          tour||(zip.file("tour.json")?JSON.parse(await zip.file("tour.json").async("string")):null)
+        );
+        hasPlan=await loadFloorPlanFromZip(zip, {
+          preferredName:S.pdfName||"",
+          pinNames
+        });
       }
       refreshPins();updateActionBar();updateHint();
     }
@@ -2529,31 +2607,15 @@ async function loadProjectFile(file, opts){
             if(match){const b=await zip.file(match).async("blob");await idbPut("photos",p.photoId,b);}
           }
         }
-        const planName=proj.pdfName||proj.pdf;
-        let planKey=planName&&zip.files[planName]?planName:null;
-        if(!planKey)planKey=Object.keys(zip.files).find(k=>!k.includes("/")&&/\.pdf$/i.test(k));
-        if(!planKey)planKey=Object.keys(zip.files).find(k=>!k.includes("/")&&/\.(png|jpe?g|webp|gif|bmp)$/i.test(k));
-        if(planKey){
-          const bytes=new Uint8Array(await zip.file(planKey).async("arraybuffer"));
-          if(/\.pdf$/i.test(planKey))await openPdfBytes(bytes,planKey.split("/").pop());
-          else await openImageBytes(bytes,planKey.split("/").pop());
-        }else{
-          // Plan may only live inside tour.json (viewer packages)
+        let tour=null;
+        try{
           const tj=zip.file("tour.json");
-          if(tj){
-            try{
-              const tour=JSON.parse(await tj.async("string"));
-              const packed=tourJsonToProject(tour);
-              if(packed.planPdfB64){
-                const bytes=b64ToBytes(packed.planPdfB64);
-                const nm=/\.pdf$/i.test(packed.planName)?packed.planName:(packed.planName+".pdf");
-                await openPdfBytes(bytes, nm);
-              }else if(packed.planImgDataUrl){
-                await openImageBytes(b64ToBytes(packed.planImgDataUrl), packed.planName||"plan.png");
-              }
-            }catch(e){ console.warn(e); }
-          }
-        }
+          if(tj) tour=JSON.parse(await tj.async("string"));
+        }catch(_){}
+        const pinNames=pinNameSetFromProj(proj, tour);
+        const preferred=proj.pdfName||proj.pdf||"";
+        const gotPlan=await resolveFloorPlanFromZip(zip, { preferredName:preferred, pinNames });
+        if(!gotPlan) toast("Pins loaded — floor plan drawing not found in file");
         refreshPins();openPinList();
         if(/\.360skeleton$/i.test(name)) toast("360skeleton loaded ✓");
         else if(stripPhotos) toast("Opened as 360skeleton ✓");
@@ -2564,7 +2626,10 @@ async function loadProjectFile(file, opts){
       if(!tj){toast("No project.json / tour.json in archive");return;}
       const tour=JSON.parse(await tj.async("string"));
       const r=await applyTourJson(tour);
-      if(!r.hasPlan) await loadFloorPlanFromZip(zip);
+      if(!r.hasPlan){
+        const pinNames=pinNameSetFromProj(null, tour);
+        await loadFloorPlanFromZip(zip, { pinNames });
+      }
       toast((/\.360skeleton$/i.test(name)?"360skeleton":"Opened from tour.json")+" · "+r.pins+" pins");
     }else{
       const proj=JSON.parse(await file.text());
