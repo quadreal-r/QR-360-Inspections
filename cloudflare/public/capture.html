@@ -497,11 +497,10 @@
 
       <div class="fld"><label>360skeleton</label>
         <div class="row2">
-          <button class="btn primary" id="save360Skeleton">Save to cloud</button>
           <button class="btn" id="load360Skeleton">Load</button>
+          <button class="btn" id="download360Skeleton">Download</button>
         </div>
-        <button class="btn" id="download360Skeleton" style="width:100%;margin-top:8px">Download .360skeleton</button>
-        <div class="note" style="margin-top:8px">Save uploads drawing + pins to cloud. Download keeps a local file copy.</div>
+        <div class="note" style="margin-top:8px">Use <b>Cloud → Save to cloud</b> to upload. Load / Download are for local .360skeleton files.</div>
       </div>
 
       <div class="fld"><label>Project</label>
@@ -594,7 +593,7 @@ const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;}
 function toast(m,ms=1900){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),ms);}
 
 /* ---------- version (each segment rolls over at 99: 1.1.99 → 1.2.0, 1.99.x → 2.0.0) ---------- */
-const VERSION=[1,0,54];
+const VERSION=[1,0,55];
 function bumpVersion(v){v=v.slice();v[2]++;if(v[2]>99){v[2]=0;v[1]++;}if(v[1]>99){v[1]=0;v[0]++;}return v;}
 function verStr(v){return "QR360 Capture <b>v"+(v||VERSION).join(".")+"</b>";}
 const CAPTURE_VER=VERSION.join(".");
@@ -2836,10 +2835,8 @@ $("#pdDelete").onclick=async()=>{if(!pdPin)return;if(pdPin.photoId)await idbDel(
   S.pins=S.pins.filter(x=>x.id!==pdPin.id);if(S.selPin&&S.selPin.id===pdPin.id)S.selPin=null;
   refreshPins();updateActionBar();closeSheet("#pinDetail");save();};
 
-$("#uploadCloud")&&($("#uploadCloud").onclick=uploadSkeletonToCloud);
 $("#cloudSignIn").onclick=()=>openCloudSignIn();
 $("#saveTourCloud").onclick=()=>{closeSheet("#menuSheet");saveTourToCloud();};
-$("#save360Skeleton").onclick=()=>{closeSheet("#menuSheet");uploadSkeletonToCloud();};
 $("#download360Skeleton").onclick=()=>{closeSheet("#menuSheet");save360Skeleton();};
 $("#load360Skeleton").onclick=()=>{closeSheet("#menuSheet");$("#skelFile").click();};
 $("#skelFile").onchange=async e=>{const f=e.target.files[0];if(f)await loadProjectFile(f,{reshoot:true});e.target.value="";};
