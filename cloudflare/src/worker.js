@@ -272,21 +272,51 @@ async function canEditTour(env, user, cloudKey) {
   return permRank(p) >= permRank('edit')
 }
 
-/** Same rules as PUT /api/tours/:key — edit existing, or admin/pre-granted create. */
+/** Grant the uploader edit on a newly created tour so they can list/re-save it. */
+async function ensureUserEditGrant(env, user, key) {
+  if (!env.INSP360_DB || !user?.email || !key) return
+  const email = normalizeEmail(user.email)
+  if (!email) return
+  try {
+    await env.INSP360_DB.prepare(
+      `INSERT INTO project_grants (cloud_key, principal_type, principal_id, permission)
+       VALUES (?, 'user', ?, 'edit')
+       ON CONFLICT(cloud_key, principal_type, principal_id) DO UPDATE SET
+         permission = 'edit'`,
+    )
+      .bind(key, email)
+      .run()
+  } catch (e) {
+    console.warn('ensureUserEditGrant failed', key, e)
+  }
+}
+
+/**
+ * Write gate for tour archives / sidecars:
+ * - Existing archive or tour.json companion → need edit (or admin)
+ * - Brand-new key → any signed-in member/admin may create; caller should grant creator edit
+ */
 async function assertCanPutTour(env, user, key) {
   const existing = await env.INSP360_BUCKET.head(key)
-  if (existing) {
+  let companion = null
+  if (!existing) {
+    try {
+      companion = await env.INSP360_BUCKET.head(tourCompanionKey(key))
+    } catch (_) {
+      companion = null
+    }
+  }
+  if (existing || companion) {
     if (!(await canEditTour(env, user, key))) {
       return { ok: false, status: 403, error: 'Forbidden — edit permission required' }
     }
-    return { ok: true }
+    return { ok: true, created: false }
   }
-  if (user.role === 'admin') return { ok: true }
-  const p = await resolveTourPermission(env, user, key)
-  if (p !== 'edit') {
-    return { ok: false, status: 403, error: 'Forbidden — only admins can create new cloud tours' }
+  if (!user?.email) {
+    return { ok: false, status: 401, error: 'Sign in required' }
   }
-  return { ok: true }
+  // Any signed-in member/admin may upload a brand-new project.
+  return { ok: true, created: true }
 }
 
 /** Capture workflow status stored on tour.json / object customMetadata. */
@@ -1027,6 +1057,13 @@ async function handleApi(request, env) {
         size: body?.size || null,
         ms: Date.now() - t0,
       })
+      if (gate.created) {
+        try {
+          await ensureUserEditGrant(env, user, key)
+        } catch (_) {
+          /* best-effort */
+        }
+      }
       try {
         await recordEvent(env, {
           email: user.email,
@@ -1214,9 +1251,8 @@ async function handleApi(request, env) {
     }
 
     if (request.method === 'PUT') {
-      if (!(await canEditTour(env, user, key))) {
-        return json({ error: 'Forbidden — edit permission required' }, 403)
-      }
+      const gate = await assertCanPutTour(env, user, key)
+      if (!gate.ok) return json({ error: gate.error }, gate.status)
       const len = Number(request.headers.get('Content-Length') || 0)
       if (len > MAX_TOUR_JSON_BYTES) return json({ error: 'Tour JSON too large' }, 413)
       if (!request.body) return json({ error: 'Empty body' }, 400)
@@ -1238,6 +1274,13 @@ async function handleApi(request, env) {
           captureStatus,
         },
       })
+      if (gate.created) {
+        try {
+          await ensureUserEditGrant(env, user, key)
+        } catch (_) {
+          /* best-effort */
+        }
+      }
       try {
         await recordEvent(env, {
           email: user.email,
@@ -1304,11 +1347,8 @@ async function handleApi(request, env) {
   }
 
   if (request.method === 'PUT') {
-    // New upload: admin always; non-admin needs edit on existing key, or may create only if they
-    // already have edit grant (or are admin). Tours with no grants stay admin-only — so members
-    // cannot create brand-new keys unless granted edit on that exact key first (admin assigns).
-    // Exception: if the object already exists, require edit; if it does not exist, only admin
-    // may create (safe default). Members with edit on a key can overwrite.
+    // Existing tours require edit. Brand-new keys: any signed-in member may create
+    // (creator receives an edit grant so the tour appears in their Cloud list).
     const gate = await assertCanPutTour(env, user, key)
     if (!gate.ok) return json({ error: gate.error }, gate.status)
     const len = Number(request.headers.get('Content-Length') || 0)
@@ -1327,6 +1367,13 @@ async function handleApi(request, env) {
         captureStatus,
       },
     })
+    if (gate.created) {
+      try {
+        await ensureUserEditGrant(env, user, key)
+      } catch (_) {
+        /* best-effort */
+      }
+    }
     try {
       await recordEvent(env, {
         email: user.email,

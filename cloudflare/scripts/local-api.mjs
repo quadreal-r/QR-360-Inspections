@@ -314,6 +314,49 @@ async function canEdit(user, key) {
   return permRank(p) >= permRank('edit')
 }
 
+async function ensureUserEditGrant(user, key) {
+  if (!aclDb || !user?.email || !key) return
+  const email = normalizeEmail(user.email)
+  if (!email) return
+  try {
+    await aclDb
+      .prepare(
+        `INSERT INTO project_grants (cloud_key, principal_type, principal_id, permission)
+         VALUES (?, 'user', ?, 'edit')
+         ON CONFLICT(cloud_key, principal_type, principal_id) DO UPDATE SET permission = 'edit'`,
+      )
+      .bind(key, email)
+      .run()
+  } catch (e) {
+    console.warn('ensureUserEditGrant failed', key, e)
+  }
+}
+
+async function objectExists(key) {
+  try {
+    await s3.send(new HeadObjectCommand({ Bucket: bucket, Key: key }))
+    return true
+  } catch (err) {
+    const st = err?.$metadata?.httpStatusCode
+    if (st === 404 || err?.name === 'NotFound' || err?.name === 'NoSuchKey') return false
+    throw err
+  }
+}
+
+/** Same create/edit rules as the Worker assertCanPutTour. */
+async function assertCanPutTour(user, key) {
+  const hasMain = await objectExists(key)
+  const hasCompanion = hasMain ? false : await objectExists(tourCompanionKey(key))
+  if (hasMain || hasCompanion) {
+    if (!(await canEdit(user, key))) {
+      return { ok: false, status: 403, error: 'Forbidden — edit permission required' }
+    }
+    return { ok: true, created: false }
+  }
+  if (!user?.email) return { ok: false, status: 401, error: 'Sign in required' }
+  return { ok: true, created: true }
+}
+
 async function readS3Range(key, offset, length) {
   const obj = await s3.send(
     new GetObjectCommand({
@@ -944,9 +987,8 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (req.method === 'PUT') {
-        if (!(await canEdit(user, key))) {
-          return json(res, { error: 'Forbidden — edit permission required' }, 403)
-        }
+        const gate = await assertCanPutTour(user, key)
+        if (!gate.ok) return json(res, { error: gate.error }, gate.status)
         const body = await readBody(req)
         if (!body.length) return json(res, { error: 'Empty body' }, 400)
         if (body.length > 8 * 1024 * 1024) return json(res, { error: 'Tour JSON too large' }, 413)
@@ -970,6 +1012,13 @@ const server = http.createServer(async (req, res) => {
             },
           }),
         )
+        if (gate.created) {
+          try {
+            await ensureUserEditGrant(user, key)
+          } catch (_) {
+            /* best-effort */
+          }
+        }
         return json(res, { ok: true, key: companion, tourKey: key, status: captureStatus })
       }
 
@@ -982,8 +1031,8 @@ const server = http.createServer(async (req, res) => {
     if (mpuCreate && req.method === 'POST') {
       const key = sanitizeKey(mpuCreate[1])
       if (!key) return json(res, { error: 'Invalid tour key' }, 400)
-      const allowed = user.role === 'admin' || (await canEdit(user, key))
-      if (!allowed) return json(res, { error: 'Forbidden — edit permission required' }, 403)
+      const gate = await assertCanPutTour(user, key)
+      if (!gate.ok) return json(res, { error: gate.error }, gate.status)
       const body = (await readJsonBody(req)) || {}
       const size = Number(body?.size || 0)
       if (size > MAX_UPLOAD_BYTES) return json(res, { error: 'File too large' }, 413)
@@ -1019,8 +1068,8 @@ const server = http.createServer(async (req, res) => {
       if (!Number.isInteger(partNumber) || partNumber < 1 || partNumber > 10000) {
         return json(res, { error: 'Invalid part number' }, 400)
       }
-      const allowed = user.role === 'admin' || (await canEdit(user, key))
-      if (!allowed) return json(res, { error: 'Forbidden — edit permission required' }, 403)
+      const gate = await assertCanPutTour(user, key)
+      if (!gate.ok) return json(res, { error: gate.error }, gate.status)
       const len = Number(req.headers['content-length'] || 0)
       if (len > MULTIPART_PART_SIZE * 2) return json(res, { error: 'Part too large' }, 413)
       const body = await readBody(req)
@@ -1054,8 +1103,8 @@ const server = http.createServer(async (req, res) => {
       const key = sanitizeKey(mpuComplete[1])
       const uploadId = decodeKey(mpuComplete[2])
       if (!key || !uploadId) return json(res, { error: 'Invalid tour key or uploadId' }, 400)
-      const allowed = user.role === 'admin' || (await canEdit(user, key))
-      if (!allowed) return json(res, { error: 'Forbidden — edit permission required' }, 403)
+      const gate = await assertCanPutTour(user, key)
+      if (!gate.ok) return json(res, { error: gate.error }, gate.status)
       const body = (await readJsonBody(req)) || {}
       const partsIn = Array.isArray(body?.parts) ? body.parts : []
       const parts = partsIn
@@ -1091,6 +1140,13 @@ const server = http.createServer(async (req, res) => {
         size: body?.size || null,
         ms: Date.now() - t0,
       })
+      if (gate.created) {
+        try {
+          await ensureUserEditGrant(user, key)
+        } catch (_) {
+          /* best-effort */
+        }
+      }
       return json(res, { ok: true, key, uploadedBy: user.email, parts: parts.length })
     }
 
@@ -1099,8 +1155,8 @@ const server = http.createServer(async (req, res) => {
       const key = sanitizeKey(mpuAbort[1])
       const uploadId = decodeKey(mpuAbort[2])
       if (!key || !uploadId) return json(res, { error: 'Invalid tour key or uploadId' }, 400)
-      const allowed = user.role === 'admin' || (await canEdit(user, key))
-      if (!allowed) return json(res, { error: 'Forbidden — edit permission required' }, 403)
+      const gate = await assertCanPutTour(user, key)
+      if (!gate.ok) return json(res, { error: gate.error }, gate.status)
       try {
         await s3.send(
           new AbortMultipartUploadCommand({
@@ -1187,12 +1243,9 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (req.method === 'PUT') {
-        // New uploads: admin always; members need edit grant on that key (or admin creates via grant later)
-        const allowed =
-          user.role === 'admin' || (await canEdit(user, key))
-        if (!allowed) {
-          return json(res, { error: 'Forbidden — edit permission required' }, 403)
-        }
+        // Existing tours require edit. Brand-new keys: any signed-in member may create.
+        const gate = await assertCanPutTour(user, key)
+        if (!gate.ok) return json(res, { error: gate.error }, gate.status)
         const body = await readBody(req)
         if (!body.length) return json(res, { error: 'Empty body' }, 400)
         const captureStatus = normalizeCaptureStatus(
@@ -1211,6 +1264,13 @@ const server = http.createServer(async (req, res) => {
             },
           }),
         )
+        if (gate.created) {
+          try {
+            await ensureUserEditGrant(user, key)
+          } catch (_) {
+            /* best-effort */
+          }
+        }
         return json(res, { ok: true, key, uploadedBy: user.email, status: captureStatus })
       }
 
