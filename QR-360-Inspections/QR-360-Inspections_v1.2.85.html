@@ -123,19 +123,16 @@
   #saveProgOverlay .sp-pct{
     flex:0 0 auto; color:var(--text); font-variant-numeric:tabular-nums; min-width:28px; text-align:right; opacity:.9;
   }
-  /* Cloud upload / large saves: centered card so progress is obvious */
-  body.save-prog-prominent::before{
-    content:''; position:fixed; inset:0; z-index:239; background:rgba(0,0,0,.5);
-    pointer-events:none;
-  }
+  /* Cloud upload / large saves: centered card so progress is obvious.
+     Scrim is a 100vmax box-shadow on the card itself (not body::before) so the
+     dialog can never sit under the dimmer — even if reparenting fails. */
   #saveProgOverlay.prominent{
     position:fixed; left:50%; top:44%; transform:translate(-50%,-50%);
     z-index:240; flex:none; width:min(460px,92vw); max-width:none;
     padding:20px 22px; flex-direction:column; align-items:stretch; gap:12px;
     pointer-events:auto; border-radius:14px;
-    background:rgba(16,24,40,.97); border:1px solid rgba(255,255,255,.16);
-    box-shadow:0 24px 70px rgba(0,0,0,.55);
-    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    background:#101828; border:1px solid rgba(255,255,255,.18);
+    box-shadow:0 0 0 100vmax rgba(0,0,0,.55), 0 24px 70px rgba(0,0,0,.55);
   }
   #saveProgOverlay.prominent .sp-row{
     flex-direction:column; align-items:stretch; gap:10px;
@@ -8554,6 +8551,7 @@ function fmtBytes(n){
 // opts.title overrides the left label (default "Saving…" / "Uploading…").
 let _saveAbortController=null;
 let _saveActiveXhr=null;
+let _saveProgHome=null; // { parent, next } — restore topbar slot after prominent overlay
 /** Set when user pauses an upload so the abort catch can toast resume guidance once. */
 let _saveCancelToast='';
 function beginSaveAbortable(){

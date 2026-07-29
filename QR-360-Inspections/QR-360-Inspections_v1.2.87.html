@@ -123,19 +123,16 @@
   #saveProgOverlay .sp-pct{
     flex:0 0 auto; color:var(--text); font-variant-numeric:tabular-nums; min-width:28px; text-align:right; opacity:.9;
   }
-  /* Cloud upload / large saves: centered card so progress is obvious */
-  body.save-prog-prominent::before{
-    content:''; position:fixed; inset:0; z-index:239; background:rgba(0,0,0,.5);
-    pointer-events:none;
-  }
+  /* Cloud upload / large saves: centered card so progress is obvious.
+     Scrim is a 100vmax box-shadow on the card itself (not body::before) so the
+     dialog can never sit under the dimmer — even if reparenting fails. */
   #saveProgOverlay.prominent{
     position:fixed; left:50%; top:44%; transform:translate(-50%,-50%);
     z-index:240; flex:none; width:min(460px,92vw); max-width:none;
     padding:20px 22px; flex-direction:column; align-items:stretch; gap:12px;
     pointer-events:auto; border-radius:14px;
-    background:rgba(16,24,40,.97); border:1px solid rgba(255,255,255,.16);
-    box-shadow:0 24px 70px rgba(0,0,0,.55);
-    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    background:#101828; border:1px solid rgba(255,255,255,.18);
+    box-shadow:0 0 0 100vmax rgba(0,0,0,.55), 0 24px 70px rgba(0,0,0,.55);
   }
   #saveProgOverlay.prominent .sp-row{
     flex-direction:column; align-items:stretch; gap:10px;
@@ -1808,7 +1805,7 @@
   <button class="btn icon topbtn" id="btnBlurFaces" title="Privacy blur — faces or licence plates (auto or manual)"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/><path d="M8.6 8.2l-.8.8M15.4 8.2l.8.8M11 12.4h2"/></svg></button>
   <button class="btn icon topbtn" id="btnPrivacySettings" title="Privacy settings — automatic face &amp; licence-plate blur"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   <button type="button" class="btn" id="btnAdmin" title="Admin — people, groups, and tour access">Admin</button>
-  <span id="appVer" title="Standalone QR-360° viewer">QR360-v1.2.84</span>
+  <span id="appVer" title="Standalone QR-360° viewer">QR360-v1.2.87</span>
 </div>
 
 <div id="privacySettings">
@@ -2302,7 +2299,7 @@
 <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,image/*" multiple>
 <input type="file" id="folderInput" webkitdirectory directory multiple>
 <input type="file" id="tourFile" accept="application/json,.json">
-<input type="file" id="projFile" accept=".insp360,.zip,application/zip">
+<input type="file" id="projFile" accept=".insp360,.360skeleton,.zip,application/zip">
 <input type="file" id="coverPick" accept="image/*">
 <input type="file" id="hsImgPick" accept="image/*" multiple>
 
@@ -6123,11 +6120,11 @@ async function buildTourPatchTail(srcFile, tourText){
 }
 /** Sidecar file name beside an .insp360: `Tour.insp360` → `Tour.tour.json`. */
 function tourSidecarFileName(inspName){
-  return String(inspName||'project.insp360').replace(/\.(insp360|zip)$/i,'')+'.tour.json';
+  return String(inspName||'project.insp360').replace(/\.(insp360|360skeleton|zip)$/i,'')+'.tour.json';
 }
 /** R2 companion key: `building/tour.insp360` → `building/tour.tour.json`. */
 function tourCompanionCloudKey(inspKey){
-  return String(inspKey||'').replace(/\.(insp360|zip)$/i,'')+'.tour.json';
+  return String(inspKey||'').replace(/\.(insp360|360skeleton|zip)$/i,'')+'.tour.json';
 }
 function setProjectSaveBusy(on){
   const busy=!!on;
@@ -7524,7 +7521,7 @@ async function openProjectPicker(){
   if(hasFSAccess()){
     try{
       const pickerOpts={
-        types:[{description:'INSP360 project', accept:{'application/zip':['.insp360','.zip']}}],
+        types:[{description:'INSP360 / 360skeleton', accept:{'application/zip':['.insp360','.360skeleton','.zip']}}],
         multiple:false
       };
       const start=projectDir||photoSourceHint||startHint;
@@ -9582,7 +9579,7 @@ async function openRecent(rec){
     try{
       const pickerOpts={
         multiple:false,
-        types:[{description:'INSP360 project', accept:{'application/zip':['.insp360','.zip']}}]
+        types:[{description:'INSP360 / 360skeleton', accept:{'application/zip':['.insp360','.360skeleton','.zip']}}]
       };
       if(wantName) pickerOpts.suggestedName=/\.(insp360|zip)$/i.test(wantName)?wantName:(wantName+'.insp360');
       const startIn=(rec&&rec.dirHandle)||projectDir||startHint||photoSourceHint;
@@ -10740,7 +10737,6 @@ function setPlanEdit(on){
   document.getElementById('planPlace').classList.toggle('on', on); try{syncPinsToggle();}catch(e){}
   if(!on){ planSel=null; planPanel.classList.remove('editing'); renderMarkers(); refreshLinkPick(); }
   try{ syncPlacingPinsUi(); }catch(_){}
-  if(on && !planSel){ try{ addPinAtMapCenter(); }catch(_){} }
 }
 
 const peTarget=document.getElementById('peTarget'), peLabel=document.getElementById('peLabel'), peNum=document.getElementById('peNum');
@@ -11463,8 +11459,7 @@ function setGmapPlace(on){
   applyGmapPlaceGestures(!!(on && p && p.isLiveMap));
   try{ syncPlacingPinsUi(); }catch(_){}
   if(on){
-    try{ if(!_gmapSel) addPinAtMapCenter(); }catch(_){}
-    toast('Pin edit on \u2014 drag the new pin into place, or tap another pin to edit it.');
+    toast('Pin edit on \u2014 tap a pin to edit it, or use Add new pin.');
   }
 }
 function syncPlacingPinsUi(){
@@ -16090,7 +16085,7 @@ function sanitizeCloudKey(name){
   if(k.includes('..')) k=k.split('/').filter(p=>p&&p!=='..').join('/');
   k=k.replace(/[\u0000-\u001f\u007f]/g,'');
   if(!k) k='tour.insp360';
-  if(!/\.insp360$/i.test(k)) k+='.insp360';
+  else if(!/\.(insp360|360skeleton)$/i.test(k)) k+='.insp360';
   if(k.length>512) k=k.slice(0,504)+'.insp360';
   return k;
 }
@@ -17358,7 +17353,7 @@ function requestEmbedCloudList(prefix){
   });
 }
 function coverCompanionKey(tourKey){
-  return String(tourKey||'').replace(/\.insp360$/i,'')+'.cover.jpg';
+  return String(tourKey||'').replace(/\.(insp360|360skeleton)$/i,'')+'.cover.jpg';
 }
 function publicCoverUrlForKey(tourKey, explicitCoverUrl){
   if(explicitCoverUrl) return String(explicitCoverUrl);
@@ -19448,7 +19443,7 @@ async function pickLocalInsp360ForDouble(rec, sideLabel){
     try{
       const [h]=await window.showOpenFilePicker({
         multiple:false,
-        types:[{description:'INSP360 project', accept:{'application/zip':['.insp360','.zip']}}]
+        types:[{description:'INSP360 / 360skeleton', accept:{'application/zip':['.insp360','.360skeleton','.zip']}}]
       });
       handle=h||null;
     }catch(e){
@@ -19874,7 +19869,7 @@ window.addEventListener('resize', ()=>{ if(isDoubleTour()){ resizeDoublePanes();
 /* __BME_INSP360_INTEGRATION__ */
 (function(){
   /** Semver only (no product prefix). Patch rolls 0–99 then middle number +1. */
-  const VERSION_NUM="1.2.84";
+  const VERSION_NUM="1.2.87";
   /**
    * Product line for this HTML copy:
    * - QR360 = standalone Inspections viewer (file / :8788 / workers.dev)
@@ -20332,7 +20327,7 @@ window.addEventListener('resize', ()=>{ if(isDoubleTour()){ resizeDoublePanes();
             try{
               const pickerOpts={
                 multiple:false,
-                types:[{description:'INSP360 project', accept:{'application/zip':['.insp360','.zip']}}]
+                types:[{description:'INSP360 / 360skeleton', accept:{'application/zip':['.insp360','.360skeleton','.zip']}}]
               };
               const startIn=projectDir||photoSourceHint||startHint;
               if(startIn) pickerOpts.startIn=startIn;

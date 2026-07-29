@@ -1,0 +1,15 @@
+---
+description: Commit and push to GitHub after every finished change set
+alwaysApply: true
+---
+
+# Always commit and push after each change
+
+When a meaningful change set is finished (feature, fix, UI, deploy sync, rules, etc.):
+
+1. **Commit** all related files for that change (do not leave finished work uncommitted).
+2. **Push** to the tracked remote branch immediately after a successful commit (`git push` / `git push -u origin HEAD` if needed).
+3. Follow the repo’s existing Git Safety Protocol (no force push to main/master, no config changes, no skipping hooks, HEREDOC commit messages).
+4. Do this even when the user did not separately ask to commit/push — this standing preference overrides the default “only commit when asked” behavior for this project.
+
+Whitespace-only or accidental touch with no real change does not need a commit.

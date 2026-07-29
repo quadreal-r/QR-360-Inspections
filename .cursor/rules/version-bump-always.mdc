@@ -15,14 +15,22 @@ When editing the INSP 360 viewer (`QR-360-Inspections_v*.html`) or related app b
      - Map embed copy (after East Industrial sync) → `Map360-vX.Y.Z`
    - Update `VERSION_NUM` / `appVer` strings inside the file to match
    - Update `.cursor/rules/open-viewer-link.mdc` to the new path + file URL
-2. Sync the local Cloudflare public copy (keeps **QR360** badge):
+2. **Always deploy to Cloudflare** before finishing (syncs the public copy and ships it — keeps **QR360** badge). Do not stop at a local-only `sync-viewer`; run deploy every time:
 
 ```powershell
 cd C:\Users\Robert\Projects\QR-360-Inspections\cloudflare
-npm run sync-viewer
+npm run deploy
 ```
 
-3. When publishing / deploying, also sync to East Industrial Database (stamps **Map360** for the map iframe):
+(`npm run deploy` runs `sync-viewer` then `wrangler deploy`.)
+
+Wrangler must be on the **krutki11** account (`account_id` in `cloudflare/wrangler.toml`). If deploy fails with auth / account mismatch, either:
+- set `$env:CLOUDFLARE_API_TOKEN` to a krutki11 token and re-run `npm run deploy`, or
+- `npx wrangler logout` then `npx wrangler login` and pick krutki11, then re-run deploy.
+
+Do not finish a viewer change set as "done" while the Worker is still on an older version.
+
+3. **Always** sync to East Industrial Database (stamps **Map360** for the map iframe):
 
 ```powershell
 cd C:\Users\Robert\Projects\QR-East_Industrial_Database
