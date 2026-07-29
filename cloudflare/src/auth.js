@@ -14,6 +14,32 @@ function normalizeEmail(email) {
     .toLowerCase()
 }
 
+/** Allow only known Capture / Pages / Workers return URLs after login. */
+export function safeReturnTo(raw) {
+  if (!raw) return null
+  let u
+  try {
+    u = new URL(String(raw))
+  } catch {
+    return null
+  }
+  const host = u.hostname.toLowerCase()
+  const httpLocal =
+    u.protocol === 'http:' && (host === 'localhost' || host === '127.0.0.1')
+  if (u.protocol !== 'https:' && !httpLocal) return null
+  const ok =
+    host === 'insp360.ca' ||
+    host.endsWith('.insp360.ca') ||
+    host.endsWith('.github.io') ||
+    host.endsWith('.workers.dev') ||
+    host === 'localhost' ||
+    host === '127.0.0.1'
+  if (!ok) return null
+  u.username = ''
+  u.password = ''
+  return u.toString()
+}
+
 function bytesToB64url(bytes) {
   let bin = ''
   for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i])
@@ -411,15 +437,19 @@ export async function handleAuthApi(request, env, path) {
 
   // First-party bootstrap for Capture (GitHub Pages / Android): re-issue the session
   // cookie as SameSite=None so cross-origin credentialed API calls work.
+  // Optional return_to=… sends the browser back to Capture after auth (same tab).
   if (path === '/api/auth/ensure' && (request.method === 'GET' || request.method === 'POST')) {
     const url = new URL(request.url)
     const wantHtml =
       url.searchParams.get('html') === '1' ||
       String(request.headers.get('Accept') || '').includes('text/html')
+    const returnTo = safeReturnTo(url.searchParams.get('return_to'))
     const sess = await verifySession(request, env)
     if (!sess.ok) {
       if (wantHtml) {
-        return Response.redirect(new URL('/', url).toString(), 302)
+        const dest = new URL('/', url)
+        if (returnTo) dest.searchParams.set('return_to', returnTo)
+        return Response.redirect(dest.toString(), 302)
       }
       return json({ ok: false, error: sess.error || 'Sign in required' }, 401)
     }
@@ -427,6 +457,16 @@ export async function handleAuthApi(request, env, path) {
       const token = await createSessionToken(sess.email, env)
       const cookie = sessionCookieHeader(token, SESSION_TTL_SEC)
       if (wantHtml) {
+        if (returnTo) {
+          return new Response(null, {
+            status: 302,
+            headers: {
+              Location: returnTo,
+              'Set-Cookie': cookie,
+              'Cache-Control': 'no-store',
+            },
+          })
+        }
         const email = String(sess.email || '').replace(/[<>&"]/g, '')
         const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Signed in</title>
 <style>body{font:15px/1.45 system-ui,sans-serif;background:#0c1219;color:#e8eef4;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0;padding:24px;text-align:center}
@@ -462,6 +502,9 @@ export function wantsHtml(request) {
 /** QuadReal two-step login wall (email → code, shows destination email). */
 export function authWallResponse(request, auth) {
   const detail = String(auth?.error || 'Sign in required').replace(/</g, '&lt;')
+  const reqUrl = new URL(request.url)
+  const returnTo = safeReturnTo(reqUrl.searchParams.get('return_to'))
+  const returnToJs = JSON.stringify(returnTo || '/')
   if (!wantsHtml(request)) {
     return new Response(
       JSON.stringify({
@@ -649,7 +692,7 @@ export function authWallResponse(request, auth) {
       });
       const j=await res.json().catch(()=>({}));
       if(!res.ok) throw new Error(j.error||'Invalid code');
-      location.href='/';
+      location.href=${returnToJs};
     }catch(ex){ showErr(ex.message||'Invalid code'); }
     finally{ btn.disabled=false; }
   });

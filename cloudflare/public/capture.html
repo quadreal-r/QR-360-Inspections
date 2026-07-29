@@ -2041,28 +2041,30 @@ async function refreshCloudAuth(){
 function openCloudSignIn(){
   // First-party ensure page re-issues the session cookie as SameSite=None so
   // Capture (GitHub Pages / other origins) can call the API with credentials.
-  const ensureUrl=CLOUD_API_HOSTED+"/api/auth/ensure?html=1";
+  // PC: same-tab auth with return_to so we land back here and refresh status.
+  const returnTo=location.href.replace(/#.*$/,"")+"#cloudAuth=1";
+  const ensureUrl=CLOUD_API_HOSTED+"/api/auth/ensure?html=1&return_to="+encodeURIComponent(returnTo);
   if(window.AndroidCloud && typeof AndroidCloud.openLogin==="function"){
-    AndroidCloud.openLogin(ensureUrl);
+    AndroidCloud.openLogin(CLOUD_API_HOSTED+"/api/auth/ensure?html=1");
     toast("Sign in with email code — return here when done", 5000);
     return;
   }
-  const w=window.open(ensureUrl,"qr360_cloud_signin","noopener,width=480,height=720");
-  if(!w){ toast("Allow pop-ups to sign in"); return; }
-  toast("Complete sign-in in the popup, then close it", 6000);
-  const t=setInterval(async()=>{
-    if(!w||w.closed){
-      clearInterval(t);
-      const me=await refreshCloudAuth();
-      if(me) toast("Signed in ✓");
-      else toast("Still not signed in — use Sign in again, then retry Save");
-    }
-  },800);
-  const onFocus=async()=>{
-    const me=await refreshCloudAuth();
-    if(me){ window.removeEventListener("focus", onFocus); toast("Signed in ✓"); }
-  };
-  window.addEventListener("focus", onFocus);
+  toast("Signing in…", 4000);
+  location.assign(ensureUrl);
+}
+async function finishCloudAuthReturn(){
+  if(!/#cloudAuth=1\b/.test(location.hash||"")) return false;
+  try{ history.replaceState(null,"", location.pathname+location.search); }catch(_){
+    try{ location.hash=""; }catch(__){}
+  }
+  const me=await refreshCloudAuth();
+  if(me){
+    toast("Signed in ✓");
+    try{ openSheet("#menuSheet"); }catch(_){}
+    return true;
+  }
+  toast("Still not signed in — try Sign in again");
+  return false;
 }
 window.onAndroidCloudReturned=async function(){
   const me=await refreshCloudAuth();
@@ -2706,7 +2708,7 @@ async function boot(){
   window.addEventListener("pointerdown",function once(){acquireWake();window.removeEventListener("pointerdown",once);});
   if(!window.pdfjsLib||!window.JSZip)toast("Libraries didn't load — reconnect to internet once, then reopen");
   if(fresh)openProject();   // "Create new project" on first activation
-  refreshCloudAuth();
+  finishCloudAuthReturn().then(done=>{ if(!done) refreshCloudAuth(); });
 }
 
 /* ============================================================
