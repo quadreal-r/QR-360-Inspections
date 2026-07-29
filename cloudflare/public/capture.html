@@ -580,7 +580,7 @@ const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;}
 function toast(m,ms=1900){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),ms);}
 
 /* ---------- version (each segment rolls over at 99: 1.1.99 → 1.2.0, 1.99.x → 2.0.0) ---------- */
-const VERSION=[1,0,58];
+const VERSION=[1,0,59];
 function bumpVersion(v){v=v.slice();v[2]++;if(v[2]>99){v[2]=0;v[1]++;}if(v[1]>99){v[1]=0;v[0]++;}return v;}
 function verStr(v){return "QR360 Capture <b>v"+(v||VERSION).join(".")+"</b>";}
 const CAPTURE_VER=VERSION.join(".");
@@ -1893,18 +1893,17 @@ async function buildSkeletonInsp360Blob(onProgress, statusOpt){
   if(onProgress) onProgress(total, total, "Writing tour.json");
   return zip.generateAsync({ type:"blob", compression:"STORE", streamFiles:true });
 }
-/** Drawing + pins + building only — never packs media. */
+/** Drawing + pins + building only — never packs media. Keep shot times for PC time-match. */
 function serializeSkeletonDraft(){
   const p=serialize();
-  p.pins=(p.pins||[]).map(pin=>({...pin, photoId:null, shotNo:null, ts:null, gps:null}));
-  p.shotSeq=0;
+  p.pins=(p.pins||[]).map(pin=>({...pin, photoId:null}));
   return p;
 }
 function buildShootLogSkeleton(){
+  // Keep logged shot timestamps (and pin ts) so the viewer can match folder photos by time.
+  // Clear photo blobs only — never clear the clock that hydrates pins on PC.
   const log=buildShootLog();
-  log.shots=[];
-  log.nextShot=1;
-  log.pins=(log.pins||[]).map(pin=>({...pin, photoId:null, shotIndex:null, ts:null, gps:null}));
+  log.pins=(log.pins||[]).map(pin=>({...pin, photoId:null}));
   return log;
 }
 function buildTourJson360Skeleton(){
