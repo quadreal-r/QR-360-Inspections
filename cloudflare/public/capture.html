@@ -515,6 +515,20 @@
   </div>
 </div>
 
+<!-- ============ REPLACE DRAWING (long-press empty plan) ============ -->
+<div class="sheet center" id="replaceDrawSheet">
+  <div class="card">
+    <h2>Drawing <button class="x" data-close>✕</button></h2>
+    <div class="body">
+      <p class="note" style="margin:0;font-size:13px;color:var(--dim);line-height:1.45">Replace the floor plan PDF or PNG? Existing pins stay on the new drawing.</p>
+    </div>
+    <div class="foot" style="flex-direction:column">
+      <button class="btn primary" id="replaceDrawBtn" style="width:100%">Replace drawing…</button>
+      <button class="btn" data-close style="width:100%">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============ IMPORT & MATCH ============ -->
 <div class="sheet" id="matchSheet">
   <div class="card">
@@ -577,7 +591,7 @@ const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;}
 function toast(m,ms=1900){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),ms);}
 
 /* ---------- version (each segment rolls over at 99: 1.1.99 → 1.2.0, 1.99.x → 2.0.0) ---------- */
-const VERSION=[1,0,60];
+const VERSION=[1,0,61];
 function bumpVersion(v){v=v.slice();v[2]++;if(v[2]>99){v[2]=0;v[1]++;}if(v[1]>99){v[1]=0;v[0]++;}return v;}
 function verStr(v){return "QR360 Capture <b>v"+(v||VERSION).join(".")+"</b>";}
 const CAPTURE_VER=VERSION.join(".");
@@ -996,7 +1010,17 @@ function positionPins(){
       // Drag / long-press edit only while ADD or PIC is armed
       dragPin=(hit&&pinsEditable(hit))?hit:null;
       if(dragPin){const gp=dragPin;lpTimer=setTimeout(()=>{longPressed=true;selectPin(gp);openPinDetail(gp);},500);}
-      else if(hit&&!pinsEditable(hit)){lpTimer=setTimeout(()=>{longPressed=true;toast("Turn on ADD or PIC to edit pins");},500);}}
+      else if(hit&&!pinsEditable(hit)){lpTimer=setTimeout(()=>{longPressed=true;toast("Turn on ADD or PIC to edit pins");},500);}
+      else if(!hit && planReady()){
+        // Hold empty drawing space 2s → replace floor plan
+        lpTimer=setTimeout(()=>{
+          if(moved||pts.size!==1) return;
+          longPressed=true;
+          try{ if(navigator.vibrate) navigator.vibrate(12); }catch(_){}
+          openSheet("#replaceDrawSheet");
+        },2000);
+      }
+    }
     if(pts.size===2){dragPin=null;clearTimeout(lpTimer);const a=[...pts.values()];startDist=dist(a[0],a[1]);startZoom=S.zoom;startMid=mid(a[0],a[1]);startPan={x:S.panX,y:S.panY};}
   });
   vpEl.addEventListener("pointermove",e=>{
@@ -1013,10 +1037,11 @@ function positionPins(){
       S.zoom=nz;moved=true;applyTransform();
     }else if(pts.size===1){
       const dx=e.clientX-downPt.x,dy=e.clientY-downPt.y;
-      if(Math.abs(dx)+Math.abs(dy)>6)moved=true;
+      if(Math.abs(dx)+Math.abs(dy)>6){
+        if(!moved){ moved=true; clearTimeout(lpTimer); }  // cancel pin-edit / replace-drawing long-press
+      }
       if(dragPin){                                   // move the grabbed pin
         if(moved){
-          clearTimeout(lpTimer);                       // a drag, not a long-press
           const r=$("#page").getBoundingClientRect();
           dragPin.x=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));
           dragPin.y=Math.min(1,Math.max(0,(e.clientY-r.top)/r.height));
@@ -2778,9 +2803,10 @@ $("#zfit").onclick=fitPage;
 $("#pprev").onclick=async()=>{if(S.pageNum>1){S.pageNum--;await renderPage();fitPage();refreshPins();save();}};
 $("#pnext").onclick=async()=>{if(S.pageNum<S.pageCount){S.pageNum++;await renderPage();fitPage();refreshPins();save();}};
 
-$("#pdfFile").onchange=async e=>{const f=e.target.files[0];if(f){await loadPlanFile(f);closeSheet("#menuSheet");}e.target.value="";};
+$("#pdfFile").onchange=async e=>{const f=e.target.files[0];if(f){await loadPlanFile(f);closeSheet("#menuSheet");closeSheet("#replaceDrawSheet");}e.target.value="";};
 $("#hintLoadPlan").onclick=()=>$("#pdfFile").click();
 $("#hintLoadUrl").onclick=loadPlanUrl;
+$("#replaceDrawBtn").onclick=()=>{closeSheet("#replaceDrawSheet");$("#pdfFile").click();};
 
 
 $("#setPrefix").oninput=e=>{S.prefix=e.target.value.trim();updateEg();
