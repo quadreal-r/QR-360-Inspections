@@ -511,9 +511,6 @@
       <div class="switch"><div class="t">Keep screen awake</div><div class="tog on" id="togWake"><i></i></div></div>
       <div class="switch"><div class="t">Sync camera clock on connect</div><div class="tog on" id="togSync"><i></i></div></div>
 
-      <div class="fld" style="margin-top:12px">
-        <button class="btn warn" id="resetProj" style="width:100%">Reset</button>
-      </div>
     </div>
   </div>
 </div>
@@ -580,7 +577,7 @@ const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;}
 function toast(m,ms=1900){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),ms);}
 
 /* ---------- version (each segment rolls over at 99: 1.1.99 → 1.2.0, 1.99.x → 2.0.0) ---------- */
-const VERSION=[1,0,59];
+const VERSION=[1,0,60];
 function bumpVersion(v){v=v.slice();v[2]++;if(v[2]>99){v[2]=0;v[1]++;}if(v[1]>99){v[1]=0;v[0]++;}return v;}
 function verStr(v){return "QR360 Capture <b>v"+(v||VERSION).join(".")+"</b>";}
 const CAPTURE_VER=VERSION.join(".");
@@ -2853,8 +2850,6 @@ $("#cloudProjList").onclick=e=>{
   else if(act==="done") markCloudComplete(key);
   else if(act==="del") deleteCloudTour(key);
 };
-$("#resetProj").onclick=async()=>{if(!confirm("Reset everything on this device?"))return;
-  await idbClear("photos");await idbDel("kv","project");await idbDel("kv","pdf");location.reload();};
 $("#newProjBtn").onclick=async()=>{if(!confirm("Discard the current project and start a new one? Its pins and photos on this device will be removed."))return;
   await idbClear("photos");await idbDel("kv","project");await idbDel("kv","pdf");location.reload();};
 
