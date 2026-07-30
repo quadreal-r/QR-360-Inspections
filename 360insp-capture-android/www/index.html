@@ -18,6 +18,7 @@
     --ok:#25c274;         /* captured */
     --bad:#ff5252;        /* error / delete */
     --pin:#3fa9ff;        /* placed, empty */
+    --pic:#c77dff;        /* 2D picture pin */
     --accent:#3fa9ff;
     --tap:56px;
     font-synthesis:none;
@@ -46,13 +47,65 @@
   .hbtn{width:44px;height:44px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);
     display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
   .hbtn:active{background:var(--line)}
-  .verbar{font-size:9px;line-height:1.4;color:var(--faint);text-align:right;letter-spacing:.3px;
-    padding:2px 10px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .verbar{font-size:12px;line-height:1.35;color:var(--ink);text-align:right;letter-spacing:.4px;
+    padding:5px 12px;background:var(--panel2);border-bottom:1px solid var(--line);font-weight:700}
+  .verbar b{color:var(--accent);font-weight:800}
+
+  /* ---- cloud projects rail (left) ---- */
+  #work{flex:1;display:flex;min-height:0;position:relative}
+  #cloudProjRail{width:0;flex:none;overflow:hidden;background:var(--panel);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;transition:none;z-index:25}
+  #cloudProjRail.open{width:min(300px,90vw)}
+  #cloudProjRail .railHd{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    padding:10px 10px 8px;border-bottom:1px solid var(--line);flex:none}
+  #cloudProjRail .railHd h3{margin:0;font-size:13px;font-weight:700;letter-spacing:.3px}
+  #cloudProjRail .railBody{flex:1;overflow:auto;padding:6px 8px 12px;-webkit-overflow-scrolling:touch}
+  #cloudProjRail .railNote{font-size:11px;color:var(--faint);line-height:1.45;padding:10px 6px}
+  #cloudProjRail .cprow{border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px;background:var(--panel2);
+    cursor:pointer;-webkit-user-select:none;user-select:none}
+  #cloudProjRail .cprow:active{background:#243445;border-color:var(--accent)}
+  #cloudProjRail .cprev{position:relative;width:72%;max-width:180px;aspect-ratio:4/3;border-radius:7px;overflow:hidden;
+    background:#0a1119;border:1px solid var(--line);margin:0 auto 7px}
+  #cloudProjRail .cprev img,#cloudProjRail .cprev canvas{display:block;width:100%;height:100%;object-fit:contain;background:#0a1119}
+  #cloudProjRail .cprev .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-size:11px;color:var(--faint);padding:10px;text-align:center;line-height:1.35}
+  #cloudProjRail .cprow .ttl{font-size:12px;font-weight:650;line-height:1.3;word-break:break-word}
+  #cloudProjRail .cprow .meta{font-size:10px;color:var(--dim);margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  #cloudProjRail .chip{font-size:9px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;
+    padding:2px 6px;border-radius:999px;border:1px solid var(--line);color:var(--dim)}
+  #cloudProjRail .chip.complete{color:#04121f;background:var(--ok);border-color:transparent}
+  #cloudProjRail .chip.in_progress{color:var(--accent);border-color:var(--accent)}
+  #cloudProjRail .railSrc{display:flex;gap:6px;padding:8px 10px 0;flex:none}
+  #cloudProjRail .railSrc .chip{flex:1;text-align:center;padding:8px 6px;border-radius:8px;cursor:pointer;
+    background:var(--panel2);border:1px solid var(--line);font-size:12px;font-weight:650;color:var(--dim)}
+  #cloudProjRail .railSrc .chip.on{background:var(--accent);color:#04121f;border-color:var(--accent)}
+  #cloudScrim{display:none;position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:24}
+  #cloudScrim.show{display:block}
+  @media (max-width:720px){
+    #cloudProjRail{position:absolute;left:0;top:0;bottom:0;width:0;box-shadow:8px 0 24px rgba(0,0,0,.45)}
+    #cloudProjRail.open{width:min(320px,90vw)}
+  }
 
   main{flex:1;position:relative;overflow:hidden;background:#0a1119;touch-action:none}
   #viewport{position:absolute;inset:0;overflow:hidden}
   #page{position:absolute;left:0;top:0;transform-origin:0 0;background:#fff;box-shadow:0 0 0 1px #000;display:none}
   #pdfCanvas{display:block;width:100%;height:100%}
+  #zoom button.on{background:var(--accent);color:#04121f;border-color:var(--accent)}
+  #viewLockBanner{display:none;position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:12;
+    background:rgba(8,16,28,.88);border:1px solid var(--accent);color:var(--accent);font-size:11px;font-weight:700;
+    letter-spacing:.3px;padding:6px 12px;border-radius:999px;pointer-events:none;white-space:nowrap}
+  #viewLockBanner.show{display:block}
+  #liveMapWrap{display:none;position:absolute;inset:0;z-index:8;background:#0a1119;overflow:hidden}
+  #liveMapWrap.show{display:block}
+  #liveMapStage{position:absolute;left:50%;top:50%;width:142%;height:142%;
+    transform:translate(-50%,-50%) rotate(var(--live-rot,0deg));transform-origin:50% 50%}
+  #liveMap{width:100%;height:100%}
+  #liveMapHud{position:absolute;left:0;right:0;bottom:0;z-index:9;padding:10px 12px max(12px,env(safe-area-inset-bottom));
+    background:linear-gradient(transparent,rgba(8,16,28,.92) 28%);pointer-events:none}
+  #liveMapHud .liveHudNote{font-size:12px;font-weight:650;color:var(--accent);text-align:center;margin-bottom:8px}
+  #liveMapHud .liveHudRow{display:flex;gap:8px;align-items:center;pointer-events:auto}
+  #liveMapHud .liveHudRow .btn{flex:1;padding:10px 8px}
+  #liveMapHud #liveRotLbl{flex:none;min-width:3.2em;text-align:center;font-weight:700;color:var(--ink)}
   #pinLayer{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden}
   .pin{position:absolute;transform:translate(-50%,-100%)}
   .pin .body{transform-origin:50% 100%;display:flex;flex-direction:column;align-items:center}
@@ -64,6 +117,8 @@
   .pin.shot .num,.pin.shot .dot{background:var(--arm);color:#1a0d00}
   .pin.has .num,.pin.has .dot{background:var(--ok)}
   .pin.armed .num,.pin.armed .dot{background:var(--arm);color:#1a0d00}
+  .pin.pic:not(.has):not(.armed) .num,.pin.pic:not(.has):not(.armed) .dot{background:var(--pic);color:#1a0820}
+  .pin.pic .num{border-radius:4px}
   .pin.sel .num{outline:3px solid #fff;outline-offset:1px}
   .pin .tick{position:absolute;top:-7px;right:-7px;background:#04121f;color:#fff;border-radius:8px;
     font-size:9px;font-weight:800;padding:1px 4px;border:1px solid var(--arm)}
@@ -97,7 +152,12 @@
   .rbtn .lb{font-size:9px;letter-spacing:.3px;color:var(--dim)}
   .rbtn.on{border-color:var(--arm);background:#2a1c08}
   .rbtn.on .lb{color:var(--arm)}
+  .rbtn.on.pic{border-color:var(--pic);background:#241833}
+  .rbtn.on.pic .lb{color:var(--pic)}
   .rbtn:disabled{opacity:.35}
+  .rbtn .rdot{position:absolute;top:5px;right:5px;width:12px;height:12px;border-radius:50%;
+    background:var(--bad);border:2px solid var(--panel);pointer-events:none}
+  .rbtn .rdot.on{background:var(--ok)}
 
   /* zoom cluster bottom-right */
   #zoom{position:absolute;right:max(8px,env(safe-area-inset-right));bottom:96px;display:flex;flex-direction:column;gap:6px;z-index:20}
@@ -148,9 +208,10 @@
   .card .body{overflow:auto;padding:12px 14px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   .card .foot{padding:10px 14px;padding-bottom:max(10px,env(safe-area-inset-bottom));border-top:1px solid var(--line);display:flex;gap:8px}
 
-  input[type=text],input[type=search]{width:100%;background:var(--panel2);border:1px solid var(--line);
-    border-radius:9px;padding:11px 12px;color:var(--ink);font-size:16px}
-  input:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+  input[type=text],input[type=search],input[type=password],input[type=number],textarea{width:100%;background:var(--panel2);border:1px solid var(--line);
+    border-radius:9px;padding:11px 12px;color:var(--ink);font-size:16px;box-sizing:border-box}
+  textarea{min-height:84px;resize:vertical;font-family:inherit;line-height:1.35}
+  input:focus,textarea:focus{outline:2px solid var(--accent);border-color:var(--accent)}
   .filters{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 4px}
   .chip{padding:7px 11px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);font-size:12px;color:var(--dim)}
   .chip.on{background:var(--accent);color:#04121f;border-color:var(--accent);font-weight:700}
@@ -162,16 +223,24 @@
   .brow .b{font-size:11px;color:var(--dim)}
   .brow .rt{font-size:11px;color:var(--faint);text-align:right;white-space:nowrap}
   .brow .pfx{font-family:ui-monospace,monospace;font-size:12px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 7px;color:var(--accent)}
+  #gmapSheet .card{max-width:min(520px,96vw)}
+  #gmapBldgList{max-height:168px;overflow:auto;margin-top:6px;border:1px solid var(--line);border-radius:9px;display:none}
+  #gmapBldgList .brow{padding:9px 10px}
+  #gmapAddr{font-size:13px;font-weight:600;color:var(--ink);margin-top:6px;min-height:1.2em}
 
   .fld{margin-bottom:12px}
   .fld label{display:block;font-size:11px;color:var(--dim);margin-bottom:5px;letter-spacing:.4px;text-transform:uppercase}
   .row2{display:flex;gap:8px}
-  .row2>*{flex:1}
+  .row2>*{flex:1;min-width:0}
   .btn{border-radius:10px;padding:12px;font-weight:700;font-size:14px;text-align:center;
     background:var(--panel2);border:1px solid var(--line);flex:1}
   .btn.primary{background:var(--accent);color:#04121f;border-color:var(--accent)}
-  .btn.warn{background:#2a1010;color:var(--bad);border-color:#5a2020}
+  .btn.brown{background:#8b5a2b;color:#fff4e8;border-color:#a06c3a}
+  .btn.warn{background:#ff5252;color:#1a0606;border-color:#ff5252}
   .btn:active{filter:brightness(1.15)}
+  #cloudAuthNote{font-size:12px;font-weight:600;line-height:1.35;color:var(--ink)}
+  #cloudAuthNote.bad{color:#ff8a8a}
+  #cloudAuthNote.ok{color:#5ee0a0}
   .switch{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
   .switch .t{font-size:14px}
   .switch .t small{display:block;color:var(--dim);font-size:11px}
@@ -201,6 +270,19 @@
   .mrow select{width:100%;margin-top:6px;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px;font-size:13px;font-family:ui-monospace,monospace}
   #matchZoom{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:120;display:none;align-items:center;justify-content:center;padding:16px}
   #matchZoom img{max-width:100%;max-height:100%;border-radius:10px}
+  #picPreview{position:fixed;inset:0;z-index:70;background:rgba(4,8,12,.55);display:none;align-items:flex-end;justify-content:center;
+    padding:12px;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+  #picPreview.open{display:flex}
+  #picPreview .card{position:relative;width:min(360px,100%);background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.55)}
+  #picPreview .x{position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:8px;background:var(--panel2);
+    font-size:18px;display:flex;align-items:center;justify-content:center;z-index:2}
+  #picPreview .empty{height:160px;display:flex;align-items:center;justify-content:center;color:var(--faint);
+    background:var(--panel2);border:1px solid var(--line);border-radius:10px;font-size:13px;text-align:center;padding:12px}
+  #picPreview img{display:block;width:100%;max-height:42vh;object-fit:contain;border-radius:10px;background:#0a1119;
+    border:1px solid var(--line);cursor:zoom-in}
+  #picPreview .pn{font-weight:700;font-family:ui-monospace,monospace;margin-top:10px;padding-right:36px}
+  #picPreview .pmeta{font-size:12px;color:var(--dim);margin-top:4px;white-space:pre-wrap;word-break:break-word}
 
   /* camera log */
   #camState{display:flex;gap:8px;margin-bottom:8px}
@@ -222,6 +304,7 @@
 <body>
 <div id="app">
   <header>
+    <button class="hbtn" id="projRailBtn" title="Projects">📁</button>
     <div class="title">INSP&nbsp;<b>360</b></div>
     <button id="bldgBtn"><span class="a" id="bldgA">Select building</span><span class="b" id="bldgB">tap to choose from portfolio</span></button>
     <button class="hbtn" id="pinsBtn" title="Pins">☰</button>
@@ -229,12 +312,41 @@
   </header>
   <div id="ver" class="verbar"></div>
 
+  <div id="work">
+  <aside id="cloudProjRail" aria-label="Capture projects">
+    <div class="railHd">
+      <h3>Projects</h3>
+      <button class="hbtn" id="cloudRailClose" title="Close" style="width:34px;height:34px;font-size:16px">✕</button>
+    </div>
+    <div class="railSrc" id="projRailSrc" role="tablist" aria-label="Project source">
+      <button type="button" class="chip on" data-src="cloud" role="tab" aria-selected="true">Cloud</button>
+      <button type="button" class="chip" data-src="local" role="tab" aria-selected="false">Local</button>
+    </div>
+    <div class="railBody" id="cloudProjList">
+      <div class="railNote">Sign in to see recent captures on the Inspections cloud.</div>
+    </div>
+  </aside>
+  <div id="cloudScrim"></div>
+
   <main>
     <div id="viewport">
       <div id="page">
         <canvas id="pdfCanvas"></canvas>
       </div>
       <div id="pinLayer"></div>
+      <div id="liveMapWrap" aria-hidden="true">
+        <div id="liveMapStage"><div id="liveMap"></div></div>
+        <div id="liveMapHud">
+          <div class="liveHudNote">Pan &amp; pinch to frame · tap 🔓 to save this screen as a PNG floor plan</div>
+          <div class="liveHudRow">
+            <button type="button" class="btn" id="liveRotL">−15°</button>
+            <span id="liveRotLbl" class="mono">0°</span>
+            <button type="button" class="btn" id="liveRotR">+15°</button>
+            <button type="button" class="btn brown" id="liveMapClose">Close</button>
+          </div>
+        </div>
+      </div>
+      <div id="viewLockBanner">View locked · PNG drawing</div>
     </div>
 
     <div id="hint"><div class="box">
@@ -246,12 +358,14 @@
           <button class="btn primary" id="hintLoadPlan">Add PDF or PNG</button>
           <button class="btn" id="hintLoadUrl">From link…</button>
         </div>
+        <button class="btn" id="hintLoadGmap" style="width:100%;margin-top:8px">Google Map</button>
         <div class="note" style="margin-top:8px">Floor plan lives on this device and survives reloads.</div>
       </div>
     </div></div>
 
     <div id="rail">
-      <button class="rbtn" id="addBtn"><span class="ic">📍</span><span class="lb">ADD</span></button>
+      <button class="rbtn" id="addBtn" style="position:relative"><span class="ic">📍</span><span class="lb">ADD</span><span class="rdot" id="addDot"></span></button>
+      <button class="rbtn" id="picBtn" style="position:relative"><span class="ic">🖼</span><span class="lb">PIC</span><span class="rdot" id="picDot"></span></button>
       <button class="rbtn" id="camBtn" style="position:relative"><span class="ic">📷</span><span class="lb">CAMERA</span><span id="camDot"></span></button>
     </div>
 
@@ -259,6 +373,7 @@
       <button id="zin">＋</button>
       <button id="zout">－</button>
       <button id="zfit" style="font-size:15px">⤢</button>
+      <button id="zlock" title="Lock view as PNG drawing" style="font-size:14px">🔓</button>
     </div>
 
     <div id="pageNav" style="display:none">
@@ -267,6 +382,7 @@
       <button id="pnext">›</button>
     </div>
   </main>
+  </div><!-- /work -->
 
   <div id="actionBar" class="safe">
     <div id="armWrap">
@@ -303,6 +419,10 @@
         <input type="text" id="pmName" placeholder="e.g. 145 Carrier Drive — RTU Inspection" autocomplete="off"></div>
       <div class="fld"><label>Building address</label>
         <button class="btn" id="pmAddr" style="width:100%;text-align:left;font-weight:600">Start typing — matches your address DB</button></div>
+      <div class="fld"><label>Floor plan</label>
+        <button class="btn" id="pmLoadGmap" style="width:100%">Google Map…</button>
+        <div class="note">Opens map settings — pick an address, zoom, size, and rotation, then load a satellite drawing.</div>
+      </div>
       <div class="row2">
         <div class="fld"><label>Suite / unit #</label><input type="text" id="pmSuite" placeholder="e.g. 10 (blank = all)" autocomplete="off"></div>
         <div class="fld"><label>Tenant</label><input type="text" id="pmTenant" placeholder="count, or suite's tenant" autocomplete="off"></div>
@@ -348,12 +468,32 @@
     <h2><span id="pdTitle">Pin</span> <button class="x" data-close>✕</button></h2>
     <div class="body">
       <div id="pdThumbWrap" style="text-align:center;margin-bottom:12px"></div>
-      <div class="fld"><label>Photo name</label><input type="text" id="pdName" class="mono"></div>
+      <div class="fld"><label id="pdNameLbl">Photo name</label><input type="text" id="pdName" class="mono"></div>
       <div class="fld"><label>Note (optional)</label><input type="text" id="pdNote" placeholder="e.g. RTU-3 north, roof access"></div>
+      <div class="fld" id="pdInfoFld" style="display:none"><label>Extra info</label>
+        <textarea id="pdInfo" placeholder="Condition, equipment ID, follow-up…"></textarea></div>
+      <div id="pdAttachRow" style="display:none;margin-bottom:4px">
+        <div class="row2">
+          <button class="btn primary" id="pdTake">Take photo</button>
+          <button class="btn" id="pdPick">From device</button>
+        </div>
+      </div>
     </div>
     <div class="foot">
       <button class="btn warn" id="pdDelete">Delete</button>
       <button class="btn primary" id="pdSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ATTACH SOURCE ============ -->
+<div class="sheet center" id="attachSheet">
+  <div class="card">
+    <h2>Add picture <button class="x" data-close>✕</button></h2>
+    <div class="body" style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn primary" id="attachTake">Take photo</button>
+      <button class="btn" id="attachPick">From device</button>
+      <div class="note">Use the phone camera, or pick an existing image from this device.</div>
     </div>
   </div>
 </div>
@@ -379,7 +519,7 @@
           <button class="btn primary" id="blePower">Power Off</button>
         </div>
         <button class="btn" id="bleSyncTime" style="width:100%;margin-top:6px">Sync clock</button>
-        <div class="note" style="margin-top:6px">Photos come off the card, not over Bluetooth — download them, then <b>⋮ → Import &amp; match</b>. Battery shows if your X5 exposes it over BLE.</div>
+        <div class="note" style="margin-top:6px">Photos come off the card, not over Bluetooth — download them on a PC to hydrate. Battery shows if your X5 exposes it over BLE.</div>
         <div id="bleLog" class="i" style="background:#0a1119;border:1px solid var(--line);border-radius:9px;padding:8px;height:104px;overflow:auto;font-family:ui-monospace,monospace;font-size:11px;line-height:1.5;white-space:pre-wrap;margin-top:8px">Not connected.\n</div>
       </div>
 
@@ -399,29 +539,22 @@
   <div class="card">
     <h2>Menu <button class="x" data-close>✕</button></h2>
     <div class="body">
-      <div class="fld"><label>Export</label>
+      <div class="fld"><label>Cloud</label>
         <div class="row2">
-          <button class="btn primary" id="exportSkeleton">Export skeleton .insp360</button>
-          <button class="btn" id="exportShootLog">Export shoot log</button>
+          <button class="btn primary" id="saveTourCloud">Save to cloud</button>
+          <button class="btn brown" id="saveTourLocal">Save locally</button>
         </div>
         <div class="row2" style="margin-top:8px">
-          <button class="btn primary" id="uploadCloud">Upload skeleton to cloud</button>
-          <button class="btn" id="cloudSignIn">Sign in</button>
+          <button class="btn primary" id="cloudSignIn">Sign in</button>
+          <button class="btn brown" id="cloudSignOff">Sign off</button>
         </div>
+        <button class="btn" id="lockViewPngBtn" style="width:100%;margin-top:8px">Lock view as PNG drawing</button>
+        <div class="note" id="lockViewNote" style="margin-top:6px">Frame the map, then lock — saves a PNG floor plan for cloud upload and freezes pan/zoom.</div>
         <div class="note" id="cloudAuthNote" style="margin-top:8px"></div>
       </div>
 
       <div class="fld"><label>Project</label>
-        <button class="btn primary" id="openProjBtn" style="width:100%;margin-bottom:8px">Project info</button>
-        <div class="row2">
-          <button class="btn" id="loadPdf">Open PDF or PNG</button>
-          <button class="btn" id="loadPdfUrl">From link…</button>
-        </div>
-      </div>
-
-      <div class="fld"><label>Address database</label>
-        <button class="btn" id="loadDb" style="width:100%">Load database (.xlsx)</button>
-        <div class="note" id="dbStatus">Built-in list.</div>
+        <button class="btn primary" id="openProjBtn" style="width:100%">Project info</button>
       </div>
 
       <div class="fld"><label>Photo naming</label>
@@ -436,12 +569,58 @@
       <div class="switch"><div class="t">Keep screen awake</div><div class="tog on" id="togWake"><i></i></div></div>
       <div class="switch"><div class="t">Sync camera clock on connect</div><div class="tog on" id="togSync"><i></i></div></div>
 
-      <div class="fld" style="margin-top:12px">
-        <button class="btn primary" id="importPhotos" style="width:100%">Import &amp; match photos</button>
+      <div class="fld" style="margin-top:12px"><label>Google Maps</label>
+        <div class="row2">
+          <div class="fld" style="margin:0"><label>API key</label>
+            <input type="password" id="gmapKeyMenu" placeholder="AIza…" autocomplete="off" spellcheck="false"></div>
+          <div class="fld" style="margin:0"><label>Map ID</label>
+            <input type="password" id="gmapIdMenu" placeholder="Map style ID" autocomplete="off" spellcheck="false"></div>
+        </div>
+        <div class="note">Stored only on this device. Enable <b>Maps JavaScript API</b>. Map ID (optional) is from Google Cloud → Map Management.</div>
+        <button class="btn" id="menuLoadGmap" style="width:100%;margin-top:8px">Load Google Map…</button>
       </div>
-      <div class="fld">
-        <button class="btn warn" id="resetProj" style="width:100%">Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ GOOGLE MAP PLAN ============ -->
+<div class="sheet center" id="gmapSheet">
+  <div class="card">
+    <h2>Google Map <button class="x" data-close>✕</button></h2>
+    <div class="body">
+      <div class="row2">
+        <div class="fld"><label>API key</label>
+          <input type="password" id="gmapKey" placeholder="AIza…" autocomplete="off" spellcheck="false"></div>
+        <div class="fld"><label>Map ID <span style="text-transform:none;letter-spacing:0;color:var(--faint)">(optional)</span></label>
+          <input type="password" id="gmapId" placeholder="Map style ID" autocomplete="off" spellcheck="false"></div>
       </div>
+      <div class="note" style="margin:-4px 0 10px">From Google Cloud → Map Management (optional styling). Both values stay on this device only.</div>
+      <div class="fld"><label>Building address</label>
+        <input type="search" id="gmapSearch" placeholder="Search portfolio addresses…" autocomplete="off">
+        <div id="gmapAddr"></div>
+        <div id="gmapBldgList" class="blist"></div>
+      </div>
+      <div class="row2">
+        <div class="fld"><label>Latitude</label><input type="text" id="gmapLat" class="mono" inputmode="decimal" placeholder="43.65"></div>
+        <div class="fld"><label>Longitude</label><input type="text" id="gmapLng" class="mono" inputmode="decimal" placeholder="-79.38"></div>
+      </div>
+      <div class="row2">
+        <div class="fld"><label>Starting zoom</label><input type="number" id="gmapZoom" class="mono" min="1" max="22" step="1" value="19"></div>
+        <div class="fld"><label>Map type</label>
+          <select id="gmapType" style="width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:11px 12px;color:var(--ink);font-size:16px">
+            <option value="satellite" selected>Satellite</option>
+            <option value="hybrid">Hybrid</option>
+            <option value="roadmap">Roadmap</option>
+            <option value="terrain">Terrain</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn" id="gmapGps" style="width:100%;margin-bottom:8px">Use device GPS</button>
+      <div class="note">Open the interactive map to pan &amp; pinch freely. Rotate on-screen, then tap 🔓 to save the <b>whole map screen</b> as a PNG floor plan — your pins stay, and you can pan/zoom afterward. Enable <b>Maps JavaScript API</b> for your key.</div>
+    </div>
+    <div class="foot">
+      <button class="btn" data-close>Cancel</button>
+      <button class="btn primary" id="gmapOpenLive">Open interactive map</button>
     </div>
   </div>
 </div>
@@ -453,7 +632,6 @@
     <div class="body" id="matchBody"></div>
     <div class="foot">
       <button class="btn" id="matchPick">Select photos</button>
-      <button class="btn" id="matchPickFolder">Select folder</button>
       <button class="btn primary" id="matchApply">Apply matches</button>
     </div>
   </div>
@@ -461,11 +639,20 @@
 
 <input type="file" id="pdfFile" accept="application/pdf,image/png,image/jpeg,image/webp,image/*" style="display:none">
 <input type="file" id="photoFile" accept="image/*" style="display:none">
+<input type="file" id="photoCapture" accept="image/*" capture="environment" style="display:none">
 <input type="file" id="matchFiles" accept="image/*" multiple style="display:none">
 <input type="file" id="dbFile" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none">
-<input type="file" id="projFile" accept=".json,.zip,application/json,application/zip" style="display:none">
+<input type="file" id="tourFile" accept=".insp360,.360skeleton,.zip,.json,application/zip,application/json" style="display:none">
 <div class="toast" id="toast"></div>
 <div id="matchZoom"><img alt=""></div>
+<div id="picPreview">
+  <div class="card">
+    <button class="x" id="picPrevClose" type="button" aria-label="Close">✕</button>
+    <div id="picPrevMedia"></div>
+    <div class="pn" id="picPrevName"></div>
+    <div class="pmeta" id="picPrevMeta"></div>
+  </div>
+</div>
 
 <script src="vendor/pdf.min.js"></script>
 <script src="vendor/jszip.min.js"></script>
@@ -485,7 +672,11 @@ const S = {
   pageNum:1, pageCount:1,
   pins:[], selPin:null,
   zoom:1, panX:0, panY:0, baseW:0, baseH:0,
-  mode:"add",                 // "add" | "move"
+  viewLocked:false,
+  liveMapActive:false,
+  liveMap:null,
+  liveRot:0,
+  mode:"move",                // "add" | "add2d" | "move" — pin edit only when add/add2d
   prefix:"", next:1, shotSeq:0,
   meta:{name:"", address:"", suite:"", tenant:"", sqft:"", cluster:"", ptype:"", creator:"", created:null, modified:null},
   ble:null,                   // {device,char,notify} when BLE connected
@@ -500,11 +691,11 @@ const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;}
 function toast(m,ms=1900){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),ms);}
 
 /* ---------- version (each segment rolls over at 99: 1.1.99 → 1.2.0, 1.99.x → 2.0.0) ---------- */
-const VERSION=[1,0,39];
+const VERSION=[1,0,81];
 function bumpVersion(v){v=v.slice();v[2]++;if(v[2]>99){v[2]=0;v[1]++;}if(v[1]>99){v[1]=0;v[0]++;}return v;}
-function verStr(v){return "QR360-Capture-v"+(v||VERSION).join(".");}
+function verStr(v){return "QR360 Capture <b>v"+(v||VERSION).join(".")+"</b>";}
 const CAPTURE_VER=VERSION.join(".");
-const CLOUD_API_HOSTED="https://insp360-viewer.krutki11.workers.dev";
+const CLOUD_API_HOSTED="https://qr360-viewer.insp360.ca";
 const CLOUD_MPU_PART_SIZE=8*1024*1024;
 const CLOUD_MPU_MIN_SIZE=16*1024*1024;
 
@@ -527,8 +718,9 @@ function save(){clearTimeout(saveT);saveT=setTimeout(async()=>{
 function serialize(){
   return {v:2, captureVer:CAPTURE_VER, building:S.building, pdfName:S.pdfName, planKind:S.planKind||null, pageCount:S.pageCount,
     prefix:S.prefix, next:S.next, shotSeq:S.shotSeq, sessionStarted:S.sessionStarted||null, opt:S.opt, meta:S.meta,
-    pins:S.pins.map(p=>({id:p.id,page:p.page,x:p.x,y:p.y,seq:p.seq,name:p.name,note:p.note,
-      photoId:p.photoId,ts:p.ts,shotNo:p.shotNo||null,gps:p.gps||null}))};
+    viewLocked:!!S.viewLocked,
+    pins:S.pins.map(p=>({id:p.id,kind:p.kind||"pano",page:p.page,x:p.x,y:p.y,seq:p.seq,name:p.name,note:p.note||"",
+      info:p.info||"",photoId:p.photoId,ts:p.ts,shotNo:p.shotNo||null,gps:p.gps||null}))};
 }
 
 /* ============================================================
@@ -677,7 +869,7 @@ function openProject(){
   $("#pmCreator").value=m.creator||"";
   $("#pmCreated").value=m.created?new Date(m.created).toLocaleString():"—";
   $("#pmMod").value=m.modified?new Date(m.modified).toLocaleString():"—";
-  $("#cnPano").textContent=S.pins.filter(p=>p.photoId).length;
+  $("#cnPano").textContent=S.pins.filter(p=>!isPhoto2d(p)&&p.photoId).length;
   $("#cnMark").textContent=S.pins.length;
   $("#cnPlan").textContent=planReady()?S.pageCount:0;
   openSheet("#projSheet");
@@ -708,6 +900,21 @@ function saveProject(){
 // A plan is ready once either a PDF document or an image element is loaded.
 function planReady(){return !!(S.pdfDoc||S.imgEl);}
 
+/** Drop the current drawing from memory, canvas, and IDB so a newly opened project cannot keep the old map. */
+async function clearPlan(){
+  S.pdfDoc=null; S.page=null; S.imgEl=null; S.pdfBytes=null; S.pdfName=null;
+  S.planKind=null; S.pageCount=1; S.pageNum=1; S.pts=null;
+  S.viewLocked=false; syncViewLockUi();
+  try{
+    const c=$("#pdfCanvas");
+    if(c){ const ctx=c.getContext("2d"); if(ctx) ctx.clearRect(0,0,c.width||0,c.height||0); c.width=0; c.height=0; }
+  }catch(_){}
+  const page=$("#page"); if(page) page.style.display="none";
+  const nav=$("#pageNav"); if(nav) nav.style.display="none";
+  try{ await idbDel("kv","pdf"); }catch(_){}
+  updateHint();
+}
+
 // Show/hide the home-screen empty state and switch its message + loaders
 // depending on whether the project info has been filled out yet.
 function updateHint(){
@@ -718,17 +925,18 @@ function updateHint(){
   const icon=$("#hintIcon"), msg=$("#hintMsg"), acts=$("#hintActions");
   if(filled){
     icon.textContent="🗺️";
-    msg.innerHTML='<b>Add your floor plan</b><br>Open a PDF or PNG drawing for this project, then drop pins where each 360° shot goes.';
+    msg.innerHTML='<b>Add your floor plan</b><br>Open a PDF or PNG, load from a link, or pull a Google Map for this site.';
     acts.style.display="block";
   }else{
     icon.textContent="📐";
-    msg.innerHTML='<b>Load a floor plan</b> to begin.<br>Pick a building and fill out the project info, then add its PDF or PNG drawing.';
+    msg.innerHTML='<b>Load a floor plan</b> to begin.<br>Pick a building and fill out the project info, then add its PDF, PNG, or Google Map.';
     acts.style.display="none";
   }
 }
 
 async function openPdfBytes(bytes,name){
   try{
+    if(!S._suppressUnlock){ S.viewLocked=false; syncViewLockUi(); }
     S.imgEl=null; S.planKind="pdf";
     S.pdfBytes=bytes; S.pdfName=name||"drawing.pdf";
     S.pdfDoc=await pdfjsLib.getDocument({data:bytes.slice(0)}).promise;
@@ -747,6 +955,8 @@ async function openImageBytes(bytes,name){
   try{
     const url=URL.createObjectURL(new Blob([bytes.slice(0)]));
     const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url;});
+    // Keep lock flag if caller is mid lockViewAsPngDrawing (set after); otherwise unlock on new plan
+    if(!S._lockingPng && !S._suppressUnlock){ S.viewLocked=false; syncViewLockUi(); }
     S.pdfDoc=null; S.page=null;
     S.imgEl=img; S.planKind="img";
     S.pdfBytes=bytes; S.pdfName=name||"drawing.png";
@@ -760,6 +970,135 @@ async function openImageBytes(bytes,name){
     fitPage(); refreshPins(); save();
     toast(`Loaded ${S.pdfName}`);
   }catch(e){toast("Couldn't read that image");console.error(e);}
+}
+
+function syncViewLockUi(){
+  const live=!!S.liveMapActive;
+  const on=!!S.viewLocked;
+  const zb=$("#zlock"); if(zb){
+    zb.textContent=on?"🔒":"🔓";
+    zb.classList.toggle("on",on);
+    zb.title=live?"Save interactive map as PNG floor plan":(on?"Unlock view":"Lock view as PNG drawing");
+    zb.disabled=false;
+  }
+  const ban=$("#viewLockBanner"); if(ban){
+    ban.classList.toggle("show", on||live);
+    ban.textContent=live ? "Interactive map · tap 🔓 to save as PNG" : "View locked · PNG drawing";
+  }
+  const btn=$("#lockViewPngBtn"); if(btn) btn.textContent=on?"Unlock view":(live?"Save map as PNG floor plan":"Lock view as PNG drawing");
+  const note=$("#lockViewNote");
+  if(note) note.textContent=live
+    ? "Interactive Google Map is open. Frame the building, then tap the padlock to save that screen as a PNG floor plan (pins & pan/zoom stay available)."
+    : on
+    ? "View locked. Pan/zoom frozen. PNG drawing is ready for Save to cloud."
+    : "Frame the map, then lock — saves a PNG floor plan for cloud upload and freezes pan/zoom.";
+  ["#zin","#zout","#zfit"].forEach(sel=>{ const el=$(sel); if(el) el.disabled=on && !live; });
+}
+function setViewLocked(on, quiet){
+  S.viewLocked=!!on;
+  syncViewLockUi();
+  save();
+  if(!quiet) toast(S.viewLocked?"View locked":"View unlocked");
+}
+
+/** Visible plan UV rect for the current viewport (clamped to the drawing). */
+function visiblePlanUv(){
+  if(!S.pts||!S.fitScale) return {u0:0,u1:1,v0:0,v1:1,full:true};
+  const vp=$("#viewport"); if(!vp) return {u0:0,u1:1,v0:0,v1:1,full:true};
+  const pw=S.pts.w*S.fitScale, ph=S.pts.h*S.fitScale;
+  if(pw<=0||ph<=0) return {u0:0,u1:1,v0:0,v1:1,full:true};
+  const toUv=(sx,sy)=>({
+    u:(sx-S.panX)/(S.zoom*pw),
+    v:(sy-S.panY)/(S.zoom*ph)
+  });
+  const a=toUv(0,0), b=toUv(vp.clientWidth, vp.clientHeight);
+  let u0=Math.min(a.u,b.u), u1=Math.max(a.u,b.u);
+  let v0=Math.min(a.v,b.v), v1=Math.max(a.v,b.v);
+  u0=Math.max(0,Math.min(1,u0)); u1=Math.max(0,Math.min(1,u1));
+  v0=Math.max(0,Math.min(1,v0)); v1=Math.max(0,Math.min(1,v1));
+  if(u1-u0<0.02||v1-v0<0.02) return {u0:0,u1:1,v0:0,v1:1,full:true};
+  const area=(u1-u0)*(v1-v0);
+  const full=S.zoom<=1.02 && area>0.92;
+  if(full) return {u0:0,u1:1,v0:0,v1:1,full:true};
+  return {u0,u1,v0,v1,full:false};
+}
+
+async function rasterizePlanCanvas(maxSide){
+  maxSide=maxSide||2048;
+  if(S.imgEl){
+    const iw=S.imgEl.naturalWidth||S.imgEl.width, ih=S.imgEl.naturalHeight||S.imgEl.height;
+    let w=iw, h=ih;
+    const m=Math.max(w,h);
+    if(m>maxSide){ const s=maxSide/m; w=Math.max(1,Math.round(w*s)); h=Math.max(1,Math.round(h*s)); }
+    const c=document.createElement("canvas"); c.width=w; c.height=h;
+    c.getContext("2d",{alpha:false}).drawImage(S.imgEl,0,0,w,h);
+    return c;
+  }
+  if(!S.pdfDoc) throw new Error("No floor plan loaded");
+  const page=S.page||await S.pdfDoc.getPage(S.pageNum);
+  const vp1=page.getViewport({scale:1});
+  const scale=Math.min(maxSide/vp1.width, maxSide/vp1.height, 3);
+  const vp=page.getViewport({scale});
+  const c=document.createElement("canvas"); c.width=Math.round(vp.width); c.height=Math.round(vp.height);
+  const ctx=c.getContext("2d",{alpha:false});
+  ctx.fillStyle="#fff"; ctx.fillRect(0,0,c.width,c.height);
+  await page.render({canvasContext:ctx, viewport:vp}).promise;
+  return c;
+}
+
+function canvasToPngBytes(canvas){
+  return new Promise((resolve,reject)=>{
+    canvas.toBlob(async b=>{
+      if(!b) return reject(new Error("Could not encode PNG"));
+      resolve(new Uint8Array(await b.arrayBuffer()));
+    }, "image/png");
+  });
+}
+
+/**
+ * Bake the current framing into drawing.png, remap pins, fit, and lock pan/zoom.
+ * Cloud upload then gets a stable PNG floor plan.
+ */
+async function lockViewAsPngDrawing(){
+  try{
+    if(S.liveMapActive){
+      await bakeLiveMapToStatic();
+      return;
+    }
+    if(!planReady()){ toast("Load a floor plan or open Google Map first"); return; }
+    if(S.viewLocked){ setViewLocked(false); return; }
+    toast("Saving PNG drawing…", 5000);
+    const uv=visiblePlanUv();
+    const src=await rasterizePlanCanvas(2048);
+    const x0=Math.floor(uv.u0*src.width), y0=Math.floor(uv.v0*src.height);
+    const cw=Math.max(1, Math.ceil((uv.u1-uv.u0)*src.width));
+    const ch=Math.max(1, Math.ceil((uv.v1-uv.v0)*src.height));
+    const out=document.createElement("canvas");
+    out.width=cw; out.height=ch;
+    const ctx=out.getContext("2d",{alpha:false});
+    ctx.fillStyle="#111"; ctx.fillRect(0,0,cw,ch);
+    ctx.drawImage(src, x0, y0, cw, ch, 0, 0, cw, ch);
+    const bytes=await canvasToPngBytes(out);
+    const page=S.pageNum||1;
+    const du=Math.max(1e-9, uv.u1-uv.u0);
+    const dv=Math.max(1e-9, uv.v1-uv.v0);
+    const keep=[];
+    S.pins.forEach(p=>{
+      if((p.page||1)!==page){ keep.push(p); return; }
+      const nx=(p.x-uv.u0)/du, ny=(p.y-uv.v0)/dv;
+      if(nx< -0.02||nx>1.02||ny< -0.02||ny>1.02) return; // outside crop
+      p.x=Math.min(1,Math.max(0,nx));
+      p.y=Math.min(1,Math.max(0,ny));
+      keep.push(p);
+    });
+    S.pins=keep;
+    S._lockingPng=true;
+    try{
+      await openImageBytes(bytes, "drawing.png");
+      setViewLocked(true, true);
+    }finally{ S._lockingPng=false; }
+    toast("Locked as PNG drawing"+(uv.full?"":" · cropped to view")+" — ready for cloud", 4500);
+  }catch(e){ toast(String(e.message||e)); console.error(e); }
 }
 
 // Route a picked file / fetched blob to the right loader by type or extension.
@@ -782,6 +1121,426 @@ async function loadPlanUrl(){
     if(isImg)await openImageBytes(buf,name||"drawing.png");
     else await openPdfBytes(buf,name||"drawing.pdf");
   }catch(e){toast("Couldn't fetch that link (CORS?)");}
+}
+
+/* ---------- Google Maps → interactive floor-plan image ---------- */
+const GMAP_KEY_LS="insp360.googleMapsKey";
+const GMAP_ID_LS="insp360.googleMapsId";
+const GMAP_ROT_LS="insp360.googleMapsRot";
+function lsGet(k){ try{ return (localStorage.getItem(k)||"").trim(); }catch(_){ return ""; } }
+function lsSet(k,v){
+  try{
+    v=String(v||"").trim();
+    if(v) localStorage.setItem(k,v); else localStorage.removeItem(k);
+  }catch(_){}
+}
+function getGoogleMapsKey(){ return lsGet(GMAP_KEY_LS); }
+function setGoogleMapsKey(key){
+  lsSet(GMAP_KEY_LS, key);
+  const a=$("#gmapKey"), b=$("#gmapKeyMenu");
+  if(a && a!==document.activeElement) a.value=key||"";
+  if(b && b!==document.activeElement) b.value=key||"";
+}
+function getGoogleMapsId(){ return lsGet(GMAP_ID_LS); }
+function setGoogleMapsId(id){
+  lsSet(GMAP_ID_LS, id);
+  const a=$("#gmapId"), b=$("#gmapIdMenu");
+  if(a && a!==document.activeElement) a.value=id||"";
+  if(b && b!==document.activeElement) b.value=id||"";
+}
+function getGmapRot(){
+  let n=parseInt(lsGet(GMAP_ROT_LS),10);
+  if(!Number.isFinite(n)) n=0;
+  return ((n%360)+360)%360;
+}
+function setGmapRot(deg){
+  let n=parseInt(deg,10);
+  if(!Number.isFinite(n)) n=0;
+  n=((n%360)+360)%360;
+  lsSet(GMAP_ROT_LS, String(n));
+  return n;
+}
+function syncGmapKeyInputs(){
+  const k=getGoogleMapsKey(), id=getGoogleMapsId();
+  const a=$("#gmapKey"), b=$("#gmapKeyMenu"), c=$("#gmapId"), d=$("#gmapIdMenu");
+  if(a) a.value=k; if(b) b.value=k;
+  if(c) c.value=id; if(d) d.value=id;
+}
+function clampMapZoom(z){
+  z=Number(z);
+  if(!Number.isFinite(z)) return 19;
+  return Math.max(1, Math.min(22, Math.round(z)));
+}
+function buildingLatLng(b){
+  b=b||S.building||{};
+  const lat=Number(b.lat), lng=Number(b.lng);
+  if(Number.isFinite(lat)&&Number.isFinite(lng)&&(lat!==0||lng!==0)) return {lat,lng};
+  return null;
+}
+function setGmapAddrLabel(text){
+  const el=$("#gmapAddr"); if(!el) return;
+  el.textContent=text||"";
+}
+function applyGmapBuilding(b, opts){
+  if(!b) return false;
+  const ll=buildingLatLng(b);
+  if(!ll){ toast("No coordinates for that building"); return false; }
+  $("#gmapLat").value=String(ll.lat);
+  $("#gmapLng").value=String(ll.lng);
+  setGmapAddrLabel(b.address||"");
+  const search=$("#gmapSearch"); if(search) search.value=b.address||"";
+  const list=$("#gmapBldgList"); if(list){ list.innerHTML=""; list.style.display="none"; }
+  // Adopt into the project quietly so the tour keeps the portfolio address
+  if(!opts||opts.adopt!==false){
+    const same=S.building&&String(S.building.address||"").toLowerCase()===String(b.address||"").toLowerCase();
+    if(!same){
+      S.building=b;
+      S.prefix=b.custom ? (b.prefix||derivePrefix(b.address)) : derivePrefix(b.address);
+      S.next=nextFreeNum();
+      S.meta.address=b.address||"";
+      S.meta.cluster=(b.cluster||"").replace(/\s*\(x \d+\)/,"");
+      if(b.sqft)S.meta.sqft=b.sqft;
+      S.meta.tenant=tenantSummary(b,S.meta.suite);
+      if(!S.meta.ptype)S.meta.ptype=b.custom?"":"Industrial";
+      $("#bldgA").textContent=b.address;
+      $("#bldgB").textContent=b.custom?"Custom address":`${b.portfolio.replace(" Business Park","")} · BU ${b.bu} · ${b.rtu||0} RTU`;
+      const sp=$("#setPrefix"), sn=$("#setNext");
+      if(sp)sp.value=S.prefix; if(sn)sn.value=S.next; updateEg();
+      updateHint(); save();
+    }
+  }
+  return true;
+}
+function renderGmapBldgList(){
+  const list=$("#gmapBldgList"); if(!list) return;
+  const raw=($("#gmapSearch").value||"").trim(), q=raw.toLowerCase();
+  list.innerHTML="";
+  if(!q){ list.style.display="none"; return; }
+  const hits=BUILDINGS.filter(b=>{
+    return (b.address+" "+b.bu+" "+b.cluster+" "+b.portfolio+" "+(b.manager||"")).toLowerCase().includes(q);
+  }).slice(0,40);
+  if(!hits.length){
+    list.style.display="block";
+    list.innerHTML='<div class="note" style="text-align:center;padding:14px">No matches in the address database.</div>';
+    return;
+  }
+  hits.forEach(b=>{
+    const r=el("div","brow");
+    const ll=buildingLatLng(b);
+    r.innerHTML=`<div class="info"><div class="a">${esc(b.address)}</div>
+      <div class="b">${esc((b.portfolio||"").replace(" Business Park",""))} · BU ${esc(b.bu||"—")}${ll?"":" · no coords"}</div></div>
+      <div style="text-align:right"><div class="pfx">${esc(derivePrefix(b.address))}</div></div>`;
+    r.onclick=()=>{ applyGmapBuilding(b); toast("Coordinates from "+b.address); };
+    list.appendChild(r);
+  });
+  list.style.display="block";
+}
+function openGoogleMapSheet(){
+  syncGmapKeyInputs();
+  if(!$("#gmapZoom").value) $("#gmapZoom").value="19";
+  const b=S.building;
+  if(b&&b.address){
+    applyGmapBuilding(b,{adopt:false});
+  }else{
+    setGmapAddrLabel("");
+    const search=$("#gmapSearch"); if(search) search.value="";
+    const list=$("#gmapBldgList"); if(list){ list.innerHTML=""; list.style.display="none"; }
+    $("#gmapLat").value="";
+    $("#gmapLng").value="";
+  }
+  openSheet("#gmapSheet");
+  setTimeout(()=>{ try{ $("#gmapSearch").focus(); }catch(_){} }, 80);
+}
+
+/* ---------- Interactive Google Map (JS API) → lock captures full screen PNG ---------- */
+let _mapsJsKey=null;
+let _html2canvasPromise=null;
+function patchWebGlPreserveBuffer(){
+  if(window.__inspGmapGlPatched) return;
+  window.__inspGmapGlPatched=true;
+  const orig=HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext=function(type, attrs){
+    if(type==="webgl"||type==="webgl2"||type==="experimental-webgl"){
+      attrs=Object.assign({}, attrs||{}, { preserveDrawingBuffer:true });
+    }
+    return orig.call(this, type, attrs);
+  };
+}
+function applyLiveRotCss(){
+  const stage=$("#liveMapStage");
+  if(stage) stage.style.setProperty("--live-rot", (S.liveRot||0)+"deg");
+  const lbl=$("#liveRotLbl"); if(lbl) lbl.textContent=String(S.liveRot||0)+"°";
+}
+function setLiveRot(deg){
+  let n=parseInt(deg,10); if(!Number.isFinite(n)) n=0;
+  n=((n%360)+360)%360;
+  S.liveRot=n;
+  setGmapRot(n);
+  applyLiveRotCss();
+}
+function nudgeLiveRot(delta){ setLiveRot((S.liveRot||0)+delta); }
+
+async function ensureMapsJs(key){
+  key=String(key||"").trim();
+  if(!key) throw new Error("Enter your Google Maps API key");
+  patchWebGlPreserveBuffer();
+  if(window.google&&google.maps&&google.maps.importLibrary&&_mapsJsKey===key){
+    await google.maps.importLibrary("maps");
+    return;
+  }
+  if(_mapsJsKey && _mapsJsKey!==key){
+    throw new Error("Maps key already loaded — reload the page to switch API keys");
+  }
+  await new Promise((resolve,reject)=>{
+    const existing=document.getElementById("gmapsJsLoader");
+    if(existing){
+      existing.addEventListener("load",()=>resolve());
+      existing.addEventListener("error",()=>reject(new Error("Maps JavaScript API failed to load")));
+      if(window.google&&google.maps) resolve();
+      return;
+    }
+    const s=document.createElement("script");
+    s.id="gmapsJsLoader";
+    s.async=true;
+    s.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(key)+"&v=weekly&loading=async";
+    s.onload=()=>resolve();
+    s.onerror=()=>reject(new Error("Maps JavaScript API failed to load — enable it for this key in Google Cloud"));
+    document.head.appendChild(s);
+  });
+  const t0=Date.now();
+  while(!(window.google&&google.maps&&google.maps.importLibrary)){
+    if(Date.now()-t0>15000) throw new Error("Maps JavaScript API timed out");
+    await new Promise(r=>setTimeout(r,40));
+  }
+  _mapsJsKey=key;
+  await google.maps.importLibrary("maps");
+}
+
+function ensureHtml2Canvas(){
+  if(window.html2canvas) return Promise.resolve(window.html2canvas);
+  if(_html2canvasPromise) return _html2canvasPromise;
+  _html2canvasPromise=new Promise((resolve,reject)=>{
+    const s=document.createElement("script");
+    s.src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+    s.async=true;
+    s.onload=()=>{
+      if(window.html2canvas) resolve(window.html2canvas);
+      else reject(new Error("html2canvas failed to initialize"));
+    };
+    s.onerror=()=>reject(new Error("Could not load screen-capture helper"));
+    document.head.appendChild(s);
+  });
+  return _html2canvasPromise;
+}
+
+function hideLiveMap(){
+  S.liveMapActive=false;
+  const wrap=$("#liveMapWrap");
+  if(wrap){ wrap.classList.remove("show"); wrap.setAttribute("aria-hidden","true"); }
+  syncViewLockUi();
+}
+
+function showLiveMapShell(){
+  $("#hint").style.display="none";
+  $("#page").style.display="none";
+  const wrap=$("#liveMapWrap");
+  if(wrap){ wrap.classList.add("show"); wrap.setAttribute("aria-hidden","false"); }
+  S.liveMapActive=true;
+  S.viewLocked=false;
+  setAddMode("move",true);
+  syncViewLockUi();
+}
+
+async function openInteractiveGoogleMap(){
+  try{
+    const key=($("#gmapKey").value||getGoogleMapsKey()).trim();
+    const mapId=($("#gmapId").value||getGoogleMapsId()).trim();
+    setGoogleMapsKey(key);
+    setGoogleMapsId(mapId);
+    const lat=Number($("#gmapLat").value.trim());
+    const lng=Number($("#gmapLng").value.trim());
+    const zoom=clampMapZoom($("#gmapZoom").value);
+    const maptype=$("#gmapType").value||"satellite";
+    if(!Number.isFinite(lat)||!Number.isFinite(lng)) throw new Error("Pick a building address or enter lat/lng first");
+    toast("Opening interactive map…", 5000);
+    await ensureMapsJs(key);
+    closeSheet("#gmapSheet");
+    showLiveMapShell();
+    S.liveRot=getGmapRot(); applyLiveRotCss();
+    const host=$("#liveMap");
+    const opts={
+      center:{ lat, lng },
+      zoom,
+      mapTypeId: maptype,
+      disableDefaultUI:false,
+      zoomControl:true,
+      mapTypeControl:true,
+      streetViewControl:false,
+      fullscreenControl:false,
+      gestureHandling:"greedy",
+      tilt:0
+    };
+    if(mapId) opts.mapId=mapId;
+    else if(google.maps.RenderingType) opts.renderingType=google.maps.RenderingType.RASTER;
+    if(S.liveMap){
+      S.liveMap.setOptions(opts);
+      S.liveMap.setCenter({ lat, lng });
+      S.liveMap.setZoom(zoom);
+      if(maptype) S.liveMap.setMapTypeId(maptype);
+    }else{
+      S.liveMap=new google.maps.Map(host, opts);
+    }
+    setTimeout(()=>{ try{ google.maps.event.trigger(S.liveMap,"resize"); S.liveMap.setCenter({lat,lng}); }catch(_){} }, 80);
+    toast("Frame the site, rotate if needed, then tap 🔓 to save as PNG floor plan", 6000);
+  }catch(e){ hideLiveMap(); toast(String(e.message||e)); console.error(e); }
+}
+
+function waitMapIdle(map, ms){
+  ms=ms||1800;
+  return new Promise(resolve=>{
+    let done=false;
+    const finish=()=>{ if(done) return; done=true; resolve(); };
+    try{ if(map) google.maps.event.addListenerOnce(map,"idle",finish); }catch(_){}
+    setTimeout(finish, ms);
+  });
+}
+
+function canvasLooksBlank(canvas){
+  try{
+    const w=canvas.width, h=canvas.height;
+    if(w<8||h<8) return true;
+    const ctx=canvas.getContext("2d",{willReadFrequently:true});
+    const step=Math.max(8, Math.floor(Math.min(w,h)/24));
+    let colored=0, samples=0;
+    for(let y=step;y<h;y+=step){
+      for(let x=step;x<w;x+=step){
+        const p=ctx.getImageData(x,y,1,1).data;
+        samples++;
+        // Ignore near-black / near-navy chrome
+        if(p[0]>28||p[1]>36||p[2]>48) colored++;
+      }
+    }
+    return samples>0 && colored/samples < 0.02;
+  }catch(_){ return true; }
+}
+
+async function captureLiveMapScreenBytes(){
+  const wrap=$("#liveMapWrap");
+  const hud=$("#liveMapHud");
+  if(!wrap||!wrap.classList.contains("show")) throw new Error("Interactive map not open");
+  const prevHud=hud?hud.style.visibility:"";
+  if(hud) hud.style.visibility="hidden";
+  let controlsRestored=false;
+  const restoreControls=()=>{
+    if(controlsRestored||!S.liveMap) return;
+    controlsRestored=true;
+    try{ S.liveMap.setOptions({ zoomControl:true, mapTypeControl:true }); }catch(_){}
+  };
+  try{
+    if(S.liveMap){
+      try{ S.liveMap.setOptions({ zoomControl:false, mapTypeControl:false }); }catch(_){}
+    }
+    await waitMapIdle(S.liveMap, 1600);
+    await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+
+    const w=wrap.clientWidth, h=wrap.clientHeight;
+    if(w<16||h<16) throw new Error("Map screen too small");
+    const scale=Math.min(2, Math.max(1, window.devicePixelRatio||1));
+
+    // Prefer html2canvas so CSS rotation + full viewport match what you see
+    try{
+      const h2c=await ensureHtml2Canvas();
+      const shot=await h2c(wrap,{
+        useCORS:true,
+        allowTaint:false,
+        backgroundColor:"#0a1119",
+        scale,
+        logging:false,
+        imageTimeout:8000,
+        ignoreElements:el=>!!(hud&&(el===hud||hud.contains(el)))
+      });
+      if(shot&&shot.width>8&&!canvasLooksBlank(shot)){
+        return await canvasToPngBytes(shot);
+      }
+    }catch(err){ console.warn("html2canvas map capture failed", err); }
+
+    // Fallback: draw largest map canvas (WebGL / vector) with live rotation
+    const mapHost=$("#liveMap")||wrap;
+    const canvases=[...mapHost.querySelectorAll("canvas")].filter(c=>c.width>16&&c.height>16);
+    canvases.sort((a,b)=>(b.width*b.height)-(a.width*a.height));
+    if(!canvases.length) throw new Error("Could not capture map screen — wait for tiles, then try again");
+    const src=canvases[0];
+    try{ src.toDataURL("image/png"); }catch(_){
+      throw new Error("Map canvas is protected — remove Map ID or wait for tiles, then lock again");
+    }
+    const out=document.createElement("canvas");
+    out.width=Math.round(w*scale);
+    out.height=Math.round(h*scale);
+    const ctx=out.getContext("2d",{alpha:false});
+    ctx.fillStyle="#0a1119";
+    ctx.fillRect(0,0,out.width,out.height);
+    ctx.save();
+    ctx.translate(out.width/2, out.height/2);
+    ctx.rotate(((S.liveRot||0)*Math.PI)/180);
+    // Stage is ~142% to allow rotation; scale canvas to that footprint
+    const stageScale=1.42;
+    const dw=w*scale*stageScale, dh=h*scale*stageScale;
+    ctx.drawImage(src, -dw/2, -dh/2, dw, dh);
+    ctx.restore();
+    if(canvasLooksBlank(out)) throw new Error("Captured map was blank — wait for imagery, then lock again");
+    return await canvasToPngBytes(out);
+  }finally{
+    if(hud) hud.style.visibility=prevHud;
+    restoreControls();
+  }
+}
+
+function disposeLiveMap(){
+  hideLiveMap();
+  S.liveMap=null;
+  const host=$("#liveMap");
+  if(host) host.innerHTML="";
+  S.liveRot=0; applyLiveRotCss();
+}
+
+async function bakeLiveMapToStatic(){
+  if(!S.liveMap) throw new Error("Interactive map not open");
+  toast("Capturing map screen…", 6000);
+  const bytes=await captureLiveMapScreenBytes();
+  disposeLiveMap();
+  // Convert to a normal floor-plan PNG — keep unlocked so pins show and pan/zoom work.
+  S.viewLocked=false;
+  await openImageBytes(bytes, "drawing.png");
+  $("#page").style.display="block";
+  fitPage();
+  refreshPins();
+  syncViewLockUi();
+  toast("Map saved as PNG — pan, zoom, and place pins as usual", 4500);
+}
+
+function closeLiveMap(){
+  disposeLiveMap();
+  if(planReady()){ $("#page").style.display="block"; updateHint(); refreshPins(); }
+  else updateHint();
+  toast("Interactive map closed");
+}
+
+async function fillGmapFromDeviceGps(){
+  try{
+    toast("Getting GPS…", 4000);
+    const g=await new Promise((res,rej)=>{
+      if(!navigator.geolocation) return rej(new Error("GPS unavailable"));
+      navigator.geolocation.getCurrentPosition(
+        p=>res({lat:+p.coords.latitude.toFixed(6), lng:+p.coords.longitude.toFixed(6)}),
+        err=>rej(new Error(err.message||"GPS failed")),
+        { enableHighAccuracy:true, timeout:15000, maximumAge:10000 }
+      );
+    });
+    $("#gmapLat").value=String(g.lat);
+    $("#gmapLng").value=String(g.lng);
+    setGmapAddrLabel("Device GPS");
+    toast("GPS filled ✓");
+  }catch(e){ toast(String(e.message||e)); }
 }
 // Cap backing-store dimension; smaller on phones to avoid out-of-memory on big plans.
 const MAX_SIDE=(Math.min(screen.width,screen.height)<=820)?4096:6000;
@@ -852,6 +1611,7 @@ function scheduleRerender(){clearTimeout(rerenderT);rerenderT=setTimeout(()=>{re
 // Fit whole page to viewport (zoom = 1, centered).
 function fitPage(){
   if(!S.pts)return;
+  if(S.viewLocked){ applyTransform(); renderCanvas(); return; }
   computeFit();
   S.zoom=1;
   const vpW=$("#viewport").clientWidth,vpH=$("#viewport").clientHeight;
@@ -861,6 +1621,7 @@ function fitPage(){
 }
 // Zoom keeping the point (cx,cy) [viewport-relative px] stationary on screen.
 function zoomAt(nz,cx,cy){
+  if(S.viewLocked) return;
   nz=Math.min(12,nz);
   if(nz<=1){fitPage();return;}          // don't zoom out past 100% (fit)
   const u=(cx-S.panX)/S.zoom, v=(cy-S.panY)/S.zoom;
@@ -901,8 +1662,11 @@ function positionPins(){
     vpEl.setPointerCapture(e.pointerId);
     pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pts.size===1){downPt={x:e.clientX,y:e.clientY};downTime=Date.now();moved=false;longPressed=false;startPan={x:S.panX,y:S.panY};
-      dragPin=planReady()?hitPin(e.clientX,e.clientY):null;      // grabbed a pin?
-      if(dragPin){const gp=dragPin;lpTimer=setTimeout(()=>{longPressed=true;selectPin(gp);openPinDetail(gp);},500);}}  // hold to edit/delete
+      const hit=planReady()?hitPin(e.clientX,e.clientY):null;
+      // Drag / long-press edit only while ADD or PIC is armed
+      dragPin=(hit&&pinsEditable(hit))?hit:null;
+      if(dragPin){const gp=dragPin;lpTimer=setTimeout(()=>{longPressed=true;selectPin(gp);openPinDetail(gp);},500);}
+      else if(hit&&!pinsEditable(hit)){lpTimer=setTimeout(()=>{longPressed=true;toast("Turn on ADD or PIC to edit pins");},500);}}
     if(pts.size===2){dragPin=null;clearTimeout(lpTimer);const a=[...pts.values()];startDist=dist(a[0],a[1]);startZoom=S.zoom;startMid=mid(a[0],a[1]);startPan={x:S.panX,y:S.panY};}
   });
   vpEl.addEventListener("pointermove",e=>{
@@ -910,6 +1674,7 @@ function positionPins(){
     pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
     const a=[...pts.values()];
     if(pts.size===2){
+      if(S.viewLocked) return;
       const d=dist(a[0],a[1]),m=mid(a[0],a[1]);
       let nz=Math.max(1,Math.min(12,startZoom*(d/startDist)));
       const r=vpEl.getBoundingClientRect();
@@ -929,12 +1694,13 @@ function positionPins(){
           if(!$(`#pinLayer .pin[data-id="${dragPin.id}"]`).classList.contains("sel"))selectPin(dragPin);
           positionPins();
         }
-      }else if(S.zoom>1.001 && (S.mode==="move"||moved)){   // pan only when zoomed in
+      }else if(!S.viewLocked && S.zoom>1.001 && (S.mode==="move"||moved)){   // pan only when zoomed in
         S.panX=startPan.x+dx;S.panY=startPan.y+dy;applyTransform();
       }
     }
   });
   function doubleTapZoom(cx,cy){
+    if(S.viewLocked) return;
     const r=vpEl.getBoundingClientRect();
     if(S.zoom>1.05) fitPage();                       // toggle back out
     else zoomAt(deepZoomTarget(), cx-r.left, cy-r.top);
@@ -956,12 +1722,13 @@ function positionPins(){
       }
       lastTapT=now; lastTapX=downPt.x; lastTapY=downPt.y;
       const hit=hitPin(downPt.x,downPt.y);
-      if(hit){selectPin(hit);}                         // selecting is instant
-      else{
+      if(hit){selectPin(hit); if(isPhoto2d(hit)) showPicPreview(hit); else hidePicPreview();}
+      else{ hidePicPreview();
         const r=$("#page").getBoundingClientRect();
         const x=(downPt.x-r.left)/r.width, y=(downPt.y-r.top)/r.height;
-        if(S.mode==="add" && x>=0&&x<=1&&y>=0&&y<=1){  // defer add so a 2nd tap can zoom instead
-          const px=x,py=y; addTimer=setTimeout(()=>{addPin(px,py);addTimer=null;},270);
+        if((S.mode==="add"||S.mode==="add2d") && x>=0&&x<=1&&y>=0&&y<=1){  // defer add so a 2nd tap can zoom instead
+          const px=x,py=y,k=S.mode==="add2d"?"photo2d":"pano";
+          addTimer=setTimeout(()=>{addPin(px,py,k);addTimer=null;},270);
         }else{selectPin(null);}
       }
     }
@@ -973,7 +1740,7 @@ function positionPins(){
 
   // Mouse wheel / trackpad scroll = zoom in/out, centered on the cursor.
   vpEl.addEventListener("wheel",e=>{
-    if(!planReady())return;
+    if(!planReady()||S.viewLocked)return;
     e.preventDefault();
     const r=vpEl.getBoundingClientRect();
     const cx=e.clientX-r.left, cy=e.clientY-r.top;
@@ -991,7 +1758,8 @@ function handleTap(cx,cy){
   const hit=hitPin(cx,cy);
   if(hit){selectPin(hit);return;}
   if(x<0||x>1||y<0||y>1)return;
-  if(S.mode==="add"){addPin(x,y);}
+  if(S.mode==="add"){addPin(x,y,"pano");}
+  else if(S.mode==="add2d"){addPin(x,y,"photo2d");}
   else{ selectPin(null); }
 }
 function hitPin(cx,cy){
@@ -1007,22 +1775,35 @@ function hitPin(cx,cy){
 /* ============================================================
    PINS
    ============================================================ */
+function isPhoto2d(p){return !!(p&&p.kind==="photo2d");}
+function isPano(p){return !isPhoto2d(p);}
+/** Pin move / long-press edit: ADD arms 360 pins, PIC arms 2D pins. */
+function pinsEditable(p){
+  if(S.mode==="add") return !p||isPano(p);
+  if(S.mode==="add2d") return !p||isPhoto2d(p);
+  return false;
+}
 function nextFreeNum(){let n=1;const used=new Set(S.pins.map(p=>p.seq));while(used.has(n))n++;return n;}
 function pad(n){return String(n).padStart(2,"0");}
 function pinName(seq){return `${S.prefix} (${seq})`;}
-function photoFileName(p){return (p.name||pinName(p.seq))+".jpg";}
-function addPin(x,y){
+function picName(seq){return `PIC (${seq})`;}
+function photoFileName(p){return (p.name||(isPhoto2d(p)?picName(p.seq):pinName(p.seq)))+".jpg";}
+function addPin(x,y,kind){
+  kind=kind||"pano";
   const seq=parseInt($("#setNext").value)||nextFreeNum();
-  const p={id:"p"+Date.now()+Math.random().toString(36).slice(2,6),page:S.pageNum,x,y,seq,
-    name:pinName(seq),note:"",photoId:null,ts:null};
+  const p={id:"p"+Date.now()+Math.random().toString(36).slice(2,6),kind,page:S.pageNum,x,y,seq,
+    name:kind==="photo2d"?picName(seq):pinName(seq),note:"",info:"",photoId:null,ts:null};
   S.pins.push(p);
   S.next=seq+1;$("#setNext").value=S.next;updateEg();
   refreshPins();selectPin(p);save();
+  if(kind==="photo2d") openPinDetail(p);
 }
 function refreshPins(){
   const layer=$("#pinLayer");layer.innerHTML="";
-  S.pins.filter(p=>p.page===S.pageNum).forEach(p=>{
+  const page=S.pageNum||1;
+  S.pins.filter(p=>(p.page||1)==page).forEach(p=>{
     const node=el("div","pin");node.dataset.id=p.id;
+    if(isPhoto2d(p))node.classList.add("pic");
     if(p.photoId)node.classList.add("has");
     else if(p.shotNo)node.classList.add("shot");
     if(S.selPin&&S.selPin.id===p.id)node.classList.add("sel");
@@ -1032,45 +1813,90 @@ function refreshPins(){
     layer.appendChild(node);
   });
   positionPins();
-  const shot=S.pins.filter(p=>p.shotNo||p.photoId).length, ph=S.pins.filter(p=>p.photoId).length;
-  $("#pinCount").textContent=`(${S.pins.length} pins · ${shot} logged · ${ph} matched)`;
+  const panos=S.pins.filter(isPano), pics=S.pins.filter(isPhoto2d);
+  const shot=panos.filter(p=>p.shotNo||p.photoId).length, ph=panos.filter(p=>p.photoId).length;
+  const picPh=pics.filter(p=>p.photoId).length;
+  $("#pinCount").textContent=`(${panos.length}×360 · ${pics.length}×2D · ${shot} logged · ${ph} matched · ${picPh} pics)`;
 }
 function selectPin(p){
   S.selPin=p; 
   $$("#pinLayer .pin").forEach(n=>n.classList.toggle("sel", p&&n.dataset.id===p.id));
   if(p){$$("#pinLayer .pin").forEach(n=>n.classList.remove("armed"));
     const node=$(`#pinLayer .pin[data-id="${p.id}"]`);if(node)node.classList.add("armed");}
+  else hidePicPreview();
   updateActionBar();
 }
+let _picPrevUrl=null,_picPrevId=null;
+function hidePicPreview(){
+  const box=$("#picPreview"); if(!box)return;
+  box.classList.remove("open");
+  _picPrevId=null;
+  const media=$("#picPrevMedia"); if(media)media.innerHTML="";
+  if(_picPrevUrl){try{URL.revokeObjectURL(_picPrevUrl);}catch(e){} _picPrevUrl=null;}
+}
+async function showPicPreview(p){
+  if(!p||!isPhoto2d(p)){hidePicPreview();return;}
+  const token=p.id; _picPrevId=token;
+  $("#picPrevName").textContent=p.name||picName(p.seq);
+  const bits=[p.note,p.info].filter(Boolean);
+  $("#picPrevMeta").textContent=bits.length?bits.join(" · "):"2D picture pin";
+  const media=$("#picPrevMedia");
+  if(_picPrevUrl){try{URL.revokeObjectURL(_picPrevUrl);}catch(e){} _picPrevUrl=null;}
+  media.innerHTML=p.photoId?'<div class="empty">Loading…</div>':'<div class="empty">No picture yet — tap PHOTO to take or pick one</div>';
+  $("#picPreview").classList.add("open");
+  if(!p.photoId)return;
+  const blob=await idbGet("photos",p.photoId);
+  if(_picPrevId!==token)return; // user selected another pin meanwhile
+  media.innerHTML="";
+  if(!blob){media.innerHTML='<div class="empty">Picture missing from storage</div>';return;}
+  _picPrevUrl=URL.createObjectURL(blob);
+  const img=el("img"); img.alt=p.name||"2D picture"; img.src=_picPrevUrl;
+  img.onclick=e=>{e.stopPropagation(); const z=$("#matchZoom"); z.querySelector("img").src=_picPrevUrl; z.style.display="flex";};
+  media.appendChild(img);
+}
 function updateActionBar(){
-  const p=S.selPin, nm=$("#armName"), wrap=$("#armWrap");
-  $("#shootBtn").disabled=!p; $("#attachBtn").disabled=!p; nm.disabled=!p;
+  const p=S.selPin, nm=$("#armName"), wrap=$("#armWrap"), pic=isPhoto2d(p);
+  $("#shootBtn").disabled=!p||pic; $("#attachBtn").disabled=!p; nm.disabled=!p;
   if(p){
     nm.value=p.name;
     wrap.classList.add("has-val");
-    const method=S.ble?"fire + log":"log shot";
-    $("#shootLbl").textContent="SHOOT";
-    $("#shootSub").textContent = p.shotNo&&!p.photoId ? `logged #${p.shotNo} · re-log` : `${method} → ${p.name}`;
+    if(pic){
+      $("#shootLbl").textContent="—";
+      $("#shootSub").textContent="2D pin · use ATTACH";
+      $("#attachBtn").querySelector("span:not(.sub)").textContent="PHOTO";
+      $("#attachBtn").querySelector(".sub").textContent=p.photoId?"camera or device":"take or pick";
+    }else{
+      const method=S.ble?"fire + log":"log shot";
+      $("#shootLbl").textContent="SHOOT";
+      $("#shootSub").textContent = p.shotNo&&!p.photoId ? `logged #${p.shotNo} · re-log` : `${method} → ${p.name}`;
+      $("#attachBtn").querySelector("span:not(.sub)").textContent="ATTACH";
+      $("#attachBtn").querySelector(".sub").textContent="camera or device";
+    }
   }else{
     nm.value="";
     wrap.classList.remove("has-val");
     $("#shootLbl").textContent="SHOOT";
     $("#shootSub").textContent="select a pin first";
+    $("#attachBtn").querySelector("span:not(.sub)").textContent="ATTACH";
+    $("#attachBtn").querySelector(".sub").textContent="camera or device";
   }
 }
 
 /* pin list + detail */
 function openPinList(){
   const box=$("#pinList");box.innerHTML="";
-  if(!S.pins.length){box.innerHTML='<div class="note" style="text-align:center;padding:24px">No pins yet. Tap the plan to drop one.</div>';}
+  if(!S.pins.length){box.innerHTML='<div class="note" style="text-align:center;padding:24px">No pins yet. Tap ADD for 360° or PIC for a 2D picture pin.</div>';}
   [...S.pins].sort((a,b)=>a.seq-b.seq).forEach(p=>{
     const r=el("div","prow");
-    const thumb=el("div","thumb");thumb.textContent=p.photoId?"":"○";
+    const thumb=el("div","thumb");thumb.textContent=p.photoId?"":(isPhoto2d(p)?"🖼":"○");
     if(p.photoId)loadThumb(p.photoId,thumb);
     const info=el("div");info.style.flex="1";
+    const badge=p.photoId
+      ?(isPhoto2d(p)?'<span class="badge ok">✓ 2D</span>':'<span class="badge ok">✓ 360</span>')
+      :(isPhoto2d(p)?'<span class="badge warn">2D</span>':'<span class="badge">empty</span>');
+    const extra=[p.note,isPhoto2d(p)&&p.info?String(p.info).slice(0,40):""].filter(Boolean).map(esc).join(" · ");
     info.innerHTML=`<div class="pn">${esc(p.name)}</div>
-      <div class="pmeta">pg ${p.page}${p.note?" · "+esc(p.note):""} 
-      ${p.photoId?'<span class="badge ok">✓ 360</span>':'<span class="badge">empty</span>'}</div>`;
+      <div class="pmeta">pg ${p.page}${extra?" · "+extra:""} ${badge}</div>`;
     r.appendChild(thumb);r.appendChild(info);
     r.onclick=()=>{closeSheet("#pinSheet");if(p.page!==S.pageNum){S.pageNum=p.page;renderPage().then(()=>{refreshPins();selectPin(p);});}else{selectPin(p);}openPinDetail(p);};
     box.appendChild(r);
@@ -1083,11 +1909,19 @@ async function loadThumb(pid,imgHolder){
 }
 let pdPin=null;
 function openPinDetail(p){
-  pdPin=p;$("#pdTitle").textContent=p.name;
+  pdPin=p;
+  const pic=isPhoto2d(p);
+  $("#pdTitle").textContent=pic?"2D picture pin":p.name;
+  $("#pdNameLbl").textContent=pic?"Pin name":"Photo name";
   $("#pdName").value=p.name;$("#pdNote").value=p.note||"";
+  $("#pdInfo").value=p.info||"";
+  $("#pdInfoFld").style.display=pic?"":"none";
+  $("#pdAttachRow").style.display=pic?"":"none";
   const w=$("#pdThumbWrap");w.innerHTML="";
   if(p.photoId){idbGet("photos",p.photoId).then(b=>{if(b){const img=el("img");img.style.cssText="max-width:100%;max-height:220px;border-radius:10px;border:1px solid var(--line)";img.src=URL.createObjectURL(b);w.appendChild(img);}});}
-  else w.innerHTML='<div class="note">No photo yet — select this pin and SNAP or ATTACH.</div>';
+  else w.innerHTML=pic
+    ?'<div class="note">No 2D picture yet — take a photo or pick one from this device.</div>'
+    :'<div class="note">No photo yet — select this pin and SHOOT or ATTACH.</div>';
   openSheet("#pinDetail");
 }
 
@@ -1111,6 +1945,7 @@ async function logShot(p){
 }
 async function fireShot(){
   const p=S.selPin; if(!p){toast("Select a pin first");return;}
+  if(isPhoto2d(p)){toast("2D pins use ATTACH, not SHOOT");return;}
   const shoot=$("#shootBtn"); shoot.disabled=true;
   try{
     if(S.ble){$("#shootSub").textContent="firing camera…";
@@ -1299,11 +2134,12 @@ async function attachBlob(p,blob){
   refreshPins();updateActionBar();save();
 }
 function advancePin(cur){
+  const sameKind=p=>isPhoto2d(p)===isPhoto2d(cur);
   const done=p=>p.photoId||p.shotNo;                 // logged OR matched = handled
-  const pending=[...S.pins].sort((a,b)=>a.seq-b.seq).filter(p=>!done(p));
+  const pending=[...S.pins].sort((a,b)=>a.seq-b.seq).filter(p=>sameKind(p)&&!done(p));
   const nextP=pending.find(p=>p.seq>cur.seq)||pending[0];
   if(nextP){if(nextP.page!==S.pageNum){S.pageNum=nextP.page;renderPage().then(()=>{refreshPins();selectPin(nextP);});}else selectPin(nextP);toast("Next: "+nextP.name);}
-  else{selectPin(null);toast("All pins logged ✓");}
+  else{selectPin(null);toast(isPhoto2d(cur)?"All 2D pins done ✓":"All 360 pins logged ✓");}
 }
 
 /* ============================================================
@@ -1315,6 +2151,271 @@ function bytesToB64(bytes){
   for(let i=0;i<u8.length;i+=CH) s+=String.fromCharCode.apply(null, u8.subarray(i,i+CH));
   return btoa(s);
 }
+function b64ToBytes(b64){
+  const s=String(b64||"").replace(/^data:[^;]+;base64,/i,"");
+  const bin=atob(s);
+  const u8=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+  return u8;
+}
+/** Convert viewer tour.json (plan + markers) into a capture session for reshoot. */
+function tourJsonToProject(tour){
+  const metaIn=(tour&&tour.meta)||{};
+  const meta={
+    name:metaIn.name||"",
+    address:metaIn.address||"",
+    suite:metaIn.suite||"",
+    tenant:metaIn.tenant||"",
+    sqft:metaIn.sf||metaIn.sqft||"",
+    cluster:metaIn.cluster||"",
+    ptype:metaIn.type||metaIn.ptype||"",
+    creator:metaIn.creator||"",
+    created:metaIn.created||null,
+    modified:metaIn.modified||null
+  };
+  const plans=(tour&&tour.plan&&Array.isArray(tour.plan.plans))?tour.plan.plans:[];
+  const planBlock=plans[(tour&&tour.plan&&tour.plan.active)||0]||plans[0]||null;
+  const markers=(planBlock&&Array.isArray(planBlock.markers))?planBlock.markers:[];
+  const pins=[];
+  let seq=0;
+  const stamp=Date.now().toString(36);
+  for(const m of markers){
+    seq++;
+    const kind=(m.kind==="photo2d"||m.kind==="pic"||(m.image&&!m.target))?"photo2d":"pano";
+    let name="";
+    if(m.target) name=String(m.target).replace(/^.*\//,"").replace(/\.jpe?g$/i,"");
+    else if(m.image) name=String(m.image).replace(/^.*\//,"").replace(/\.jpe?g$/i,"");
+    else name=(kind==="photo2d"?"PIC":"PIN")+seq;
+    const label=String(m.label||"").trim();
+    const note=(label&&label!==name)?label:"";
+    pins.push({
+      id:"p"+stamp+seq,
+      kind, page:1, x:+m.x||0, y:+m.y||0, seq,
+      name, note, info:m.info||"",
+      photoId:null, ts:null, shotNo:null, gps:null
+    });
+  }
+  if(Array.isArray(tour&&tour.photoPins)){
+    for(const pp of tour.photoPins){
+      seq++;
+      pins.push({
+        id:pp.id||("p"+stamp+"2d"+seq),
+        kind:"photo2d", page:pp.page||1, x:+pp.x||0, y:+pp.y||0, seq:pp.seq||seq,
+        name:pp.name||("PIC"+seq), note:pp.note||"", info:pp.info||"",
+        photoId:null, ts:null, shotNo:null, gps:null
+      });
+    }
+  }
+  let building=null;
+  if(meta.address){
+    building=BUILDINGS.find(b=>String(b.address||"").toLowerCase()===String(meta.address).toLowerCase())||null;
+  }
+  const prefix=building&&building.prefix
+    ?building.prefix
+    :(String(meta.address||meta.name||"SITE").match(/\d+/)||["SITE"])[0];
+  const planKind=planBlock&&planBlock.img?"img":"pdf";
+  const planName=planBlock&&planBlock.name?planBlock.name:(planKind==="img"?"plan.png":"drawing.pdf");
+  return {
+    proj:{
+      v:2, captureVer:CAPTURE_VER, building, pdfName:planName, planKind, pageCount:1,
+      prefix, next:seq+1, shotSeq:0, sessionStarted:null, opt:{}, meta, pins
+    },
+    planPdfB64:planBlock&&planBlock.pdf?planBlock.pdf:null,
+    planImgDataUrl:planBlock&&planBlock.img?planBlock.img:null,
+    planName
+  };
+}
+async function applyTourJson(tour, opts){
+  const packed=tourJsonToProject(tour);
+  const keepPlan=!!(opts&&opts.keepPlan&&planReady());
+  await idbClear("photos");
+  if(!keepPlan) await clearPlan();
+  if(keepPlan){
+    // Keep the current drawing; adopt project info + centered pins only.
+    const proj=packed.proj;
+    S.building=proj.building||null;
+    S.prefix=proj.prefix||S.prefix||"SITE";
+    S.next=proj.next||1;
+    S.shotSeq=0;
+    S.meta=Object.assign(S.meta, proj.meta||{});
+    if(S.building && !S.meta.address) S.meta.address=S.building.address;
+    S.pins=centerPinsOnPlan(proj.pins||[]);
+    S.selPin=null;
+    S.viewLocked=false;
+    if(S.building){
+      $("#bldgA").textContent=S.meta.address||S.building.address;
+      $("#bldgB").textContent=S.building.custom?"Custom address":`${S.building.portfolio.replace(" Business Park","")} · BU ${S.building.bu}`;
+    }else if(S.meta.address||S.meta.name){
+      $("#bldgA").textContent=S.meta.address||S.meta.name;
+      $("#bldgB").textContent=S.meta.name||"tap to edit project";
+    }
+    const sp=$("#setPrefix"), sn=$("#setNext");
+    if(sp) sp.value=S.prefix; if(sn) sn.value=S.next; updateEg();
+    refreshPins(); updateActionBar(); updateHint(); syncViewLockUi(); save();
+    return { pins:S.pins.length, hasPlan:true, keptPlan:true };
+  }
+  await restore(packed.proj);
+  const hasPlan=await loadFloorPlanFromPacked(packed);
+  refreshPins();updateActionBar();updateHint();
+  return { pins:packed.proj.pins.length, hasPlan, keptPlan:false };
+}
+
+/** Place pins in a centered non-overlapping grid on the current drawing (0–1 UV). */
+function centerPinsOnPlan(pins){
+  const list=(pins||[]).map(p=>({
+    ...p,
+    kind:p.kind||"pano",
+    info:p.info||"",
+    note:p.note||"",
+    page:S.pageNum||1,
+    photoId:null, shotNo:null, ts:null, gps:null
+  }));
+  const n=list.length;
+  if(!n) return list;
+  const cols=Math.max(1, Math.ceil(Math.sqrt(n)));
+  const rows=Math.ceil(n/cols);
+  const pad=0.26;
+  const cellW=(1-2*pad)/cols;
+  const cellH=(1-2*pad)/rows;
+  for(let i=0;i<n;i++){
+    const col=i%cols, row=Math.floor(i/cols);
+    const inRow=(row===rows-1)?(n-row*cols):cols;
+    let x;
+    if(inRow<=1) x=0.5;
+    else if(inRow<cols){
+      const rowW=cellW*inRow;
+      x=(0.5-rowW/2)+cellW*(col+0.5);
+    }else x=pad+cellW*(col+0.5);
+    const y=pad+cellH*(row+0.5);
+    list[i].x=Math.min(0.92, Math.max(0.08, x));
+    list[i].y=Math.min(0.92, Math.max(0.08, y));
+  }
+  return list;
+}
+/** Load floor plan bytes from tourJsonToProject() result. Returns true if a drawing was opened. */
+async function loadFloorPlanFromPacked(packed){
+  if(!packed) return false;
+  try{
+    if(packed.planPdfB64){
+      const bytes=b64ToBytes(packed.planPdfB64);
+      if(bytes&&bytes.length){
+        const nm=/\.pdf$/i.test(packed.planName)?packed.planName:(packed.planName+".pdf");
+        await openPdfBytes(bytes, nm);
+        return true;
+      }
+    }
+    if(packed.planImgDataUrl){
+      const bytes=b64ToBytes(packed.planImgDataUrl);
+      if(bytes&&bytes.length){
+        await openImageBytes(bytes, packed.planName||"plan.png");
+        return true;
+      }
+    }
+  }catch(e){ console.warn("plan decode failed", e); }
+  return false;
+}
+/** True if a zip entry looks like a pin/pano photo, not a floor-plan drawing. */
+function looksLikePinPhotoName(name, pinNames){
+  const base=String(name||"").replace(/^.*\//,"").toLowerCase();
+  if(!base) return false;
+  if(/^preview\.jpe?g$/i.test(base)||/\.cover\.jpe?g$/i.test(base)) return true;
+  if(/\(\d+\)\s*\.jpe?g$/i.test(base)) return true; // "145 (1).jpg"
+  if(pinNames&&pinNames.has(base.replace(/\.jpe?g$/i,""))) return true;
+  if(pinNames&&pinNames.has(base)) return true;
+  return false;
+}
+function pinNameSetFromProj(proj, tour){
+  const set=new Set();
+  for(const p of (proj&&proj.pins)||[]){
+    const n=String(p.name||"").toLowerCase();
+    if(n){ set.add(n); set.add(n+".jpg"); set.add(n+".jpeg"); }
+  }
+  for(const fn of (tour&&tour.order)||[]){
+    const b=String(fn||"").replace(/^.*\//,"").toLowerCase();
+    if(b){ set.add(b); set.add(b.replace(/\.jpe?g$/i,"")); }
+  }
+  return set;
+}
+/**
+ * Pick floor-plan bytes from a zip. Never treats pin/pano JPEGs as the drawing.
+ * Prefers: preferred name → PDF → plan/drawing-named raster → tour.json embed.
+ */
+async function resolveFloorPlanFromZip(zip, opts){
+  opts=opts||{};
+  if(!zip) return false;
+  const preferred=opts.preferredName?String(opts.preferredName):"";
+  const pinNames=opts.pinNames||new Set();
+  const entries=Object.keys(zip.files).filter(k=>zip.files[k]&&!zip.files[k].dir);
+
+  async function openEntry(key){
+    const bytes=new Uint8Array(await zip.file(key).async("arraybuffer"));
+    const base=key.split("/").pop();
+    // Sniff PDF magic even when the extension is wrong
+    const isPdf=/\.pdf$/i.test(key)||(bytes.length>4&&bytes[0]===0x25&&bytes[1]===0x50&&bytes[2]===0x44&&bytes[3]===0x46);
+    if(isPdf) await openPdfBytes(bytes, /\.pdf$/i.test(base)?base:(base.replace(/\.[^.]+$/,"")+".pdf"));
+    else await openImageBytes(bytes, base);
+    return true;
+  }
+  function isRoot(k){ return !k.includes("/"); }
+  function isPlanRaster(k){
+    if(!/\.(png|jpe?g|webp|gif|bmp)$/i.test(k)) return false;
+    if(/photos2d\//i.test(k)) return false;
+    if(looksLikePinPhotoName(k, pinNames)) return false;
+    return true;
+  }
+  function isPlanNamed(k){
+    const b=k.split("/").pop().toLowerCase();
+    return /^(drawing|plan|floor|floorplan|siteplan)/i.test(b)||/\b(drawing|plan|floor)\b/i.test(b);
+  }
+
+  try{
+    if(preferred && zip.files[preferred] && !zip.files[preferred].dir){
+      if(!looksLikePinPhotoName(preferred, pinNames)||/\.pdf$/i.test(preferred))
+        return await openEntry(preferred);
+    }
+    // Root PDFs first (real drawings)
+    let key=entries.find(k=>isRoot(k)&&/\.pdf$/i.test(k));
+    if(!key) key=entries.find(k=>/\.pdf$/i.test(k)&&!/photos2d\//i.test(k));
+    if(key) return await openEntry(key);
+
+    // Named plan rasters (drawing.png / plan.jpg) — not pin shots
+    key=entries.find(k=>isRoot(k)&&isPlanRaster(k)&&isPlanNamed(k));
+    if(!key) key=entries.find(k=>isPlanRaster(k)&&isPlanNamed(k));
+    if(key) return await openEntry(key);
+
+    // tour.json embedded plan (pdf / img) — before any leftover JPEG
+    const tj=zip.file("tour.json");
+    if(tj){
+      try{
+        const tour=JSON.parse(await tj.async("string"));
+        const packed=tourJsonToProject(tour);
+        if(await loadFloorPlanFromPacked(packed)) return true;
+      }catch(e){ console.warn(e); }
+    }
+
+    // Last resort: a root raster that is not a pin photo (e.g. floor plan scan as PNG)
+    key=entries.find(k=>isRoot(k)&&isPlanRaster(k)&&/\.png$/i.test(k));
+    if(!key) key=entries.find(k=>isRoot(k)&&isPlanRaster(k));
+    if(key) return await openEntry(key);
+  }catch(e){ console.warn("resolveFloorPlanFromZip", e); }
+  return false;
+}
+/** Pull a drawing out of an .insp360 / .360skeleton zip (embedded tour.json or loose drawing). */
+async function loadFloorPlanFromZip(zip, opts){
+  return resolveFloorPlanFromZip(zip, opts||{});
+}
+async function cloudFetchTourJson(key){
+  if(window.AndroidCloud && typeof AndroidCloud.getTourJson==="function"){
+    const raw=JSON.parse(AndroidCloud.getTourJson(key)||"{}");
+    if(raw.missing||raw.status===404) return null;
+    if(!raw.ok) throw new Error(raw.error||("Tour JSON failed ("+(raw.status||"?")+")"));
+    return typeof raw.tour==="string"?JSON.parse(raw.tour):raw.tour;
+  }
+  const res=await cloudFetch("/api/tours/"+encodeTourKeyPath(key)+"/tour");
+  if(res.status===404) return null;
+  if(!res.ok) throw new Error("Tour JSON failed ("+res.status+")");
+  return await res.json();
+}
 function shortStem(addr){
   const a=String(addr||"").trim();
   const m=a.match(/^(\d{1,6})\b\s*([A-Za-z][A-Za-z0-9'.\-]*)/);
@@ -1322,7 +2423,7 @@ function shortStem(addr){
   const n=a.match(/^(\d{1,6})\b/);
   return n?n[1]:(S.prefix||"site");
 }
-function inspFileName(){
+function tourTitleStem(){
   const stem=shortStem(S.meta.address||(S.building&&S.building.address)||"");
   let title=String(S.meta.name||"").trim()||"FieldCapture";
   title=title.replace(/[\\/:*?"<>|]+/g," ").replace(/\s+/g," ").trim();
@@ -1332,15 +2433,17 @@ function inspFileName(){
     if(re.test(title)) title=title.replace(re, stem+" ").replace(/\s+/g," ").trim();
     else if(!title.toLowerCase().startsWith(stem.toLowerCase())) title=(stem+" "+title).replace(/\s+/g," ").trim();
   }
-  return title+".insp360";
+  return title;
 }
+function inspFileName(){ return tourTitleStem()+".insp360"; }
 function sanitizeCloudKey(name){
   let k=String(name||"").trim().replace(/\\/g,"/").replace(/^\/+/,"");
   if(k.includes("..")) k=k.split("/").filter(p=>p&&p!=="..").join("/");
   k=k.replace(/[\u0000-\u001f\u007f]/g,"");
-  if(!k) k="tour.insp360";
-  if(!/\.insp360$/i.test(k)) k+=".insp360";
-  if(k.length>512) k=k.slice(0,504)+".insp360";
+  const defExt=".insp360";
+  if(!k) k="tour"+defExt;
+  else if(!/\.(insp360|360skeleton)$/i.test(k)) k+=defExt; // accept legacy .360skeleton keys
+  if(k.length>512) k=k.slice(0,512-defExt.length)+defExt;
   return k;
 }
 function cloudObjectKey(){
@@ -1384,8 +2487,8 @@ function buildShootLog(){
     planKind:S.planKind||null,
     pageCount:S.pageCount||1,
     pins:ordered.map(p=>({
-      id:p.id, page:p.page, x:p.x, y:p.y, seq:p.seq, name:p.name, note:p.note||"",
-      shotIndex:p.shotNo||null, photoId:p.photoId||null, ts:p.ts||null, gps:p.gps||null
+      id:p.id, kind:p.kind||"pano", page:p.page, x:p.x, y:p.y, seq:p.seq, name:p.name, note:p.note||"",
+      info:p.info||"", shotIndex:p.shotNo||null, photoId:p.photoId||null, ts:p.ts||null, gps:p.gps||null
     })),
     shots
   };
@@ -1411,11 +2514,19 @@ async function exportShootLog(){
   dl(new Blob([JSON.stringify(log,null,2)],{type:"application/json"}), stem+".json");
   toast("Exported "+stem+".json ("+log.shots.length+" shots)");
 }
-/** Photo-less (or partial) tour.json v2 — markers + pending targets for PC hydrate / cloud. */
-function buildTourJsonSkeleton(){
-  const ordered=[...S.pins].sort((a,b)=>a.seq-b.seq);
+/** Tour status for cloud / tour.json — always .insp360 (no separate skeleton format). */
+function desiredCaptureStatus(){
+  const panos=S.pins.filter(isPano);
+  if(!panos.length) return "in_progress";
+  if(panos.every(p=>p.photoId)) return "complete";
+  return "in_progress";
+}
+function buildTourJson(statusOpt){
+  const all=[...S.pins].sort((a,b)=>a.seq-b.seq);
+  const panos=all.filter(isPano);
+  const pics=all.filter(isPhoto2d);
   const order=[], tours={};
-  for(const p of ordered){
+  for(const p of panos){
     const fn=photoFileName(p);
     order.push(fn);
     tours[fn]={ objects:[], view:{ lon:0, lat:0, fov:90 } };
@@ -1423,6 +2534,7 @@ function buildTourJsonSkeleton(){
   const now=new Date().toISOString();
   if(!S.meta.created) S.meta.created=now;
   S.meta.modified=now;
+  const status=statusOpt||desiredCaptureStatus();
   const out={
     version:2,
     lockView:true,
@@ -1438,70 +2550,87 @@ function buildTourJsonSkeleton(){
       type:S.meta.ptype||(S.building&&S.building.portfolio)||"",
       created:S.meta.created,
       modified:S.meta.modified,
-      status:"skeleton",
-      pendingPhotos:true,
+      status,
+      pendingPhotos:status!=="complete",
       captureVer:CAPTURE_VER
     }
   };
-  if(S.pdfBytes || ordered.length){
-    const markers=ordered.map(p=>({
-      x:+(+p.x).toFixed(6), y:+(+p.y).toFixed(6),
-      target:photoFileName(p), label:p.note||p.name||""
+  if(status==="complete"){ out.meta.pendingPhotos=false; out.meta.completedAt=now; }
+  if(pics.length){
+    out.photoPins=pics.map(p=>({
+      id:p.id, page:p.page, x:+(+p.x).toFixed(6), y:+(+p.y).toFixed(6),
+      seq:p.seq, name:p.name, note:p.note||"", info:p.info||"",
+      image:p.photoId?("photos2d/"+photoFileName(p)):null
     }));
+  }
+  if(S.pdfBytes || all.length){
+    const markers=all.map(p=>{
+      const m={
+        x:+(+p.x).toFixed(6), y:+(+p.y).toFixed(6),
+        label:p.note||p.name||"", kind:p.kind||"pano"
+      };
+      if(isPhoto2d(p)){
+        if(p.photoId) m.image="photos2d/"+photoFileName(p);
+        if(p.info) m.info=p.info;
+      }else m.target=photoFileName(p);
+      return m;
+    });
     const plan={ name:S.pdfName||"Floor plan", markers };
     if(S.pdfBytes){
       const b64=bytesToB64(S.pdfBytes instanceof Uint8Array?S.pdfBytes:new Uint8Array(S.pdfBytes));
-      if(S.planKind==="img") plan.img="data:image/png;base64,"+b64;
-      else plan.pdf=b64;
+      if(S.planKind==="img"){
+        const n=String(S.pdfName||"").toLowerCase();
+        const mime=/\.jpe?g$/.test(n)?"image/jpeg":/\.webp$/.test(n)?"image/webp":"image/png";
+        plan.img="data:"+mime+";base64,"+b64;
+      }else plan.pdf=b64;
     }
     out.plan={ active:0, plans:[plan] };
   }
   return out;
 }
-async function buildSkeletonInsp360Blob(onProgress){
+async function buildInsp360Blob(onProgress, statusOpt){
   if(!window.JSZip) throw new Error("JSZip missing");
   if(!S.pins.length) throw new Error("Place at least one marker first");
   const zip=new JSZip();
-  const ordered=[...S.pins].sort((a,b)=>a.seq-b.seq);
+  const all=[...S.pins].sort((a,b)=>a.seq-b.seq);
+  const panos=all.filter(isPano);
+  const pics=all.filter(isPhoto2d);
+  const total=panos.length+pics.length+2;
   let i=0;
-  for(const p of ordered){
+  for(const p of panos){
     if(!p.photoId) continue;
     const b=await idbGet("photos",p.photoId);
     if(!b) continue;
     zip.file(photoFileName(p), b, { compression:"STORE" });
     i++;
-    if(onProgress) onProgress(i, ordered.length+2, "Packing "+photoFileName(p));
+    if(onProgress) onProgress(i, total, "Packing "+photoFileName(p));
   }
-  const tour=buildTourJsonSkeleton();
-  // If any photos packed, clear pending when complete; otherwise keep skeleton flag
-  if(i>=ordered.length && ordered.length){
-    delete tour.meta.status;
-    delete tour.meta.pendingPhotos;
+  for(const p of pics){
+    if(!p.photoId) continue;
+    const b=await idbGet("photos",p.photoId);
+    if(!b) continue;
+    zip.file("photos2d/"+photoFileName(p), b, { compression:"STORE" });
+    i++;
+    if(onProgress) onProgress(i, total, "Packing 2D "+photoFileName(p));
   }
+  const status=statusOpt||desiredCaptureStatus();
+  const tour=buildTourJson(status);
   zip.file("tour.json", JSON.stringify(tour,null,2), { compression:"STORE" });
   zip.file("shoot-log.json", JSON.stringify(buildShootLog(),null,2), { compression:"STORE" });
   zip.file("capture-draft.json", JSON.stringify(serialize(),null,2), { compression:"STORE" });
-  if(onProgress) onProgress(ordered.length+2, ordered.length+2, "Writing tour.json");
+  if(onProgress) onProgress(total, total, "Writing tour.json");
   return zip.generateAsync({ type:"blob", compression:"STORE", streamFiles:true });
-}
-async function exportSkeleton(){
-  try{
-    if(!S.pins.length){ toast("Place markers first"); return; }
-    toast("Building skeleton .insp360…", 3000);
-    const blob=await buildSkeletonInsp360Blob();
-    const name=inspFileName();
-    dl(blob, name);
-    toast("Saved "+name+" (skeleton — hydrate photos on PC)");
-  }catch(e){ toast(String(e.message||e)); }
 }
 function cloudApiOrigin(){
   const host=(location.hostname||"").toLowerCase();
-  if(/workers\.dev$/i.test(host)) return location.origin;
+  // Same-origin only when this page is served by the viewer Worker itself
+  if(host==="insp360.ca"||host==="www.insp360.ca"||/^qr360-viewer\./i.test(host)||/^insp360-viewer\./i.test(host))
+    return location.origin;
   if(host==="127.0.0.1"||host==="localhost"){
     if(String(location.port||"")==="8788") return location.origin;
     return "http://127.0.0.1:8788";
   }
-  // Android WebView asset origin — talk to hosted Worker
+  // capture.insp360.ca, GitHub Pages, Android WebView — hosted API
   return CLOUD_API_HOSTED;
 }
 function cloudCreds(base){
@@ -1523,33 +2652,92 @@ async function cloudFetch(path, opts){
 }
 async function refreshCloudAuth(){
   const note=$("#cloudAuthNote");
+  const setNote=(cls,text)=>{ if(!note)return; note.className=cls||""; note.style.color=""; note.textContent=text; };
+  // Android: CookieManager session (cross-origin fetch from the asset page cannot see it).
+  if(window.AndroidCloud && typeof AndroidCloud.checkSession==="function"){
+    try{
+      const r=JSON.parse(AndroidCloud.checkSession()||"{}");
+      if(r&&r.ok){
+        setNote("ok","Signed in as "+(r.email||r.name||"user")+(r.role?" · "+r.role:""));
+        return r;
+      }
+      setNote("bad","Not signed in — tap Sign in, then Upload.");
+      return null;
+    }catch(e){
+      setNote("bad","Auth check failed");
+      return null;
+    }
+  }
   try{
     const res=await cloudFetch("/api/me");
     if(res.status===401){
-      if(note){ note.className="note"; note.style.color="var(--bad)"; note.textContent="Not signed in — tap Sign in, enter email code, then Upload."; }
+      setNote("bad","Not signed in — tap Sign in, then Upload.");
       return null;
     }
-    if(!res.ok){ if(note){ note.textContent="Auth check failed ("+res.status+")"; } return null; }
+    if(!res.ok){ setNote("bad","Auth check failed ("+res.status+")"); return null; }
     const me=await res.json();
-    if(note){ note.className="note"; note.style.color="var(--ok)"; note.textContent="Signed in as "+(me.email||me.name||"user")+(me.role?" · "+me.role:""); }
+    setNote("ok","Signed in as "+(me.email||me.name||"user")+(me.role?" · "+me.role:""));
     return me;
   }catch(e){
-    if(note){ note.textContent="Cloud unreachable — export skeleton and upload from PC."; }
+    setNote("bad","Cloud unreachable — save .insp360 locally and upload from PC.");
     return null;
   }
 }
 function openCloudSignIn(){
-  const url=CLOUD_API_HOSTED+"/";
+  // First-party ensure page re-issues the session cookie as SameSite=None so
+  // Capture (GitHub Pages / other origins) can call the API with credentials.
+  // PC: same-tab auth with return_to so we land back here and refresh status.
+  const returnTo=location.href.replace(/#.*$/,"")+"#cloudAuth=1";
+  const ensureUrl=CLOUD_API_HOSTED+"/api/auth/ensure?html=1&return_to="+encodeURIComponent(returnTo);
   if(window.AndroidCloud && typeof AndroidCloud.openLogin==="function"){
-    AndroidCloud.openLogin(url);
+    // Android: native WebView — no return_to (bridge calls onAndroidCloudReturned).
+    AndroidCloud.openLogin(CLOUD_API_HOSTED+"/api/auth/ensure?html=1");
+    toast("Sign in with email code — return here when done", 5000);
     return;
   }
-  window.open(url, "_blank");
+  toast("Signing in…", 4000);
+  location.assign(ensureUrl);
 }
+async function finishCloudAuthReturn(){
+  if(!/#cloudAuth=1\b/.test(location.hash||"")) return false;
+  try{ history.replaceState(null,"", location.pathname+location.search); }catch(_){
+    try{ location.hash=""; }catch(__){}
+  }
+  const me=await refreshCloudAuth();
+  if(me){
+    toast("Signed in ✓");
+    try{ openSheet("#menuSheet"); }catch(_){}
+    return true;
+  }
+  toast("Still not signed in — try Sign in again");
+  return false;
+}
+async function cloudSignOff(){
+  try{ localStorage.removeItem("insp360.aclEmail"); }catch(_){}
+  try{
+    if(window.AndroidCloud && typeof AndroidCloud.logout==="function"){
+      const r=JSON.parse(AndroidCloud.logout()||"{}");
+      if(!r.ok) throw new Error(r.error||"Sign off failed");
+    }else{
+      await cloudFetch("/api/auth/logout", { method:"POST" });
+    }
+  }catch(e){
+    toast(String(e.message||e)||"Sign off failed");
+  }
+  await refreshCloudAuth();
+  const list=$("#cloudProjList");
+  if(list) list.innerHTML='<div class="railNote">Not signed in. Tap <b>Sign in</b> in the menu (email code), then reopen Projects.</div>';
+  toast("Signed off");
+}
+window.onAndroidCloudReturned=async function(){
+  const me=await refreshCloudAuth();
+  if(me){ toast("Signed in ✓"); openSheet("#menuSheet"); refreshCloudProjects(); }
+  else toast("Sign-in not detected — try Sign in again");
+};
 async function uploadBlobPut(key, blob, contentType, onProgress){
   // Native Android: stage in cache (chunked) then PUT with WebView cookies
   if(window.AndroidCloud && typeof AndroidCloud.beginCache==="function" && typeof AndroidCloud.uploadCache==="function"){
-    const name="skel_"+Date.now()+".insp360";
+    const name="up_"+Date.now()+(/\.(360skeleton|insp360)$/i.exec(key)?.[0]||".insp360");
     const begin=JSON.parse(AndroidCloud.beginCache(name)||"{}");
     if(!begin.ok) throw new Error(begin.error||"Cache begin failed");
     const buf=new Uint8Array(await blob.arrayBuffer());
@@ -1578,29 +2766,18 @@ async function uploadBlobPut(key, blob, contentType, onProgress){
     xhr.open("PUT", base+path);
     xhr.withCredentials=cloudCreds(base)==="include";
     xhr.responseType="text";
-    xhr.timeout=180000; // hard cap so a dead connection can't hang the upload forever
     xhr.setRequestHeader("Content-Type", contentType||"application/zip");
     if(isLocalApi(base)){
       try{ xhr.setRequestHeader("X-Insp360-Email",(localStorage.getItem("insp360.aclEmail")||"robert.piwin@quadreal.com")); }catch(_){}
     }
-    // Stall watchdog: a frozen connection fires no error, so abort when no bytes move for 45s.
-    let lastTick=Date.now();
-    let stalled=false;
-    const watchdog=setInterval(()=>{
-      if(Date.now()-lastTick>45000){ stalled=true; clearInterval(watchdog); try{ xhr.abort(); }catch(_){} }
-    }, 5000);
-    const stopWatchdog=()=>{ try{ clearInterval(watchdog); }catch(_){} };
     xhr.upload.onprogress=e=>{
-      lastTick=Date.now();
       if(typeof onProgress==="function"){
         const total=e.lengthComputable?e.total:(blob&&blob.size)||0;
         onProgress({ loaded:e.loaded||0, total:total||0 });
       }
     };
-    xhr.onload=()=>{ stopWatchdog(); resolve({ ok:xhr.status>=200&&xhr.status<300, status:xhr.status, text:()=>xhr.responseText||"" }); };
-    xhr.onerror=()=>{ stopWatchdog(); reject(new Error("Network error during upload")); };
-    xhr.ontimeout=()=>{ stopWatchdog(); reject(new Error("Upload timed out (no response)")); };
-    xhr.onabort=()=>{ stopWatchdog(); reject(new Error(stalled?"Upload stalled (no data for 45s)":"Upload cancelled")); };
+    xhr.onload=()=>resolve({ ok:xhr.status>=200&&xhr.status<300, status:xhr.status, text:()=>xhr.responseText||"" });
+    xhr.onerror=()=>reject(new Error("Network error during upload"));
     xhr.send(blob);
   });
 }
@@ -1616,40 +2793,489 @@ async function uploadTourSidecar(key, tourText){
   });
   return !!(res&&res.ok);
 }
-async function uploadSkeletonToCloud(){
+async function saveTourToCloud(){
   try{
     if(!S.pins.length){ toast("Place markers first"); return; }
-    if(!(S.meta.address||(S.building&&S.building.address))){ toast("Pick a building / address first"); return; }
+    if(!(S.meta.address||(S.building&&S.building.address)||S.meta.name)){ toast("Set project name or address first"); return; }
     const me=await refreshCloudAuth();
     if(!me && !(window.AndroidCloud && typeof AndroidCloud.uploadBytes==="function")){
       toast("Sign in to cloud first (email code), then retry");
       return;
     }
-    toast("Building skeleton…", 4000);
-    const blob=await buildSkeletonInsp360Blob();
+    const status=desiredCaptureStatus();
+    toast("Building .insp360…", 4000);
+    const blob=await buildInsp360Blob(null, status);
     const key=cloudObjectKey();
-    toast("Uploading "+inspFileName()+"…", 6000);
+    toast("Uploading to cloud…", 8000);
     const res=await uploadBlobPut(key, blob, "application/zip");
     if(!res.ok) throw new Error("Upload failed ("+res.status+")");
-    const tourText=JSON.stringify(buildTourJsonSkeleton(),null,2);
+    const tourText=JSON.stringify(buildTourJson(status),null,2);
     const ok=await uploadTourSidecar(key, tourText);
-    if(!ok) toast("Archive uploaded; sidecar failed — open in viewer and Save");
-    else toast("Cloud skeleton uploaded ✓");
+    if(!ok) toast("Archive uploaded; sidecar failed");
+    else toast("Saved to cloud ✓ · "+status.replace("_"," "));
+    try{ _tourPrevCache.delete(key); }catch(_){}
     const note=$("#cloudAuthNote");
-    if(note) note.textContent="Uploaded · "+key+" · hydrate photos on PC when X5 batch is ready";
+    if(note){ note.className="ok"; note.style.color=""; note.textContent="Cloud · "+key; }
+    openCloudProjects(true);
+  }catch(e){ toast(String(e.message||e)); }
+}
+async function saveTourLocally(){
+  try{
+    if(!S.pins.length){ toast("Place markers first"); return; }
+    const status=desiredCaptureStatus();
+    toast("Building .insp360…", 3000);
+    const blob=await buildInsp360Blob(null, status);
+    const name=inspFileName();
+    dl(blob, name);
+    toast("Saved "+name);
+  }catch(e){ toast(String(e.message||e)); }
+}
+
+/* ---- Projects rail (cloud + local) ---- */
+let projRailSrc="cloud"; // "cloud" | "local"
+function escHtml(s){ return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+function tourTitleFromKey(key){
+  const base=String(key||"").split("/").pop()||key||"Tour";
+  return base.replace(/\.(insp360|360skeleton)$/i,"");
+}
+function fmtWhen(iso){
+  if(!iso) return "";
+  try{
+    const d=new Date(iso), now=Date.now(), ms=now-d.getTime();
+    if(ms<60000) return "just now";
+    if(ms<3600000) return Math.floor(ms/60000)+"m ago";
+    if(ms<86400000) return Math.floor(ms/3600000)+"h ago";
+    if(ms<604800000) return Math.floor(ms/86400000)+"d ago";
+    return d.toLocaleDateString();
+  }catch(_){ return ""; }
+}
+function statusLabel(st){
+  const s=String(st||"in_progress").toLowerCase();
+  if(s==="complete"||s==="completed") return "complete";
+  return "in_progress";
+}
+function syncProjRailSrcUi(){
+  const wrap=$("#projRailSrc"); if(!wrap) return;
+  wrap.querySelectorAll("[data-src]").forEach(btn=>{
+    const on=btn.getAttribute("data-src")===projRailSrc;
+    btn.classList.toggle("on", on);
+    btn.setAttribute("aria-selected", on?"true":"false");
+  });
+}
+function setProjRailSrc(src){
+  projRailSrc=src==="local"?"local":"cloud";
+  syncProjRailSrcUi();
+  refreshProjRail();
+}
+function openCloudProjects(forceRefresh){
+  const rail=$("#cloudProjRail"), scrim=$("#cloudScrim");
+  if(rail) rail.classList.add("open");
+  if(scrim && window.matchMedia("(max-width:720px)").matches) scrim.classList.add("show");
+  syncProjRailSrcUi();
+  if(forceRefresh!==false) refreshProjRail();
+}
+function closeCloudProjects(){
+  const rail=$("#cloudProjRail"), scrim=$("#cloudScrim");
+  if(rail) rail.classList.remove("open");
+  if(scrim) scrim.classList.remove("show");
+}
+function refreshProjRail(){
+  if(projRailSrc==="local") renderLocalProjectsPanel();
+  else refreshCloudProjects();
+}
+function renderLocalProjectsPanel(){
+  const list=$("#cloudProjList"); if(!list) return;
+  list.innerHTML=`
+    <div style="padding:2px 0 10px">
+      <button class="btn primary" data-act="open-local" style="width:100%">Open local file</button>
+    </div>
+    <div class="railNote">Pick a saved <b>.insp360</b> (or <b>.json</b> / <b>.zip</b>) from this device. Use the <b>Cloud</b> tab for Inspections projects.</div>`;
+}
+function pickLocalTourFile(){
+  const inp=$("#tourFile"); if(!inp) return;
+  inp.value="";
+  inp.click();
+}
+async function cloudListTours(){
+  if(window.AndroidCloud && typeof AndroidCloud.listTours==="function"){
+    const raw=JSON.parse(AndroidCloud.listTours("")||"{}");
+    if(!raw.ok) throw new Error(raw.error||("List failed ("+(raw.status||"?")+")"));
+    return raw.tours||[];
+  }
+  const res=await cloudFetch("/api/tours");
+  if(res.status===401) throw new Error("auth");
+  if(!res.ok) throw new Error("List failed ("+res.status+")");
+  const data=await res.json();
+  return data.tours||[];
+}
+async function cloudDownloadTourBlob(key){
+  if(window.AndroidCloud && typeof AndroidCloud.downloadTour==="function"){
+    const name="dl_"+Date.now()+(/\.(360skeleton|insp360)$/i.exec(key)?.[0]||".insp360");
+    const start=JSON.parse(AndroidCloud.downloadTour(key, name)||"{}");
+    if(!start.ok) throw new Error(start.error||("Download failed ("+(start.status||"?")+")"));
+    const size=Number(start.size||0);
+    const parts=[];
+    let offset=0;
+    const CHUNK=240000;
+    while(offset<size){
+      const chunk=JSON.parse(AndroidCloud.readCacheB64(name, offset, Math.min(CHUNK, size-offset))||"{}");
+      if(!chunk.ok) throw new Error(chunk.error||"Read failed");
+      const n=Number(chunk.n||0);
+      if(n<=0) break;
+      const bin=atob(chunk.b64||"");
+      const u8=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+      parts.push(u8);
+      offset+=n;
+    }
+    try{ AndroidCloud.deleteCache(name); }catch(_){}
+    return new Blob(parts, { type:"application/zip" });
+  }
+  const res=await cloudFetch("/api/tours/"+encodeTourKeyPath(key));
+  if(!res.ok) throw new Error("Download failed ("+res.status+")");
+  return await res.blob();
+}
+async function cloudPatchStatus(key, status){
+  if(window.AndroidCloud && typeof AndroidCloud.patchTourStatus==="function"){
+    const r=JSON.parse(AndroidCloud.patchTourStatus(key, status)||"{}");
+    if(!r.ok) throw new Error(r.error||("Status failed ("+(r.status||"?")+")"));
+    return;
+  }
+  const res=await cloudFetch("/api/tours/"+encodeTourKeyPath(key)+"/status", {
+    method:"PATCH",
+    headers:{ "Content-Type":"application/json; charset=utf-8" },
+    body:JSON.stringify({ status })
+  });
+  if(!res.ok) throw new Error("Status failed ("+res.status+")");
+}
+async function cloudDeleteTour(key){
+  if(window.AndroidCloud && typeof AndroidCloud.deleteTour==="function"){
+    const r=JSON.parse(AndroidCloud.deleteTour(key)||"{}");
+    if(!r.ok) throw new Error(r.error||("Delete failed ("+(r.status||"?")+")"));
+    return;
+  }
+  const res=await cloudFetch("/api/tours/"+encodeTourKeyPath(key), { method:"DELETE" });
+  if(!res.ok) throw new Error("Delete failed ("+res.status+")");
+}
+const _tourPrevCache=new Map(); // key -> dataURL | ""
+let _tourPrevToken=0;
+
+function loadImgEl(src){
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>res(img);
+    img.onerror=()=>rej(new Error("image decode failed"));
+    img.src=src;
+  });
+}
+
+/** Preview markers: centered grid in the middle of the drawing (ignore real UV — those often cluster at 0,0). */
+function drawPinsOnPreview(ctx, pins, ox, oy, dw, dh){
+  if(!pins||!pins.length||dw<=0||dh<=0) return;
+  const n=pins.length;
+  const r=Math.max(5, Math.min(8, Math.floor(Math.min(dw,dh)/28)));
+  const gap=r*2.6;
+  const cols=Math.max(1, Math.ceil(Math.sqrt(n)));
+  const rows=Math.max(1, Math.ceil(n/cols));
+  const gridW=(cols-1)*gap;
+  const gridH=(rows-1)*gap;
+  const cx=ox+dw/2, cy=oy+dh/2;
+  const x0=cx-gridW/2, y0=cy-gridH/2;
+  for(let i=0;i<n;i++){
+    const col=i%cols, row=Math.floor(i/cols);
+    // Center the last row when it has fewer pins
+    let x=x0+col*gap, y=y0+row*gap;
+    if(row===rows-1){
+      const inRow=n-row*cols;
+      const rowW=(inRow-1)*gap;
+      x=cx-rowW/2+col*gap;
+    }
+    const pic=isPhoto2d(pins[i]);
+    ctx.beginPath();
+    ctx.arc(x, y, pic?r*0.9:r, 0, Math.PI*2);
+    ctx.fillStyle=pic?"#c77dff":"#3fa9ff";
+    ctx.fill();
+    ctx.lineWidth=1.4;
+    ctx.strokeStyle="#04121f";
+    ctx.stroke();
+  }
+}
+
+async function renderTourPreviewDataUrl(tour){
+  const packed=tourJsonToProject(tour);
+  const pins=packed.proj.pins||[];
+  const W=360, H=270;
+  const canvas=document.createElement("canvas");
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext("2d",{alpha:false});
+  ctx.fillStyle="#0a1119";
+  ctx.fillRect(0,0,W,H);
+
+  let bmp=null;
+  try{
+    if(packed.planImgDataUrl){
+      const src=/^data:/i.test(packed.planImgDataUrl)
+        ? packed.planImgDataUrl
+        : "data:image/png;base64,"+String(packed.planImgDataUrl).replace(/^data:[^;]+;base64,/i,"");
+      bmp=await loadImgEl(src);
+    }else if(packed.planPdfB64 && window.pdfjsLib){
+      const bytes=b64ToBytes(packed.planPdfB64);
+      const doc=await pdfjsLib.getDocument({data:bytes.slice(0)}).promise;
+      const page=await doc.getPage(1);
+      const vp1=page.getViewport({scale:1});
+      const scale=Math.min(W/vp1.width, H/vp1.height, 1.5);
+      const vp=page.getViewport({scale});
+      const tmp=document.createElement("canvas");
+      tmp.width=Math.max(1, Math.round(vp.width));
+      tmp.height=Math.max(1, Math.round(vp.height));
+      await page.render({canvasContext:tmp.getContext("2d",{alpha:false}), viewport:vp}).promise;
+      bmp=tmp;
+      try{ doc.destroy(); }catch(_){}
+    }
+  }catch(e){ console.warn("tour preview plan", e); bmp=null; }
+
+  let ox=0, oy=0, dw=W, dh=H;
+  if(bmp){
+    const iw=bmp.naturalWidth||bmp.width, ih=bmp.naturalHeight||bmp.height;
+    const s=Math.min(W/iw, H/ih);
+    dw=Math.max(1, iw*s); dh=Math.max(1, ih*s);
+    ox=(W-dw)/2; oy=(H-dh)/2;
+    ctx.fillStyle="#111820";
+    ctx.fillRect(0,0,W,H);
+    ctx.drawImage(bmp, ox, oy, dw, dh);
+  }else if(pins.length){
+    // Pin map without drawing — still better than text-only
+    ctx.fillStyle="#14202c";
+    ctx.fillRect(8,8,W-16,H-16);
+    ctx.strokeStyle="#2c3d4e";
+    ctx.strokeRect(8.5,8.5,W-17,H-17);
+    ox=8; oy=8; dw=W-16; dh=H-16;
+  }else{
+    return "";
+  }
+  drawPinsOnPreview(ctx, pins, ox, oy, dw, dh);
+  return canvas.toDataURL("image/jpeg", 0.78);
+}
+
+async function hydrateTourPreviews(root){
+  const token=++_tourPrevToken;
+  const cells=[...(root.querySelectorAll(".cprev[data-key]")||[])];
+  const queue=cells.slice();
+  const workers=Math.min(3, queue.length||1);
+  async function worker(){
+    while(queue.length && token===_tourPrevToken){
+      const el=queue.shift(); if(!el) return;
+      const key=el.getAttribute("data-key")||"";
+      if(!key) continue;
+      try{
+        let url=_tourPrevCache.get(key);
+        if(url===undefined){
+          const tour=await cloudFetchTourJson(key);
+          if(token!==_tourPrevToken) return;
+          url=tour? (await renderTourPreviewDataUrl(tour)) : "";
+          _tourPrevCache.set(key, url||"");
+        }
+        if(token!==_tourPrevToken) return;
+        if(url){
+          el.innerHTML="";
+          const img=document.createElement("img");
+          img.alt="Drawing preview";
+          img.src=url;
+          el.appendChild(img);
+        }else{
+          el.innerHTML='<div class="ph">No drawing preview</div>';
+        }
+      }catch(e){
+        if(token!==_tourPrevToken) return;
+        el.innerHTML='<div class="ph">Preview unavailable</div>';
+      }
+    }
+  }
+  await Promise.all(Array.from({length:workers}, ()=>worker()));
+}
+
+async function refreshCloudProjects(){
+  const list=$("#cloudProjList"); if(!list) return;
+  list.innerHTML='<div class="railNote">Loading…</div>';
+  try{
+    const me=await refreshCloudAuth();
+    if(!me && !(window.AndroidCloud && typeof AndroidCloud.listTours==="function")){
+      list.innerHTML='<div class="railNote">Not signed in. Tap <b>Sign in</b> in the menu (email code), then reopen Projects.</div>';
+      return;
+    }
+    _tourPrevCache.clear();
+    const tours=await cloudListTours();
+    if(!tours.length){
+      list.innerHTML='<div class="railNote">No cloud captures yet. Use <b>Save to cloud</b> after placing markers.</div>';
+      return;
+    }
+    list.innerHTML=tours.map(t=>{
+      const st=statusLabel(t.status);
+      const key=String(t.key||"");
+      return `<div class="cprow" data-key="${escHtml(key)}" role="button" tabindex="0" title="Open project">
+        <div class="cprev" data-key="${escHtml(key)}"><div class="ph">Loading preview…</div></div>
+        <div class="ttl">${escHtml(tourTitleFromKey(key))}</div>
+        <div class="meta"><span class="chip ${st}">${st.replace("_"," ")}</span><span>${escHtml(fmtWhen(t.uploaded))}</span></div>
+      </div>`;
+    }).join("");
+    hydrateTourPreviews(list);
+  }catch(e){
+    if(String(e.message||e)==="auth"){
+      list.innerHTML='<div class="railNote">Not signed in. Tap <b>Sign in</b> in the menu, then reopen Projects.</div>';
+    }else{
+      list.innerHTML=`<div class="railNote">Could not load projects.<br>${escHtml(e.message||e)}</div>`;
+    }
+  }
+}
+async function openCloudTour(key){
+  try{
+    const keepPlan=planReady();
+    toast(keepPlan?"Loading pins onto current map…":"Opening plan & pins…", 8000);
+    if(!keepPlan){
+      await clearPlan();
+      S.pins=[]; S.selPin=null; refreshPins();
+    }else{
+      await idbClear("photos");
+      S.pins=[]; S.selPin=null; refreshPins();
+    }
+    let tour=null;
+    try{ tour=await cloudFetchTourJson(key); }catch(e){ console.warn(e); }
+    let pinCount=0;
+    let hasPlan=keepPlan;
+    let keptPlan=keepPlan;
+
+    if(keepPlan){
+      if(tour){
+        const r=await applyTourJson(tour, { keepPlan:true });
+        pinCount=r.pins; hasPlan=true; keptPlan=true;
+      }else{
+        // No sidecar — pull pins/info from archive without replacing the drawing
+        toast("Loading project info…", 10000);
+        const blob=await cloudDownloadTourBlob(key);
+        const zip=await JSZip.loadAsync(blob);
+        const draft=zip.file("project.json")||zip.file("capture-draft.json");
+        if(draft){
+          const proj=JSON.parse(await draft.async("string"));
+          S.building=proj.building||null;
+          S.prefix=proj.prefix||S.prefix||"SITE";
+          S.next=proj.next||1;
+          S.shotSeq=0;
+          S.meta=Object.assign(S.meta, proj.meta||{});
+          if(S.building && !S.meta.address) S.meta.address=S.building.address;
+          S.pins=centerPinsOnPlan(proj.pins||[]);
+          S.selPin=null;
+          S.viewLocked=false;
+          if(S.building){
+            $("#bldgA").textContent=S.meta.address||S.building.address;
+            $("#bldgB").textContent=S.building.custom?"Custom address":`${S.building.portfolio.replace(" Business Park","")} · BU ${S.building.bu}`;
+          }else if(S.meta.address||S.meta.name){
+            $("#bldgA").textContent=S.meta.address||S.meta.name;
+            $("#bldgB").textContent=S.meta.name||"tap to edit project";
+          }
+          const sp=$("#setPrefix"), sn=$("#setNext");
+          if(sp) sp.value=S.prefix; if(sn) sn.value=S.next; updateEg();
+          pinCount=S.pins.length;
+        }else{
+          const tj=zip.file("tour.json");
+          if(tj){
+            tour=JSON.parse(await tj.async("string"));
+            const r=await applyTourJson(tour, { keepPlan:true });
+            pinCount=r.pins;
+          }
+        }
+        refreshPins(); updateActionBar(); updateHint(); syncViewLockUi(); save();
+      }
+      fitPage();
+      closeCloudProjects();
+      if(pinCount) toast("Loaded "+pinCount+" pin"+(pinCount===1?"":"s")+" onto current map");
+      else toast("Project info loaded onto current map");
+      return;
+    }
+
+    if(tour){
+      const r=await applyTourJson(tour);
+      pinCount=r.pins;
+      hasPlan=r.hasPlan;
+      keptPlan=!!r.keptPlan;
+    }
+    // Sidecar often has markers only — floor plan usually lives inside the archive.
+    if(!hasPlan){
+      toast(pinCount?"Pins loaded — downloading drawing…":"Downloading project archive…", 12000);
+      const blob=await cloudDownloadTourBlob(key);
+      const zip=await JSZip.loadAsync(blob);
+      if(!tour){
+        const draft=zip.file("project.json")||zip.file("capture-draft.json");
+        if(draft){
+          const proj=JSON.parse(await draft.async("string"));
+          proj.pins=(proj.pins||[]).map(p=>({...p, photoId:null, shotNo:null, ts:null, gps:null}));
+          proj.shotSeq=0;
+          await idbClear("photos");
+          await clearPlan();
+          await restore(proj);
+          pinCount=S.pins.length;
+        }else{
+          const tj=zip.file("tour.json");
+          if(tj){
+            tour=JSON.parse(await tj.async("string"));
+            const r=await applyTourJson(tour);
+            pinCount=r.pins;
+            hasPlan=r.hasPlan;
+          }
+        }
+      }
+      if(!hasPlan){
+        const pinNames=pinNameSetFromProj(
+          { pins:S.pins },
+          tour||(zip.file("tour.json")?JSON.parse(await zip.file("tour.json").async("string")):null)
+        );
+        hasPlan=await loadFloorPlanFromZip(zip, {
+          preferredName:S.pdfName||"",
+          pinNames
+        });
+      }
+      refreshPins();updateActionBar();updateHint();
+    }
+    if(!pinCount && !hasPlan) throw new Error("No pins or drawing found in that cloud project");
+    closeCloudProjects();
+    if(keptPlan) toast("Loaded "+pinCount+" pin"+(pinCount===1?"":"s")+" onto current map");
+    else if(hasPlan) toast("Opened for reshoot · "+pinCount+" pin"+(pinCount===1?"":"s")+" + drawing");
+    else toast("Opened "+pinCount+" pins — drawing not found in archive");
+  }catch(e){ console.error(e); toast(String(e.message||e)); }
+}
+async function markCloudComplete(key){
+  try{
+    await cloudPatchStatus(key, "complete");
+    toast("Marked complete ✓");
+    refreshCloudProjects();
+  }catch(e){ toast(String(e.message||e)); }
+}
+async function deleteCloudTour(key){
+  if(!confirm("Delete this cloud capture?\n"+key)) return;
+  try{
+    await cloudDeleteTour(key);
+    toast("Deleted ✓");
+    refreshCloudProjects();
   }catch(e){ toast(String(e.message||e)); }
 }
 async function exportZip(){
-  if(!S.pins.length){toast("Nothing to export yet");return;}
-  toast("Building ZIP…",3000);
+  if(!S.pins.length && !S.pdfBytes){toast("Nothing to save yet — add a plan or pins");return;}
+  toast("Building tour capture…",3000);
   const zip=new JSZip();
-  const folder=(S.building?S.building.address.replace(/[^\w -]/g,"").trim():"site").replace(/\s+/g,"_");
+  const folder=(S.building?S.building.address.replace(/[^\w -]/g,"").trim():(S.meta.name||"site")).replace(/\s+/g,"_")||"site";
   const photos=zip.folder(folder);
   const manifest={project:S.meta,building:S.building,pdf:S.pdfName,exported:new Date().toISOString(),prefix:S.prefix,pins:[]};
   for(const p of [...S.pins].sort((a,b)=>a.seq-b.seq)){
-    const entry={name:p.name,shot:p.shotNo||null,page:p.page,x:+p.x.toFixed(4),y:+p.y.toFixed(4),
-      note:p.note||"",captured:p.ts?new Date(p.ts).toISOString():null,gps:p.gps||null,file:null};
-    if(p.photoId){const b=await idbGet("photos",p.photoId);if(b){const fn=photoFileName(p);photos.file(fn,b);entry.file=folder+"/"+fn;}}
+    const entry={name:p.name,kind:p.kind||"pano",shot:p.shotNo||null,page:p.page,x:+p.x.toFixed(4),y:+p.y.toFixed(4),
+      note:p.note||"",info:p.info||"",captured:p.ts?new Date(p.ts).toISOString():null,gps:p.gps||null,file:null};
+    if(p.photoId){
+      const b=await idbGet("photos",p.photoId);
+      if(b){
+        const sub=isPhoto2d(p)?"photos2d":folder;
+        const fn=photoFileName(p);
+        zip.folder(sub).file(fn,b);
+        entry.file=sub+"/"+fn;
+      }
+    }
     manifest.pins.push(entry);
   }
   zip.file("manifest.json",JSON.stringify(manifest,null,2));
@@ -1659,17 +3285,17 @@ async function exportZip(){
   if(S.pdfBytes)zip.file(S.pdfName||"drawing.pdf",S.pdfBytes);
   const out=await zip.generateAsync({type:"blob"});
   dl(out,`${folder}_360capture.zip`);
-  toast("ZIP ready ✓");
+  toast("Tour capture saved ✓");
 }
 /* the "hidden" side log: shot order + timestamp + GPS, to reconcile against camera EXIF */
 function captureLogRows(){
   return [...S.pins].filter(p=>p.shotNo||p.photoId).sort((a,b)=>(a.shotNo||1e9)-(b.shotNo||1e9))
-    .map(p=>({shot:p.shotNo||"",name:p.name,time:p.ts?new Date(p.ts).toISOString():"",
+    .map(p=>({shot:p.shotNo||"",name:p.name,kind:p.kind||"pano",time:p.ts?new Date(p.ts).toISOString():"",
       lat:p.gps?p.gps.lat:"",lng:p.gps?p.gps.lng:"",acc_m:p.gps?p.gps.acc:"",
-      page:p.page,x:+p.x.toFixed(4),y:+p.y.toFixed(4),note:p.note||"",matched:p.photoId?"yes":"no"}));
+      page:p.page,x:+p.x.toFixed(4),y:+p.y.toFixed(4),note:p.note||"",info:p.info||"",matched:p.photoId?"yes":"no"}));
 }
 function captureLogCsv(){
-  const cols=["shot","name","time","lat","lng","acc_m","page","x","y","note","matched"];
+  const cols=["shot","name","kind","time","lat","lng","acc_m","page","x","y","note","info","matched"];
   const rows=captureLogRows();
   return [cols.join(",")].concat(rows.map(r=>cols.map(c=>`"${String(r[c]).replace(/"/g,'""')}"`).join(","))).join("\n");
 }
@@ -1683,52 +3309,11 @@ function exportCaptureLog(){
 /* ============================================================
    IMPORT & MATCH  — pair downloaded photos to logged pins
    ============================================================ */
-let MATCH={files:[],pick:{},shift:0,folderName:null,addrConfirmed:false};
+let MATCH={files:[],pick:{},shift:0};
 // Free thumbnail/preview object URLs so re-importing doesn't leak memory.
 function clearMatch(){
   for(const f of (MATCH.files||[])){if(f.thumb)URL.revokeObjectURL(f.thumb);if(f.full)URL.revokeObjectURL(f.full);}
-  MATCH={files:[],pick:{},shift:0,folderName:null,addrConfirmed:false};
-}
-// Normalize an address / folder name for comparison: trim, lowercase,
-// collapse whitespace, and treat _ and - as spaces.
-function normAddr(s){return String(s||"").trim().toLowerCase().replace(/[_-]/g," ").replace(/\s+/g," ").trim();}
-// Folder pick via the File System Access API, falling back to the multi-file input.
-// Reads only .jpg/.jpeg/.png files from the chosen folder.
-async function pickMatchFolder(){
-  if(!window.showDirectoryPicker){ toast("Folder pick not supported here — using file select"); $("#matchFiles").click(); return; }
-  let dir;
-  try{ dir=await window.showDirectoryPicker(); }
-  catch(e){ return; } // user cancelled the picker
-  const files=[];
-  try{
-    for await (const entry of dir.values()){
-      if(entry.kind==="file" && /\.(jpe?g|png)$/i.test(entry.name)){
-        try{ files.push(await entry.getFile()); }catch(_){}
-      }
-    }
-  }catch(e){ toast("Couldn't read that folder"); return; }
-  if(!files.length){ toast("No .jpg/.png photos found in that folder"); return; }
-  handleMatchFiles(files, dir.name);
-}
-// Inline warning shown when a picked folder name doesn't match the project address.
-function showAddrWarn(folderName, projAddr){
-  const body=$("#matchBody"); if(!body)return;
-  const old=$("#matchAddrWarn"); if(old)old.remove();
-  const div=document.createElement("div");
-  div.id="matchAddrWarn";
-  div.style.cssText="margin:0 0 10px;padding:12px;border:1px solid var(--bad);border-radius:10px;background:rgba(210,60,60,.10)";
-  div.innerHTML=`<b style="color:var(--bad)">⚠ Folder / address mismatch</b>
-    <div class="pmeta" style="margin-top:6px">Folder: <b>${esc(folderName)}</b></div>
-    <div class="pmeta">Project: <b>${esc(projAddr)}</b></div>
-    <div class="pmeta" style="margin-top:6px">These don't match — make sure these photos belong to this project before applying.</div>
-    <div class="row2" style="margin-top:8px">
-      <button class="btn" id="matchAddrCancel">Cancel</button>
-      <button class="btn primary" id="matchAddrContinue">Continue anyway</button>
-    </div>`;
-  body.prepend(div);
-  body.scrollTop=0;
-  $("#matchAddrContinue").onclick=()=>{MATCH.addrConfirmed=true; div.remove(); applyMatch();};
-  $("#matchAddrCancel").onclick=()=>{div.remove();};
+  MATCH={files:[],pick:{},shift:0};
 }
 // Small JPEG thumbnail so the review list stays light even with big 360 files.
 async function makeThumb(file){
@@ -1740,7 +3325,7 @@ async function makeThumb(file){
     return await new Promise(r=>cnv.toBlob(b=>r(b?URL.createObjectURL(b):null),"image/jpeg",0.72));
   }catch(e){ try{return URL.createObjectURL(file);}catch(_){return null;} }
 }
-async function handleMatchFiles(fileList, folderName){
+async function handleMatchFiles(fileList){
   const arr=[...fileList]; if(!arr.length)return;
   clearMatch();
   const infos=[];
@@ -1754,14 +3339,15 @@ async function handleMatchFiles(fileList, folderName){
     infos.push({file:f,name:f.name,time,gps,viaExif,thumb,full:null});
   }
   infos.sort((a,b)=>a.time-b.time);
-  MATCH={files:infos,pick:{},shift:0,folderName:folderName||null,addrConfirmed:false};
+  MATCH={files:infos,pick:{},shift:0};
   autoSequential();          // first pass: pair in capture order for verification
 }
 function loggedPinsOrdered(){
-  const logged=[...S.pins].filter(p=>p.shotNo).sort((a,b)=>a.shotNo-b.shotNo);
+  // Import & match is for 360 camera downloads — skip 2D picture pins.
+  const logged=[...S.pins].filter(p=>isPano(p)&&p.shotNo).sort((a,b)=>a.shotNo-b.shotNo);
   if(logged.length) return logged;
-  // No SHOOT log yet — still auto-pair Import photos to empty pins in seq order.
-  return [...S.pins].filter(p=>!p.photoId).sort((a,b)=>a.seq-b.seq);
+  // No SHOOT log yet — still auto-pair Import photos to empty 360 pins in seq order.
+  return [...S.pins].filter(p=>isPano(p)&&!p.photoId).sort((a,b)=>a.seq-b.seq);
 }
 
 // Pair marker #i with photo #i (capture order), shifted by MATCH.shift.
@@ -1861,16 +3447,6 @@ async function openMatchZoom(idx){
 }
 async function applyMatch(){
   const pins=loggedPinsOrdered();
-  // Folder uploads: warn if the folder name doesn't match the project address.
-  // Individual file picks (no folderName) skip this check.
-  if(MATCH.folderName && !MATCH.addrConfirmed){
-    const projAddr=S.meta.address||(S.building&&S.building.address)||"";
-    if(projAddr && normAddr(MATCH.folderName)!==normAddr(projAddr)){
-      toast(`Folder "${MATCH.folderName}" ≠ project "${projAddr}" — confirm to continue`,3200);
-      showAddrWarn(MATCH.folderName, projAddr);
-      return;
-    }
-  }
   // block if any photo is assigned to more than one marker
   const useCount={}; Object.values(MATCH.pick).forEach(idx=>{if(idx!=null)useCount[idx]=(useCount[idx]||0)+1;});
   if(Object.values(useCount).some(c=>c>1)){toast("Two markers point at the same photo — fix the duplicates first");return;}
@@ -1892,39 +3468,64 @@ function saveProjJson(){
 }
 function dl(blob,name){const a=el("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);}
 
-async function loadProjectFile(file){
+async function loadProjectFile(file, opts){
+  opts=opts||{};
   try{
-    if(file.name.endsWith(".zip")){
+    const name=(file.name||"").toLowerCase();
+    const isArchive=/\.(zip|insp360|360skeleton)$/i.test(name);
+    // Legacy .360skeleton packs had no media; reshoot mode strips attached photos.
+    const stripPhotos=!!opts.reshoot || /\.360skeleton$/i.test(name);
+    if(isArchive){
       const zip=await JSZip.loadAsync(file);
-      const pj=zip.file("project.json");
-      if(!pj){toast("No project.json in ZIP");return;}
-      const proj=JSON.parse(await pj.async("string"));
-      await restore(proj);
-      // photos
-      for(const p of S.pins){
-        if(p.photoId){
-          const m=await (zip.file("manifest.json")?zip.file("manifest.json").async("string"):null);
-          // find file by pin name in any folder
-          const match=Object.keys(zip.files).find(k=>k.endsWith("/"+p.name+".jpg")||k===p.name+".jpg");
-          if(match){const b=await zip.file(match).async("blob");await idbPut("photos",p.photoId,b);}
+      const pj=zip.file("project.json")||zip.file("capture-draft.json");
+      if(pj){
+        const proj=JSON.parse(await pj.async("string"));
+        await idbClear("photos");
+        await clearPlan();
+        if(stripPhotos){
+          proj.pins=(proj.pins||[]).map(p=>({...p, photoId:null, shotNo:null, ts:null, gps:null}));
+          proj.shotSeq=0;
         }
+        await restore(proj);
+        if(!stripPhotos){
+          for(const p of S.pins){
+            if(!p.photoId)continue;
+            const match=Object.keys(zip.files).find(k=>!zip.files[k].dir&&(k.endsWith("/"+p.name+".jpg")||k===p.name+".jpg"));
+            if(match){const b=await zip.file(match).async("blob");await idbPut("photos",p.photoId,b);}
+          }
+        }
+        let tour=null;
+        try{
+          const tj=zip.file("tour.json");
+          if(tj) tour=JSON.parse(await tj.async("string"));
+        }catch(_){}
+        const pinNames=pinNameSetFromProj(proj, tour);
+        const preferred=proj.pdfName||proj.pdf||"";
+        const gotPlan=await resolveFloorPlanFromZip(zip, { preferredName:preferred, pinNames });
+        if(!gotPlan) toast("Pins loaded — floor plan drawing not found in file");
+        refreshPins();openPinList();
+        closeCloudProjects();
+        if(stripPhotos) toast("Opened for reshoot ✓");
+        else toast("Tour capture loaded ✓");
+        return;
       }
-      // floor plan (PDF or image) — stored at the ZIP root; photos live in a subfolder
-      const planName=proj.pdf||proj.pdfName;
-      let planKey=planName&&zip.files[planName]?planName:null;
-      if(!planKey)planKey=Object.keys(zip.files).find(k=>!k.includes("/")&&/\.pdf$/i.test(k));
-      if(!planKey)planKey=Object.keys(zip.files).find(k=>!k.includes("/")&&/\.(png|jpe?g|webp|gif|bmp)$/i.test(k));
-      if(planKey){
-        const bytes=new Uint8Array(await zip.file(planKey).async("arraybuffer"));
-        if(/\.pdf$/i.test(planKey))await openPdfBytes(bytes,planKey.split("/").pop());
-        else await openImageBytes(bytes,planKey.split("/").pop());
+      const tj=zip.file("tour.json");
+      if(!tj){toast("No project.json / tour.json in archive");return;}
+      const tour=JSON.parse(await tj.async("string"));
+      const r=await applyTourJson(tour);
+      if(!r.hasPlan){
+        const pinNames=pinNameSetFromProj(null, tour);
+        await loadFloorPlanFromZip(zip, { pinNames });
       }
-      refreshPins();openPinList();toast("Project loaded ✓");
+      closeCloudProjects();
+      toast("Opened from tour.json · "+r.pins+" pins");
     }else{
       const proj=JSON.parse(await file.text());
-      await restore(proj);toast("Project loaded (photos not in .json)");
+      await restore(proj);
+      closeCloudProjects();
+      toast("Project loaded (photos not in .json)");
     }
-  }catch(e){toast("Couldn't load that file");console.error(e);}
+  }catch(e){toast("Couldn't load that file: "+(e.message||e));console.error(e);}
 }
 async function restore(proj){
   S.building=proj.building||null;S.prefix=proj.prefix||"SITE";S.next=proj.next||1;S.shotSeq=proj.shotSeq||0;
@@ -1934,12 +3535,13 @@ async function restore(proj){
   S.meta=Object.assign(S.meta,proj.meta||{});
   if(S.building && !S.meta.address) S.meta.address=S.building.address;
   if(S.opt.bleCmd==="FC EF FE 86 00 03 01 02 00")S.opt.bleCmd="FC EF FE 86 00 03 01 00 00"; // migrate old default
-  S.pins=(proj.pins||[]).map(p=>({...p}));
+  S.pins=(proj.pins||[]).map(p=>({...p,kind:p.kind||"pano",info:p.info||"",note:p.note||""}));
+  S.viewLocked=!!proj.viewLocked;
   if(S.building){$("#bldgA").textContent=S.meta.address||S.building.address;
     $("#bldgB").textContent=S.building.custom?"Custom address":`${S.building.portfolio.replace(" Business Park","")} · BU ${S.building.bu}`;}
   else if(S.meta.address||S.meta.name){$("#bldgA").textContent=S.meta.address||S.meta.name;$("#bldgB").textContent=S.meta.name||"tap to edit project";}
   $("#setPrefix").value=S.prefix;$("#setNext").value=S.next;updateEg();syncToggles();
-  refreshPins();save();updateHint();
+  refreshPins();save();updateHint();syncViewLockUi();
   refreshCloudAuth();
 }
 
@@ -1956,19 +3558,25 @@ async function boot(){
   if(proj){await restore(proj);
     const pdf=await idbGet("kv","pdf");
     if(pdf&&pdf.bytes){
-      const bytes=pdf.bytes instanceof Uint8Array?pdf.bytes:new Uint8Array(pdf.bytes);
-      if(pdf.kind==="img")await openImageBytes(bytes,pdf.name);
-      else await openPdfBytes(bytes,pdf.name);
+      const wantLock=!!proj.viewLocked;
+      S._suppressUnlock=true;
+      try{
+        const bytes=pdf.bytes instanceof Uint8Array?pdf.bytes:new Uint8Array(pdf.bytes);
+        if(pdf.kind==="img")await openImageBytes(bytes,pdf.name);
+        else await openPdfBytes(bytes,pdf.name);
+      }finally{ S._suppressUnlock=false; }
+      if(wantLock) setViewLocked(true, true);
+      else syncViewLockUi();
     }
   }
   if(!S.meta.creator){try{const c=await idbGet("kv","creator");if(c)S.meta.creator=c;}catch(e){}}
-  updateActionBar();syncToggles();renderConnDots();updateHint();
-  $("#ver").textContent=verStr();
+  updateActionBar();syncToggles();renderConnDots();updateHint();syncGmapKeyInputs();syncViewLockUi();
+  $("#ver").innerHTML=verStr();
   acquireWake();
   window.addEventListener("pointerdown",function once(){acquireWake();window.removeEventListener("pointerdown",once);});
   if(!window.pdfjsLib||!window.JSZip)toast("Libraries didn't load — reconnect to internet once, then reopen");
   if(fresh)openProject();   // "Create new project" on first activation
-  refreshCloudAuth();
+  finishCloudAuthReturn().then(done=>{ if(!done) refreshCloudAuth(); });
 }
 
 /* ============================================================
@@ -1981,21 +3589,47 @@ $$("[data-close]").forEach(b=>b.onclick=()=>b.closest(".sheet").classList.remove
 
 $("#bldgBtn").onclick=openProject;
 $("#pmAddr").onclick=()=>{closeSheet("#projSheet");renderPorts();renderBldgList();openSheet("#bldgSheet");$("#bldgSearch").value="";$("#bldgSearch").focus();};
+$("#pmLoadGmap").onclick=()=>{ closeSheet("#projSheet"); openGoogleMapSheet(); };
 $("#pmSave").onclick=saveProject;
 $("#pmSuite").oninput=e=>{S.meta.suite=e.target.value.trim();
   if(S.building)$("#pmTenant").value=tenantSummary(S.building,S.meta.suite);};
 $("#openProjBtn").onclick=()=>{closeSheet("#menuSheet");openProject();};
-$("#loadDb").onclick=()=>$("#dbFile").click();
 $("#dbFile").onchange=e=>{const f=e.target.files[0];if(f)loadDbFile(f);e.target.value="";};
 $("#bldgSearch").oninput=renderBldgList;
 
-$("#addBtn").onclick=()=>{S.mode=S.mode==="add"?"move":"add";$("#addBtn").classList.toggle("on",S.mode==="add");
-  toast(S.mode==="add"?"Tap to add · drag pin to move · double-tap to zoom":"Drag to pan · double-tap to zoom");};
-$("#addBtn").classList.add("on");
+function setAddMode(mode,quiet){
+  S.mode=mode;
+  const addOn=mode==="add", picOn=mode==="add2d";
+  $("#addBtn").classList.toggle("on",addOn);
+  $("#picBtn").classList.toggle("on",picOn);
+  $("#picBtn").classList.toggle("pic",picOn);
+  $("#addDot").classList.toggle("on",addOn);
+  $("#picDot").classList.toggle("on",picOn);
+  if(quiet)return;
+  if(addOn) toast("ADD on · tap to place 360° · drag/hold to edit");
+  else if(picOn) toast("PIC on · tap to place 2D · drag/hold to edit");
+  else toast("ADD/PIC off · pins locked · select to shoot");
+}
+$("#addBtn").onclick=()=>{ if(S.liveMapActive){ toast("Lock the map as PNG before placing pins"); return; } setAddMode(S.mode==="add"?"move":"add"); };
+$("#picBtn").onclick=()=>{ if(S.liveMapActive){ toast("Lock the map as PNG before placing pins"); return; } setAddMode(S.mode==="add2d"?"move":"add2d"); };
+setAddMode("move",true);
 
 $("#camBtn").onclick=()=>{openSheet("#camSheet");};
 $("#pinsBtn").onclick=()=>{openPinList();openSheet("#pinSheet");};
-$("#menuBtn").onclick=()=>openSheet("#menuSheet");
+$("#menuBtn").onclick=()=>{ syncGmapKeyInputs(); openSheet("#menuSheet"); };
+$("#hintLoadGmap").onclick=openGoogleMapSheet;
+$("#menuLoadGmap").onclick=()=>{ closeSheet("#menuSheet"); openGoogleMapSheet(); };
+$("#gmapOpenLive").onclick=()=>openInteractiveGoogleMap();
+$("#gmapGps").onclick=()=>fillGmapFromDeviceGps();
+$("#gmapSearch").oninput=renderGmapBldgList;
+$("#gmapSearch").onfocus=()=>{ if(($("#gmapSearch").value||"").trim()) renderGmapBldgList(); };
+$("#liveRotL").onclick=()=>nudgeLiveRot(-15);
+$("#liveRotR").onclick=()=>nudgeLiveRot(15);
+$("#liveMapClose").onclick=()=>closeLiveMap();
+$("#gmapKeyMenu").onchange=$("#gmapKeyMenu").onblur=()=>setGoogleMapsKey($("#gmapKeyMenu").value);
+$("#gmapKey").onchange=$("#gmapKey").onblur=()=>setGoogleMapsKey($("#gmapKey").value);
+$("#gmapIdMenu").onchange=$("#gmapIdMenu").onblur=()=>setGoogleMapsId($("#gmapIdMenu").value);
+$("#gmapId").onchange=$("#gmapId").onblur=()=>setGoogleMapsId($("#gmapId").value);
 
 $("#shootBtn").onclick=fireShot;
 $("#bleConnBtn").onclick=()=>bleToggleConn();
@@ -2010,36 +3644,73 @@ $("#gpsStartBtn").onclick=()=>{
 $("#armName").oninput=e=>{if(!S.selPin)return;S.selPin.name=e.target.value;refreshPins();updateActionBar();save();};
 $("#armName").onfocus=e=>e.target.select();
 let _attachPinId=null;
-$("#attachBtn").onclick=()=>{
-  if(!S.selPin){toast("Select a pin first");return;}
-  _attachPinId=S.selPin.id; // survive Android file-picker blur/deselect
-  $("#photoFile").click();
-};
-$("#photoFile").onchange=async e=>{
+function beginAttach(pin){
+  if(!pin){toast("Select a pin first");return false;}
+  _attachPinId=pin.id; // survive Android file-picker blur/deselect
+  return true;
+}
+function openAttachChooser(pin){
+  if(!beginAttach(pin))return;
+  selectPin(pin);
+  openSheet("#attachSheet");
+}
+function pickAttach(mode){
+  const pin=(_attachPinId&&S.pins.find(p=>p.id===_attachPinId))||S.selPin||pdPin;
+  if(!beginAttach(pin))return;
+  closeSheet("#attachSheet");
+  // Defer click so the sheet closes first (WebView file-chooser quirk).
+  setTimeout(()=>{(mode==="capture"?$("#photoCapture"):$("#photoFile")).click();},60);
+}
+async function onPhotoPicked(e){
   const f=e.target.files[0];
   const pin=(_attachPinId&&S.pins.find(p=>p.id===_attachPinId))||S.selPin;
   _attachPinId=null;
-  if(f&&pin){await attachBlob(pin,f);selectPin(pin);toast("✓ "+pin.name+" attached");if(S.opt.advance)advancePin(pin);}
+  if(f&&pin){
+    await attachBlob(pin,f);selectPin(pin);toast("✓ "+pin.name+" attached");
+    if(pdPin&&pdPin.id===pin.id && $("#pinDetail").classList.contains("open")) openPinDetail(pin);
+    if(isPhoto2d(pin)) showPicPreview(pin);
+    else if(S.opt.advance) advancePin(pin);
+  }
   else if(f) toast("Select a pin first");
   e.target.value="";
-};
+}
+$("#attachBtn").onclick=()=>openAttachChooser(S.selPin);
+$("#attachTake").onclick=()=>pickAttach("capture");
+$("#attachPick").onclick=()=>pickAttach("gallery");
+$("#photoFile").onchange=onPhotoPicked;
+$("#photoCapture").onchange=onPhotoPicked;
 
-function zoomBtn(f){const v=$("#viewport");zoomAt(S.zoom*f, v.clientWidth/2, v.clientHeight/2);}
+function zoomBtn(f){
+  if(S.liveMapActive && S.liveMap){
+    const z=S.liveMap.getZoom();
+    if(!Number.isFinite(z)) return;
+    S.liveMap.setZoom(clampMapZoom(z+(f>1?1:-1)));
+    return;
+  }
+  if(S.viewLocked) return;
+  const v=$("#viewport"); zoomAt(S.zoom*f, v.clientWidth/2, v.clientHeight/2);
+}
 $("#zin").onclick=()=>zoomBtn(1.35);
 $("#zout").onclick=()=>zoomBtn(1/1.35);
-$("#zfit").onclick=fitPage;
-$("#pprev").onclick=async()=>{if(S.pageNum>1){S.pageNum--;await renderPage();fitPage();refreshPins();save();}};
-$("#pnext").onclick=async()=>{if(S.pageNum<S.pageCount){S.pageNum++;await renderPage();fitPage();refreshPins();save();}};
+$("#zfit").onclick=()=>{
+  if(S.liveMapActive && S.liveMap){
+    S.liveMap.setZoom(clampMapZoom($("#gmapZoom").value));
+    return;
+  }
+  if(!S.viewLocked) fitPage();
+};
+$("#zlock").onclick=()=>lockViewAsPngDrawing();
+$("#lockViewPngBtn").onclick=()=>{ closeSheet("#menuSheet"); lockViewAsPngDrawing(); };
+$("#pprev").onclick=async()=>{if(S.viewLocked){toast("Unlock view to change pages");return;} if(S.pageNum>1){S.pageNum--;await renderPage();fitPage();refreshPins();save();}};
+$("#pnext").onclick=async()=>{if(S.viewLocked){toast("Unlock view to change pages");return;} if(S.pageNum<S.pageCount){S.pageNum++;await renderPage();fitPage();refreshPins();save();}};
 
-$("#loadPdf").onclick=()=>$("#pdfFile").click();
 $("#pdfFile").onchange=async e=>{const f=e.target.files[0];if(f){await loadPlanFile(f);closeSheet("#menuSheet");}e.target.value="";};
-$("#loadPdfUrl").onclick=async()=>{await loadPlanUrl();closeSheet("#menuSheet");};
 $("#hintLoadPlan").onclick=()=>$("#pdfFile").click();
 $("#hintLoadUrl").onclick=loadPlanUrl;
 
 
 $("#setPrefix").oninput=e=>{S.prefix=e.target.value.trim();updateEg();
-  S.pins.forEach(p=>{if(!p.photoId||true)p.name=pinName(p.seq);});refreshPins();save();};
+  S.pins.forEach(p=>{if(isPano(p))p.name=pinName(p.seq);});refreshPins();save();};
 $("#setNext").oninput=e=>{S.next=parseInt(e.target.value)||1;};
 function updateEg(){const e=$("#egName");if(e)e.textContent=`${S.prefix||"SITE"} (1).jpg`;}
 
@@ -2070,10 +3741,11 @@ function syncToggles(){
   const c=$("#bleCur");if(c)c.innerHTML='SHOOT frame: <span class="mono">'+(S.opt.bleCmd||"FC EF FE 86 00 03 01 00 00")+'</span>';
 }
 
-$("#importPhotos").onclick=()=>{closeSheet("#menuSheet");clearMatch();renderMatch();openSheet("#matchSheet");};
 $("#matchZoom").onclick=()=>{$("#matchZoom").style.display="none";$("#matchZoom").querySelector("img").src="";};
+$("#picPrevClose").onclick=e=>{e.stopPropagation();hidePicPreview();};
+$("#picPreview").onclick=e=>{if(e.target===$("#picPreview"))hidePicPreview();};
+$("#picPreview .card").onclick=e=>e.stopPropagation();
 $("#matchPick").onclick=()=>$("#matchFiles").click();
-$("#matchPickFolder").onclick=pickMatchFolder;
 $("#matchFiles").onchange=e=>{if(e.target.files.length)handleMatchFiles(e.target.files);e.target.value="";};
 $("#matchApply").onclick=applyMatch;
 
@@ -2081,17 +3753,46 @@ $("#clearPins").onclick=async()=>{if(!confirm("Delete all pins, their photos, an
   for(const p of S.pins)if(p.photoId)await idbDel("photos",p.photoId);
   S.pins=[];S.selPin=null;S.shotSeq=0;S.next=1;$("#setNext").value=1;
   refreshPins();updateActionBar();openPinList();save();toast("Pins cleared · shot counter reset");};
-$("#pdSave").onclick=()=>{if(!pdPin)return;pdPin.name=$("#pdName").value.trim()||pdPin.name;pdPin.note=$("#pdNote").value.trim();refreshPins();save();closeSheet("#pinDetail");};
+$("#pdSave").onclick=()=>{if(!pdPin)return;pdPin.name=$("#pdName").value.trim()||pdPin.name;pdPin.note=$("#pdNote").value.trim();
+  if(isPhoto2d(pdPin)) pdPin.info=$("#pdInfo").value.trim();
+  refreshPins();updateActionBar();save();closeSheet("#pinDetail");};
+$("#pdTake").onclick=()=>{if(!pdPin)return;beginAttach(pdPin);pickAttach("capture");};
+$("#pdPick").onclick=()=>{if(!pdPin)return;beginAttach(pdPin);pickAttach("gallery");};
 $("#pdDelete").onclick=async()=>{if(!pdPin)return;if(pdPin.photoId)await idbDel("photos",pdPin.photoId);
   S.pins=S.pins.filter(x=>x.id!==pdPin.id);if(S.selPin&&S.selPin.id===pdPin.id)S.selPin=null;
   refreshPins();updateActionBar();closeSheet("#pinDetail");save();};
 
-$("#exportSkeleton").onclick=exportSkeleton;
-$("#exportShootLog").onclick=exportShootLog;
-$("#uploadCloud").onclick=uploadSkeletonToCloud;
-$("#cloudSignIn").onclick=()=>{ openCloudSignIn(); setTimeout(refreshCloudAuth, 1500); };
-$("#resetProj").onclick=async()=>{if(!confirm("Reset everything on this device?"))return;
-  await idbClear("photos");await idbDel("kv","project");await idbDel("kv","pdf");location.reload();};
+$("#cloudSignIn").onclick=()=>openCloudSignIn();
+$("#cloudSignOff").onclick=()=>cloudSignOff();
+$("#saveTourCloud").onclick=()=>{closeSheet("#menuSheet");saveTourToCloud();};
+$("#saveTourLocal").onclick=()=>{closeSheet("#menuSheet");saveTourLocally();};
+$("#projRailBtn").onclick=()=>openCloudProjects(true);
+$("#cloudRailClose").onclick=closeCloudProjects;
+$("#cloudScrim").onclick=closeCloudProjects;
+const srcWrap=$("#projRailSrc");
+if(srcWrap) srcWrap.addEventListener("click",e=>{
+  const btn=e.target.closest("[data-src]"); if(!btn) return;
+  setProjRailSrc(btn.getAttribute("data-src"));
+});
+$("#tourFile").onchange=async e=>{
+  const f=e.target.files&&e.target.files[0];
+  e.target.value="";
+  if(!f) return;
+  await loadProjectFile(f);
+};
+$("#cloudProjList").onclick=e=>{
+  const localBtn=e.target.closest("[data-act=open-local]");
+  if(localBtn){ pickLocalTourFile(); return; }
+  const row=e.target.closest(".cprow"); if(!row) return;
+  const key=row.getAttribute("data-key"); if(!key) return;
+  openCloudTour(key);
+};
+$("#cloudProjList").onkeydown=e=>{
+  if(e.key!=="Enter" && e.key!==" ") return;
+  const row=e.target.closest(".cprow"); if(!row) return;
+  e.preventDefault();
+  const key=row.getAttribute("data-key"); if(key) openCloudTour(key);
+};
 $("#newProjBtn").onclick=async()=>{if(!confirm("Discard the current project and start a new one? Its pins and photos on this device will be removed."))return;
   await idbClear("photos");await idbDel("kv","project");await idbDel("kv","pdf");location.reload();};
 
