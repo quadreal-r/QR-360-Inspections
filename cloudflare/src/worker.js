@@ -23,7 +23,8 @@
  *   DELETE /api/tours/<key>/mpu/<uploadId>       — abort
  *   DELETE /api/tours/<key>                      — admin or edit permission
  *   PATCH /api/tours/<key>/status                — captureStatus skeleton|in_progress|complete
- *   /api/admin/*  (admin role only; People/Groups + activity-log;
+ *   /api/admin/*  (admin role only; People/Groups + tour grants + activity-log;
+ *                 GET /api/admin/projects, PUT /api/admin/groups/:id/tours,
  *                 GET /api/admin/activity-log, POST /api/admin/activity-log/send)
  * Cron: daily activity digest → quadreal.rpiwin@gmail.com
  */
@@ -737,6 +738,76 @@ async function handleAdmin(request, env, user, path) {
       ])
       return json({ ok: true, id })
     }
+  }
+
+  // GET /api/admin/projects — R2 tours + grant summary (for Groups tour assignment)
+  if (path === '/api/admin/projects' && request.method === 'GET') {
+    const prefix = (url.searchParams.get('prefix') || '').replace(/^\/+/, '')
+    if (prefix.includes('..')) return json({ error: 'Invalid prefix' }, 400)
+    const tours = await listTours(env, prefix)
+    const grantRows = await env.INSP360_DB.prepare(
+      `SELECT cloud_key, principal_type, principal_id, permission FROM project_grants`,
+    ).all()
+    const byKey = new Map()
+    for (const g of grantRows.results || []) {
+      if (!byKey.has(g.cloud_key)) byKey.set(g.cloud_key, [])
+      byKey.get(g.cloud_key).push({
+        principal_type: g.principal_type,
+        principal_id: g.principal_id,
+        permission: g.permission,
+      })
+    }
+    return json({
+      projects: tours.map((t) => ({
+        ...t,
+        grants: byKey.get(t.key) || [],
+      })),
+    })
+  }
+
+  // PUT /api/admin/groups/:id/tours — replace this group's tour grants
+  const groupToursMatch = path.match(/^\/api\/admin\/groups\/([^/]+)\/tours$/)
+  if (groupToursMatch && request.method === 'PUT') {
+    const id = decodeKey(groupToursMatch[1])
+    const exists = await env.INSP360_DB.prepare('SELECT id FROM groups WHERE id = ?').bind(id).first()
+    if (!exists) return json({ error: 'Group not found' }, 404)
+    const body = await readJsonBody(request)
+    const raw = Array.isArray(body?.tours) ? body.tours : []
+    const cleaned = []
+    const seen = new Set()
+    for (const t of raw) {
+      const key = sanitizeKey(String(t?.key || t?.cloud_key || '').trim())
+      if (!key || seen.has(key)) continue
+      seen.add(key)
+      cleaned.push({
+        key,
+        permission: t?.permission === 'edit' ? 'edit' : 'view',
+      })
+    }
+    const stmts = [
+      env.INSP360_DB.prepare(
+        `DELETE FROM project_grants WHERE principal_type = 'group' AND principal_id = ?`,
+      ).bind(id),
+    ]
+    for (const t of cleaned) {
+      stmts.push(
+        env.INSP360_DB.prepare(
+          `INSERT INTO project_grants (cloud_key, principal_type, principal_id, permission)
+           VALUES (?, 'group', ?, ?)`,
+        ).bind(t.key, id, t.permission),
+      )
+    }
+    await env.INSP360_DB.batch(stmts)
+    try {
+      await recordEvent(env, {
+        email: user.email,
+        event_type: 'group_tours_update',
+        meta: { groupId: id, tourCount: cleaned.length },
+      })
+    } catch (_) {
+      /* telemetry must not block */
+    }
+    return json({ ok: true, id, tours: cleaned })
   }
 
   // GET /api/admin/activity-log?hours=24 — last N hours digest (default 24, max 168)

@@ -591,6 +591,70 @@ async function handleAdmin(req, res, user, pathname, url) {
     }
   }
 
+  if (pathname === '/api/admin/projects' && req.method === 'GET') {
+    const prefix = (url.searchParams.get('prefix') || '').replace(/^\/+/, '')
+    if (prefix.includes('..')) return json(res, { error: 'Invalid prefix' }, 400)
+    const tours = await listTours(prefix)
+    const grantRows = await aclDb
+      .prepare(
+        `SELECT cloud_key, principal_type, principal_id, permission FROM project_grants`,
+      )
+      .bind()
+      .all()
+    const byKey = new Map()
+    for (const g of grantRows.results || []) {
+      if (!byKey.has(g.cloud_key)) byKey.set(g.cloud_key, [])
+      byKey.get(g.cloud_key).push({
+        principal_type: g.principal_type,
+        principal_id: g.principal_id,
+        permission: g.permission,
+      })
+    }
+    return json(res, {
+      projects: tours.map((t) => ({
+        ...t,
+        grants: byKey.get(t.key) || [],
+      })),
+    })
+  }
+
+  const groupToursMatch = pathname.match(/^\/api\/admin\/groups\/([^/]+)\/tours$/)
+  if (groupToursMatch && req.method === 'PUT') {
+    const id = decodeKey(groupToursMatch[1])
+    const exists = await aclDb.prepare('SELECT id FROM groups WHERE id = ?').bind(id).first()
+    if (!exists) return json(res, { error: 'Group not found' }, 404)
+    const body = await readJsonBody(req)
+    const raw = Array.isArray(body?.tours) ? body.tours : []
+    const cleaned = []
+    const seen = new Set()
+    for (const t of raw) {
+      const key = sanitizeKey(String(t?.key || t?.cloud_key || '').trim())
+      if (!key || seen.has(key)) continue
+      seen.add(key)
+      cleaned.push({
+        key,
+        permission: t?.permission === 'edit' ? 'edit' : 'view',
+      })
+    }
+    const stmts = [
+      aclDb
+        .prepare(`DELETE FROM project_grants WHERE principal_type = 'group' AND principal_id = ?`)
+        .bind(id),
+    ]
+    for (const t of cleaned) {
+      stmts.push(
+        aclDb
+          .prepare(
+            `INSERT INTO project_grants (cloud_key, principal_type, principal_id, permission)
+             VALUES (?, 'group', ?, ?)`,
+          )
+          .bind(t.key, id, t.permission),
+      )
+    }
+    await aclDb.batch(stmts)
+    return json(res, { ok: true, id, tours: cleaned })
+  }
+
   return json(res, { error: 'Not found' }, 404)
 }
 
