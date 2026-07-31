@@ -294,6 +294,7 @@ async function sendOtpEmail(env, email, code) {
 }
 
 /** Build tour-assignment notification content for one recipient. */
+/** Parked for a future tour-assignment email identity (Admin Projects notify removed). */
 export function buildTourAssignEmail({ displayName, email, tourName, viewerUrl, note, assignedBy }) {
   const hi = displayName ? `Hi ${displayName},` : 'Hi,'
   const tour = tourName || 'a 360° tour'

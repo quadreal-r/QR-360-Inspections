@@ -23,16 +23,14 @@
  *   DELETE /api/tours/<key>/mpu/<uploadId>       — abort
  *   DELETE /api/tours/<key>                      — admin or edit permission
  *   PATCH /api/tours/<key>/status                — captureStatus skeleton|in_progress|complete
- *   /api/admin/*  (admin role only; includes POST /api/admin/notify,
+ *   /api/admin/*  (admin role only; People/Groups + activity-log;
  *                 GET /api/admin/activity-log, POST /api/admin/activity-log/send)
  * Cron: daily activity digest → quadreal.rpiwin@gmail.com
  */
 
 import {
   authWallResponse,
-  buildTourAssignEmail,
   handleAuthApi,
-  sendResendEmail,
   verifySession,
 } from './auth.js'
 import {
@@ -687,79 +685,6 @@ async function handleAdmin(request, env, user, path) {
     }
   }
 
-  // GET /api/admin/projects — R2 tours + grant summary
-  if (path === '/api/admin/projects' && request.method === 'GET') {
-    const prefix = (url.searchParams.get('prefix') || '').replace(/^\/+/, '')
-    if (prefix.includes('..')) return json({ error: 'Invalid prefix' }, 400)
-    const tours = await listTours(env, prefix)
-    const grantRows = await env.INSP360_DB.prepare(
-      `SELECT cloud_key, principal_type, principal_id, permission FROM project_grants`,
-    ).all()
-    const byKey = new Map()
-    for (const g of grantRows.results || []) {
-      if (!byKey.has(g.cloud_key)) byKey.set(g.cloud_key, [])
-      byKey.get(g.cloud_key).push({
-        principal_type: g.principal_type,
-        principal_id: g.principal_id,
-        permission: g.permission,
-      })
-    }
-    return json({
-      projects: tours.map((t) => ({
-        ...t,
-        grants: byKey.get(t.key) || [],
-      })),
-    })
-  }
-
-  // PUT /api/admin/projects/:key/grants
-  const grantsMatch = path.match(/^\/api\/admin\/projects\/(.+)\/grants$/)
-  if (grantsMatch && request.method === 'PUT') {
-    const key = sanitizeKey(decodeKey(grantsMatch[1]))
-    if (!key) return json({ error: 'Invalid tour key' }, 400)
-    const body = await readJsonBody(request)
-    const grants = Array.isArray(body?.grants) ? body.grants : []
-    const cleaned = []
-    for (const g of grants) {
-      const principal_type = g?.principal_type === 'group' ? 'group' : 'user'
-      let principal_id =
-        principal_type === 'user' ? normalizeEmail(g?.principal_id) : String(g?.principal_id || '').trim()
-      const permission = g?.permission === 'edit' ? 'edit' : g?.permission === 'view' ? 'view' : null
-      if (!principal_id || !permission) continue
-      if (principal_type === 'user' && !principal_id.includes('@')) continue
-      cleaned.push({ principal_type, principal_id, permission })
-    }
-    // Deduplicate by principal
-    const seen = new Map()
-    for (const g of cleaned) {
-      seen.set(`${g.principal_type}:${g.principal_id.toLowerCase()}`, g)
-    }
-    const finalGrants = [...seen.values()]
-    const stmts = [
-      env.INSP360_DB.prepare('DELETE FROM project_grants WHERE cloud_key = ?').bind(key),
-    ]
-    for (const g of finalGrants) {
-      stmts.push(
-        env.INSP360_DB.prepare(
-          `INSERT INTO project_grants (cloud_key, principal_type, principal_id, permission)
-           VALUES (?, ?, ?, ?)`,
-        ).bind(key, g.principal_type, g.principal_id, g.permission),
-      )
-    }
-    await env.INSP360_DB.batch(stmts)
-    try {
-      await recordEvent(env, {
-        email: user.email,
-        event_type: 'tour_grants_update',
-        tour_key: key,
-        meta: { grantCount: finalGrants.length, grants: finalGrants.slice(0, 20) },
-      })
-    } catch (_) {
-      /* telemetry must not block grants save */
-    }
-    return json({ ok: true, key, grants: finalGrants })
-  }
-
   // GET /api/admin/activity-log?hours=24 — last N hours digest (default 24, max 168)
   if (path === '/api/admin/activity-log' && request.method === 'GET') {
     const hours = url.searchParams.get('hours')
@@ -779,62 +704,6 @@ async function handleAdmin(request, env, user, path) {
     const result = await sendActivityReportNow(env, hours)
     if (!result.ok) return json(result, 502)
     return json(result)
-  }
-
-  // POST /api/admin/notify — email selected users about a tour assignment
-  if (path === '/api/admin/notify' && request.method === 'POST') {
-    const body = await readJsonBody(request)
-    const rawEmails = Array.isArray(body?.emails) ? body.emails : []
-    const unique = [
-      ...new Set(rawEmails.map(normalizeEmail).filter((e) => e && e.includes('@'))),
-    ].slice(0, 80)
-    if (!unique.length) return json({ error: 'Select at least one person' }, 400)
-
-    const tourKey = sanitizeKey(String(body?.tourKey || body?.cloud_key || '').trim())
-    let tourName = String(body?.tourName || body?.tour_name || '').trim()
-    if (!tourName && tourKey) tourName = tourKey.replace(/\.(insp360|zip)$/i, '')
-    if (!tourName) tourName = 'a 360° tour'
-    const note = String(body?.note || '').trim().slice(0, 800)
-    const viewerUrl = new URL(request.url).origin + '/'
-
-    const recipients = []
-    for (const email of unique) {
-      const row = await env.INSP360_DB.prepare(
-        'SELECT email, display_name FROM users WHERE email = ? COLLATE NOCASE',
-      )
-        .bind(email)
-        .first()
-      if (row) recipients.push(row)
-    }
-    if (!recipients.length) return json({ error: 'No matching allowlisted users' }, 400)
-
-    const sent = []
-    const failed = []
-    for (const row of recipients) {
-      const content = buildTourAssignEmail({
-        displayName: '',
-        email: row.email,
-        tourName,
-        viewerUrl,
-        note,
-        assignedBy: user.email,
-      })
-      const result = await sendResendEmail(env, {
-        to: row.email,
-        subject: content.subject,
-        text: content.text,
-        html: content.html,
-      })
-      if (result.ok) sent.push(row.email)
-      else failed.push({ email: row.email, error: result.error || 'Send failed' })
-    }
-    return json({
-      ok: failed.length === 0,
-      sent,
-      failed,
-      tourKey: tourKey || null,
-      tourName,
-    })
   }
 
   return json({ error: 'Not found' }, 404)
