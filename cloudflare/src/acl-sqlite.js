@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS groups (
 CREATE TABLE IF NOT EXISTS group_members (
   group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
   email TEXT NOT NULL COLLATE NOCASE,
+  permission TEXT NOT NULL DEFAULT 'edit' CHECK (permission IN ('view', 'edit')),
   PRIMARY KEY (group_id, email)
 );
 CREATE INDEX IF NOT EXISTS idx_group_members_email ON group_members(email);
@@ -66,6 +67,13 @@ export function openAclDb(dbPath) {
   const raw = new DatabaseSync(resolved)
   raw.exec('PRAGMA foreign_keys = ON;')
   raw.exec(SCHEMA_SQL)
+  try {
+    raw.exec(
+      `ALTER TABLE group_members ADD COLUMN permission TEXT NOT NULL DEFAULT 'edit'`,
+    )
+  } catch (_) {
+    /* column already present */
+  }
   raw.exec(SEED_SQL)
 
   const db = {
@@ -119,6 +127,31 @@ export function permRank(p) {
 
 export function betterPerm(a, b) {
   return permRank(a) >= permRank(b) ? a : b
+}
+
+export function lesserPerm(a, b) {
+  return permRank(a) <= permRank(b) ? a : b
+}
+
+/** Accept string emails or { email, permission } objects. */
+export function normalizeGroupMemberList(raw) {
+  const out = []
+  const seen = new Set()
+  for (const m of Array.isArray(raw) ? raw : []) {
+    let email = ''
+    let permission = 'view'
+    if (typeof m === 'string') {
+      email = normalizeEmail(m)
+      permission = 'view'
+    } else if (m && typeof m === 'object') {
+      email = normalizeEmail(m.email || m.principal_id)
+      permission = m.permission === 'edit' ? 'edit' : 'view'
+    }
+    if (!email.includes('@') || seen.has(email)) continue
+    seen.add(email)
+    out.push({ email, permission })
+  }
+  return out
 }
 
 /** Groups visible to this user: all groups for admins, memberships for members. */
@@ -198,7 +231,7 @@ export async function resolveTourPermission(db, user, cloudKey, sanitizeKey) {
 
   const groupRows = await db
     .prepare(
-      `SELECT pg.permission
+      `SELECT pg.permission AS group_permission, gm.permission AS member_permission
        FROM project_grants pg
        INNER JOIN group_members gm ON gm.group_id = pg.principal_id
        WHERE pg.cloud_key = ?
@@ -209,9 +242,11 @@ export async function resolveTourPermission(db, user, cloudKey, sanitizeKey) {
     .all()
 
   for (const row of groupRows.results || []) {
-    if (row.permission === 'edit' || row.permission === 'view') {
-      best = best ? betterPerm(best, row.permission) : row.permission
-    }
+    const gPerm = row.group_permission === 'edit' || row.group_permission === 'view' ? row.group_permission : null
+    if (!gPerm) continue
+    const mPerm = row.member_permission === 'view' ? 'view' : 'edit'
+    const effective = lesserPerm(gPerm, mPerm)
+    best = best ? betterPerm(best, effective) : effective
   }
   return best
 }
@@ -237,7 +272,7 @@ export async function loadUserTourPermissions(db, user) {
 
   const viaGroup = await db
     .prepare(
-      `SELECT pg.cloud_key, pg.permission
+      `SELECT pg.cloud_key, pg.permission AS group_permission, gm.permission AS member_permission
        FROM project_grants pg
        INNER JOIN group_members gm ON gm.group_id = pg.principal_id
        WHERE pg.principal_type = 'group' AND gm.email = ? COLLATE NOCASE`,
@@ -246,10 +281,11 @@ export async function loadUserTourPermissions(db, user) {
     .all()
   for (const row of viaGroup.results || []) {
     const k = row.cloud_key
-    const p = row.permission
-    if (p === 'view' || p === 'edit') {
-      map.set(k, map.has(k) ? betterPerm(map.get(k), p) : p)
-    }
+    const gPerm = row.group_permission === 'edit' || row.group_permission === 'view' ? row.group_permission : null
+    if (!gPerm) continue
+    const mPerm = row.member_permission === 'view' ? 'view' : 'edit'
+    const p = lesserPerm(gPerm, mPerm)
+    map.set(k, map.has(k) ? betterPerm(map.get(k), p) : p)
   }
   return map
 }

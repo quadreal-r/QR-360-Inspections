@@ -219,6 +219,31 @@ function betterPerm(a, b) {
   return permRank(a) >= permRank(b) ? a : b
 }
 
+function lesserPerm(a, b) {
+  return permRank(a) <= permRank(b) ? a : b
+}
+
+/** Accept string emails or { email, permission } objects. */
+function normalizeGroupMemberList(raw) {
+  const out = []
+  const seen = new Set()
+  for (const m of Array.isArray(raw) ? raw : []) {
+    let email = ''
+    let permission = 'view'
+    if (typeof m === 'string') {
+      email = normalizeEmail(m)
+      permission = 'view'
+    } else if (m && typeof m === 'object') {
+      email = normalizeEmail(m.email || m.principal_id)
+      permission = m.permission === 'edit' ? 'edit' : 'view'
+    }
+    if (!email.includes('@') || seen.has(email)) continue
+    seen.add(email)
+    out.push({ email, permission })
+  }
+  return out
+}
+
 /**
  * Resolve caller's permission on a cloud tour key.
  * Tours with no grants = admin-only.
@@ -241,7 +266,7 @@ async function resolveTourPermission(env, user, cloudKey) {
   let best = direct?.permission === 'edit' || direct?.permission === 'view' ? direct.permission : null
 
   const groupRows = await env.INSP360_DB.prepare(
-    `SELECT pg.permission
+    `SELECT pg.permission AS group_permission, gm.permission AS member_permission
      FROM project_grants pg
      INNER JOIN group_members gm ON gm.group_id = pg.principal_id
      WHERE pg.cloud_key = ?
@@ -252,9 +277,14 @@ async function resolveTourPermission(env, user, cloudKey) {
     .all()
 
   for (const row of groupRows.results || []) {
-    if (row.permission === 'edit' || row.permission === 'view') {
-      best = best ? betterPerm(best, row.permission) : row.permission
-    }
+    const gPerm =
+      row.group_permission === 'edit' || row.group_permission === 'view'
+        ? row.group_permission
+        : null
+    if (!gPerm) continue
+    const mPerm = row.member_permission === 'view' ? 'view' : 'edit'
+    const effective = lesserPerm(gPerm, mPerm)
+    best = best ? betterPerm(best, effective) : effective
   }
 
   return best
@@ -400,7 +430,7 @@ async function loadUserTourPermissions(env, user) {
   }
 
   const viaGroup = await env.INSP360_DB.prepare(
-    `SELECT pg.cloud_key, pg.permission
+    `SELECT pg.cloud_key, pg.permission AS group_permission, gm.permission AS member_permission
      FROM project_grants pg
      INNER JOIN group_members gm ON gm.group_id = pg.principal_id
      WHERE pg.principal_type = 'group' AND gm.email = ? COLLATE NOCASE`,
@@ -409,10 +439,14 @@ async function loadUserTourPermissions(env, user) {
     .all()
   for (const row of viaGroup.results || []) {
     const k = row.cloud_key
-    const p = row.permission
-    if (p === 'view' || p === 'edit') {
-      map.set(k, map.has(k) ? betterPerm(map.get(k), p) : p)
-    }
+    const gPerm =
+      row.group_permission === 'edit' || row.group_permission === 'view'
+        ? row.group_permission
+        : null
+    if (!gPerm) continue
+    const mPerm = row.member_permission === 'view' ? 'view' : 'edit'
+    const p = lesserPerm(gPerm, mPerm)
+    map.set(k, map.has(k) ? betterPerm(map.get(k), p) : p)
   }
   return map
 }
@@ -601,12 +635,15 @@ async function handleAdmin(request, env, user, path) {
       'SELECT id, name, created_at FROM groups ORDER BY name ASC',
     ).all()
     const members = await env.INSP360_DB.prepare(
-      'SELECT group_id, email FROM group_members ORDER BY email ASC',
+      'SELECT group_id, email, permission FROM group_members ORDER BY email ASC',
     ).all()
     const byGroup = new Map()
     for (const m of members.results || []) {
       if (!byGroup.has(m.group_id)) byGroup.set(m.group_id, [])
-      byGroup.get(m.group_id).push(m.email)
+      byGroup.get(m.group_id).push({
+        email: m.email,
+        permission: m.permission === 'view' ? 'view' : 'edit',
+      })
     }
     return json({
       groups: (groups.results || []).map((g) => ({
@@ -635,12 +672,9 @@ async function handleAdmin(request, env, user, path) {
     const exists = await env.INSP360_DB.prepare('SELECT id FROM groups WHERE id = ?').bind(id).first()
     if (!exists) return json({ error: 'Group not found' }, 404)
     const body = await readJsonBody(request)
-    const emails = Array.isArray(body?.members)
-      ? body.members.map(normalizeEmail).filter((e) => e && e.includes('@'))
-      : []
-    const unique = [...new Set(emails)]
+    const unique = normalizeGroupMemberList(body?.members)
     const stmts = [env.INSP360_DB.prepare('DELETE FROM group_members WHERE group_id = ?').bind(id)]
-    for (const email of unique) {
+    for (const { email, permission } of unique) {
       // Ensure user row exists so grants/UI stay consistent
       stmts.push(
         env.INSP360_DB.prepare(
@@ -650,10 +684,9 @@ async function handleAdmin(request, env, user, path) {
         ).bind(email, user.email),
       )
       stmts.push(
-        env.INSP360_DB.prepare('INSERT INTO group_members (group_id, email) VALUES (?, ?)').bind(
-          id,
-          email,
-        ),
+        env.INSP360_DB.prepare(
+          'INSERT INTO group_members (group_id, email, permission) VALUES (?, ?, ?)',
+        ).bind(id, email, permission),
       )
     }
     await env.INSP360_DB.batch(stmts)

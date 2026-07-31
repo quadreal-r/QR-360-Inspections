@@ -43,6 +43,7 @@ import {
   resolveTourPermission,
   loadUserTourPermissions,
   permRank,
+  normalizeGroupMemberList,
   resolveLocalEmail,
 } from '../src/acl-sqlite.js'
 
@@ -491,13 +492,16 @@ async function handleAdmin(req, res, user, pathname, url) {
       .bind()
       .all()
     const members = await aclDb
-      .prepare('SELECT group_id, email FROM group_members ORDER BY email ASC')
+      .prepare('SELECT group_id, email, permission FROM group_members ORDER BY email ASC')
       .bind()
       .all()
     const byGroup = new Map()
     for (const m of members.results || []) {
       if (!byGroup.has(m.group_id)) byGroup.set(m.group_id, [])
-      byGroup.get(m.group_id).push(m.email)
+      byGroup.get(m.group_id).push({
+        email: m.email,
+        permission: m.permission === 'view' ? 'view' : 'edit',
+      })
     }
     return json(res, {
       groups: (groups.results || []).map((g) => ({
@@ -522,12 +526,9 @@ async function handleAdmin(req, res, user, pathname, url) {
     const exists = await aclDb.prepare('SELECT id FROM groups WHERE id = ?').bind(id).first()
     if (!exists) return json(res, { error: 'Group not found' }, 404)
     const body = await readJsonBody(req)
-    const emails = Array.isArray(body?.members)
-      ? body.members.map(normalizeEmail).filter((e) => e && e.includes('@'))
-      : []
-    const unique = [...new Set(emails)]
+    const unique = normalizeGroupMemberList(body?.members)
     const stmts = [aclDb.prepare('DELETE FROM group_members WHERE group_id = ?').bind(id)]
-    for (const email of unique) {
+    for (const { email, permission } of unique) {
       stmts.push(
         aclDb
           .prepare(
@@ -538,7 +539,9 @@ async function handleAdmin(req, res, user, pathname, url) {
           .bind(email, user.email),
       )
       stmts.push(
-        aclDb.prepare('INSERT INTO group_members (group_id, email) VALUES (?, ?)').bind(id, email),
+        aclDb
+          .prepare('INSERT INTO group_members (group_id, email, permission) VALUES (?, ?, ?)')
+          .bind(id, email, permission),
       )
     }
     await aclDb.batch(stmts)
