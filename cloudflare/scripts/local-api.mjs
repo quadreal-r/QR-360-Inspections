@@ -460,6 +460,16 @@ async function handleAdmin(req, res, user, pathname, url) {
       )
       .bind(email, displayName, role, user.email)
       .run()
+    if (role === 'admin') {
+      try {
+        await aclDb
+          .prepare(`UPDATE group_members SET permission = 'edit' WHERE email = ? COLLATE NOCASE`)
+          .bind(email)
+          .run()
+      } catch (_) {
+        /* ignore */
+      }
+    }
     const row = await aclDb
       .prepare(
         'SELECT email, display_name, role, created_at, created_by FROM users WHERE email = ? COLLATE NOCASE',
@@ -527,8 +537,15 @@ async function handleAdmin(req, res, user, pathname, url) {
     if (!exists) return json(res, { error: 'Group not found' }, 404)
     const body = await readJsonBody(req)
     const unique = normalizeGroupMemberList(body?.members)
+    const adminRows = await aclDb.prepare(`SELECT email FROM users WHERE role = 'admin'`).all()
+    const adminEmails = new Set(
+      (adminRows.results || []).map((r) => normalizeEmail(r.email)).filter(Boolean),
+    )
+    const withAdminEdit = unique.map((m) =>
+      adminEmails.has(m.email) ? { email: m.email, permission: 'edit' } : m,
+    )
     const stmts = [aclDb.prepare('DELETE FROM group_members WHERE group_id = ?').bind(id)]
-    for (const { email, permission } of unique) {
+    for (const { email, permission } of withAdminEdit) {
       stmts.push(
         aclDb
           .prepare(
@@ -545,7 +562,7 @@ async function handleAdmin(req, res, user, pathname, url) {
       )
     }
     await aclDb.batch(stmts)
-    return json(res, { ok: true, id, members: unique })
+    return json(res, { ok: true, id, members: withAdminEdit })
   }
 
   const groupMatch = pathname.match(/^\/api\/admin\/groups\/([^/]+)$/)

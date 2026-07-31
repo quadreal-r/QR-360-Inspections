@@ -605,6 +605,18 @@ async function handleAdmin(request, env, user, path) {
     )
       .bind(email, displayName, role, user.email)
       .run()
+    // Administrators always get Edit on any group memberships.
+    if (role === 'admin') {
+      try {
+        await env.INSP360_DB.prepare(
+          `UPDATE group_members SET permission = 'edit' WHERE email = ? COLLATE NOCASE`,
+        )
+          .bind(email)
+          .run()
+      } catch (_) {
+        /* ignore */
+      }
+    }
     const row = await env.INSP360_DB.prepare(
       'SELECT email, display_name, role, created_at, created_by FROM users WHERE email = ? COLLATE NOCASE',
     )
@@ -673,8 +685,17 @@ async function handleAdmin(request, env, user, path) {
     if (!exists) return json({ error: 'Group not found' }, 404)
     const body = await readJsonBody(request)
     const unique = normalizeGroupMemberList(body?.members)
+    const adminRows = await env.INSP360_DB.prepare(
+      `SELECT email FROM users WHERE role = 'admin'`,
+    ).all()
+    const adminEmails = new Set(
+      (adminRows.results || []).map((r) => normalizeEmail(r.email)).filter(Boolean),
+    )
+    const withAdminEdit = unique.map((m) =>
+      adminEmails.has(m.email) ? { email: m.email, permission: 'edit' } : m,
+    )
     const stmts = [env.INSP360_DB.prepare('DELETE FROM group_members WHERE group_id = ?').bind(id)]
-    for (const { email, permission } of unique) {
+    for (const { email, permission } of withAdminEdit) {
       // Ensure user row exists so grants/UI stay consistent
       stmts.push(
         env.INSP360_DB.prepare(
@@ -690,7 +711,7 @@ async function handleAdmin(request, env, user, path) {
       )
     }
     await env.INSP360_DB.batch(stmts)
-    return json({ ok: true, id, members: unique })
+    return json({ ok: true, id, members: withAdminEdit })
   }
 
   const groupMatch = path.match(/^\/api\/admin\/groups\/([^/]+)$/)
