@@ -2,9 +2,9 @@
 
 When working on this project, include a clickable open link in chat replies (especially after UI/feature changes) so the user can launch the viewer immediately:
 
-- Path: `QR-360-Inspections/QR-360-Inspections_v1.3.2.html`
-- Badge: **QR360-v1.3.2** (standalone). Map embed shows **Map360-v1.3.2** after sync.
-- File URL: [Open INSP 360 Viewer](file:///C:/Users/Robert/Projects/QR-360-Inspections/QR-360-Inspections/QR-360-Inspections_v1.3.2.html)
+- Path: `QR-360-Inspections/QR-360-Inspections_v1.3.3.html`
+- Badge: **QR360-v1.3.3** (standalone). Map embed shows **Map360-v1.3.3** after sync.
+- File URL: [Open INSP 360 Viewer](file:///C:/Users/Robert/Projects/QR-360-Inspections/QR-360-Inspections/QR-360-Inspections_v1.3.3.html)
 - Capture (phone): `QR-360-Inspections/insp-capture.html` → served as `/capture.html` after sync. [Open Capture](file:///C:/Users/Robert/Projects/QR-360-Inspections/QR-360-Inspections/insp-capture.html)
 
 Prefer opening it with the `open_resource` MCP tool when finishing a change, and still paste the markdown link in the reply.
