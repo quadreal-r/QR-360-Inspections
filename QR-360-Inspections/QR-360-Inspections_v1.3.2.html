@@ -1254,10 +1254,25 @@
   }
   #adminPane #adminPeopleList{
     flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;
-    margin:0; padding-right:2px; scrollbar-width:thin;
+    margin:0; padding:8px; scrollbar-width:thin;
+    display:flex; flex-direction:column; gap:6px;
+    background:#cfd6e2; border:1.5px solid #8e99ad; border-radius:10px;
+    box-sizing:border-box;
+  }
+  #adminPane #adminPeopleList.admin-empty{
+    display:block; background:transparent; border:none; padding:14px 12px;
   }
   #adminPane #adminPeopleList::-webkit-scrollbar{width:8px}
   #adminPane #adminPeopleList::-webkit-scrollbar-thumb{background:#8e99ad; border-radius:4px}
+  #adminPane #adminPeopleList .admin-member-row{padding:6px 8px}
+  #adminPane #adminPeopleList .admin-member-name{font-size:12px}
+  #adminPane #adminPeopleList .admin-member-actions .admin-role-select,
+  #adminPane #adminPeopleList .admin-member-actions .btn{
+    font-size:11px; padding:4px 8px;
+  }
+  #adminPane #adminPeopleList .admin-member-actions .admin-role-select{
+    min-width:78px; font-weight:600;
+  }
   #adminPane #adminGroups.admin-section.on > .admin-groups-split{
     flex:1 1 auto; min-height:0; display:flex; gap:12px; overflow:hidden;
   }
@@ -17924,7 +17939,7 @@ async function refreshAdminPanel(){
 function renderAdminPeople(){
   const host=document.getElementById('adminPeopleList');
   if(!host) return;
-  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
   const q=(document.getElementById('adminPeopleSearch')?.value||'').trim().toLowerCase();
   const users=!q
     ? (adminCache.users||[])
@@ -17934,24 +17949,29 @@ function renderAdminPeople(){
         return email.includes(q) || role.includes(q);
       });
   if(!adminCache.users.length){
-    host.innerHTML='<div class="admin-empty">No users yet. Add someone by Access email.</div>';
+    host.className='admin-empty';
+    host.innerHTML='No users yet. Add someone by Access email.';
     return;
   }
   if(!users.length){
-    host.innerHTML='<div class="admin-empty">No people match “'+esc(q)+'”.</div>';
+    host.className='admin-empty';
+    host.innerHTML='No people match “'+esc(q)+'”.';
     return;
   }
-  let html='<table class="admin-table"><thead><tr><th>Email</th><th>Role</th><th></th></tr></thead><tbody>';
+  host.className='';
+  let html='';
   for(const u of users){
     const role=u.role==='admin'?'admin':'member';
-    html+='<tr><td>'+esc(u.email)+'</td><td>'+
-      '<select class="admin-role-select" data-admin-role-email="'+esc(u.email)+'" title="Change role">'+
-        '<option value="member"'+(role==='member'?' selected':'')+'>member</option>'+
-        '<option value="admin"'+(role==='admin'?' selected':'')+'>admin</option>'+
-      '</select></td><td class="admin-actions">'+
-      '<button type="button" class="btn" data-admin-del-user="'+esc(u.email)+'">Remove</button></td></tr>';
+    html+='<div class="admin-member-row">'+
+      '<div class="admin-member-name"><span>'+esc(u.email)+'</span></div>'+
+      '<div class="admin-member-actions">'+
+        '<select class="admin-role-select" data-admin-role-email="'+esc(u.email)+'" title="Change role">'+
+          '<option value="member"'+(role==='member'?' selected':'')+'>member</option>'+
+          '<option value="admin"'+(role==='admin'?' selected':'')+'>admin</option>'+
+        '</select>'+
+        '<button type="button" class="btn" data-admin-del-user="'+esc(u.email)+'">Remove</button>'+
+      '</div></div>';
   }
-  html+='</tbody></table>';
   host.innerHTML=html;
   host.querySelectorAll('[data-admin-role-email]').forEach(sel=>{
     sel.onchange=async()=>{

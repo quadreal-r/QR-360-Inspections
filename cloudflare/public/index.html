@@ -1254,10 +1254,25 @@
   }
   #adminPane #adminPeopleList{
     flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;
-    margin:0; padding-right:2px; scrollbar-width:thin;
+    margin:0; padding:8px; scrollbar-width:thin;
+    display:flex; flex-direction:column; gap:6px;
+    background:#cfd6e2; border:1.5px solid #8e99ad; border-radius:10px;
+    box-sizing:border-box;
+  }
+  #adminPane #adminPeopleList.admin-empty{
+    display:block; background:transparent; border:none; padding:14px 12px;
   }
   #adminPane #adminPeopleList::-webkit-scrollbar{width:8px}
   #adminPane #adminPeopleList::-webkit-scrollbar-thumb{background:#8e99ad; border-radius:4px}
+  #adminPane #adminPeopleList .admin-member-row{padding:6px 8px}
+  #adminPane #adminPeopleList .admin-member-name{font-size:12px}
+  #adminPane #adminPeopleList .admin-member-actions .admin-role-select,
+  #adminPane #adminPeopleList .admin-member-actions .btn{
+    font-size:11px; padding:4px 8px;
+  }
+  #adminPane #adminPeopleList .admin-member-actions .admin-role-select{
+    min-width:78px; font-weight:600;
+  }
   #adminPane #adminGroups.admin-section.on > .admin-groups-split{
     flex:1 1 auto; min-height:0; display:flex; gap:12px; overflow:hidden;
   }
@@ -1448,6 +1463,9 @@
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left;
   }
   #adminPanel .admin-grant-row.off .admin-grant-label{color:#5c677a; font-weight:500}
+  #adminPanel .admin-member-row .admin-grant-perm,
+  #adminPanel .admin-add-member select[data-admin-add-perm],
+  #adminPanel .admin-add-member select[data-admin-tour-perm],
   #adminPanel .admin-grant-row .admin-grant-perm{
     flex:0 0 auto; font-family:var(--sans); font-size:10px; font-weight:700;
     text-transform:uppercase; letter-spacing:.05em; text-align:left; text-align-last:left;
@@ -1456,13 +1474,21 @@
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%232a3344' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
     background-repeat:no-repeat; background-position:right 5px center;
   }
+  #adminPanel .admin-member-row .admin-grant-perm.view,
+  #adminPanel .admin-add-member select[data-admin-add-perm].view,
+  #adminPanel .admin-add-member select[data-admin-tour-perm].view,
   #adminPanel .admin-grant-row .admin-grant-perm.view{
     background-color:#d5dbe6; color:#2a3344; border:1px solid #8e99ad;
   }
+  #adminPanel .admin-member-row .admin-grant-perm.edit,
+  #adminPanel .admin-add-member select[data-admin-add-perm].edit,
+  #adminPanel .admin-add-member select[data-admin-tour-perm].edit,
   #adminPanel .admin-grant-row .admin-grant-perm.edit{
-    background-color:#f5e8b8; color:#6b5200; border:1px solid #d4b84a;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%236b5200' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-color:#f0c14a; color:#3d2e00; border:1px solid #c49212;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%233d2e00' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   }
+  #adminPanel .admin-member-row .admin-grant-perm:disabled,
+  #adminPanel .admin-add-member select[data-admin-add-perm]:disabled,
   #adminPanel .admin-grant-row .admin-grant-perm:disabled{
     opacity:.55; cursor:default;
   }
@@ -1556,13 +1582,20 @@
     background:transparent; border:none; padding:0; max-height:none; overflow:visible;
   }
   #adminPanel .admin-member-row{
-    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
     flex:0 0 auto;
     padding:8px 10px; border:1px solid #8e99ad; border-radius:8px; background:#eef1f5;
   }
-  #adminPanel .admin-member-row span{font-size:13px; word-break:break-all; min-width:0}
+  #adminPanel .admin-member-row .admin-member-name{
+    flex:1 1 auto; min-width:0; font-size:13px; word-break:break-all;
+    display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  }
+  #adminPanel .admin-member-row .admin-member-actions{
+    display:flex; align-items:center; gap:6px; flex:0 0 auto; margin-left:auto;
+  }
   #adminPanel .admin-member-row .admin-member-meta{display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; flex:1}
   #adminPanel .admin-member-row button{flex:0 0 auto; font-size:12px; padding:6px 10px}
+  #adminPanel .admin-member-row .admin-member-actions .admin-grant-perm{flex:0 0 auto}
   #adminPanel .admin-add-member{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
   #adminPanel .admin-add-member select,
   #adminPanel .admin-add-member input{flex:1 1 160px}
@@ -1650,15 +1683,19 @@
   #adminPanel .admin-groups-split .admin-member-row{
     padding:6px 8px;
   }
-  #adminPanel .admin-groups-split .admin-member-row span{font-size:12px}
+  #adminPanel .admin-groups-split .admin-member-row .admin-member-name{font-size:12px}
   #adminPanel .admin-groups-split .admin-member-row button{font-size:11px; padding:4px 8px}
+  #adminPanel .admin-groups-split .admin-member-row .admin-member-actions .admin-grant-perm{
+    font-size:11px; padding:4px 6px; min-width:64px;
+  }
   #adminPanel .admin-groups-split .admin-add-member{
     flex:0 0 auto; flex-wrap:nowrap; gap:6px;
   }
   #adminPanel .admin-groups-split .admin-add-member select{
     flex:1 1 auto; min-width:0; font-size:12px; padding:7px 8px;
   }
-  #adminPanel .admin-groups-split .admin-add-member select[data-admin-tour-perm]{
+  #adminPanel .admin-groups-split .admin-add-member select[data-admin-tour-perm],
+  #adminPanel .admin-groups-split .admin-add-member select[data-admin-add-perm]{
     flex:0 0 auto; width:76px;
   }
   #adminPanel .admin-groups-split .admin-add-member .btn{
@@ -1800,7 +1837,7 @@
   <button class="btn icon topbtn" id="btnBlurFaces" title="Privacy blur — faces or licence plates (auto or manual)"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/><path d="M8.6 8.2l-.8.8M15.4 8.2l.8.8M11 12.4h2"/></svg></button>
   <button class="btn icon topbtn" id="btnPrivacySettings" title="Privacy settings — automatic face &amp; licence-plate blur"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   <button type="button" class="btn" id="btnAdmin" title="Admin — people, groups, and tour access">Admin</button>
-  <span id="appVer" title="Standalone QR-360° viewer (QR360)">QR360-v1.2.95</span>
+  <span id="appVer" title="Standalone QR-360° viewer (QR360)">QR360-v1.3.2</span>
 </div>
 
 <div id="privacySettings">
@@ -1911,7 +1948,7 @@
               <input id="adminGroupName" type="text" placeholder="New group name" autocomplete="off">
               <button type="button" class="btn" id="adminGroupAdd">Create</button>
             </div>
-            <input id="adminGroupsSearch" class="admin-search" type="search" placeholder="Search groups, people…" autocomplete="off">
+            <input id="adminGroupsSearch" class="admin-search" type="search" placeholder="Search groups, people, tours…" autocomplete="off">
             <div id="adminGroupsList" class="admin-empty">Loading…</div>
           </div>
           <div class="admin-groups-pane admin-groups-detail-pane">
@@ -17748,7 +17785,7 @@ async function uploadCurrentToCloud(){
 })();
 
 /* ================= ACL /api/me + Admin panel ================= */
-let adminCache={ users:[], groups:[] };
+let adminCache={ users:[], groups:[], projects:[] };
 let adminSubTab='people';
 let adminSelectedGroupId=null;
 
@@ -17883,12 +17920,14 @@ async function refreshAdminPanel(){
     return;
   }
   try{
-    const [usersRes, groupsRes]=await Promise.all([
+    const [usersRes, groupsRes, projectsRes]=await Promise.all([
       adminFetch('/api/admin/users'),
-      adminFetch('/api/admin/groups')
+      adminFetch('/api/admin/groups'),
+      adminFetch('/api/admin/projects')
     ]);
     adminCache.users=Array.isArray(usersRes.users)?usersRes.users:[];
     adminCache.groups=Array.isArray(groupsRes.groups)?groupsRes.groups:[];
+    adminCache.projects=Array.isArray(projectsRes.projects)?projectsRes.projects:[];
     renderAdminPeople();
     renderAdminGroups();
   }catch(e){
@@ -17900,7 +17939,7 @@ async function refreshAdminPanel(){
 function renderAdminPeople(){
   const host=document.getElementById('adminPeopleList');
   if(!host) return;
-  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
   const q=(document.getElementById('adminPeopleSearch')?.value||'').trim().toLowerCase();
   const users=!q
     ? (adminCache.users||[])
@@ -17910,24 +17949,29 @@ function renderAdminPeople(){
         return email.includes(q) || role.includes(q);
       });
   if(!adminCache.users.length){
-    host.innerHTML='<div class="admin-empty">No users yet. Add someone by Access email.</div>';
+    host.className='admin-empty';
+    host.innerHTML='No users yet. Add someone by Access email.';
     return;
   }
   if(!users.length){
-    host.innerHTML='<div class="admin-empty">No people match “'+esc(q)+'”.</div>';
+    host.className='admin-empty';
+    host.innerHTML='No people match “'+esc(q)+'”.';
     return;
   }
-  let html='<table class="admin-table"><thead><tr><th>Email</th><th>Role</th><th></th></tr></thead><tbody>';
+  host.className='';
+  let html='';
   for(const u of users){
     const role=u.role==='admin'?'admin':'member';
-    html+='<tr><td>'+esc(u.email)+'</td><td>'+
-      '<select class="admin-role-select" data-admin-role-email="'+esc(u.email)+'" title="Change role">'+
-        '<option value="member"'+(role==='member'?' selected':'')+'>member</option>'+
-        '<option value="admin"'+(role==='admin'?' selected':'')+'>admin</option>'+
-      '</select></td><td class="admin-actions">'+
-      '<button type="button" class="btn" data-admin-del-user="'+esc(u.email)+'">Remove</button></td></tr>';
+    html+='<div class="admin-member-row">'+
+      '<div class="admin-member-name"><span>'+esc(u.email)+'</span></div>'+
+      '<div class="admin-member-actions">'+
+        '<select class="admin-role-select" data-admin-role-email="'+esc(u.email)+'" title="Change role">'+
+          '<option value="member"'+(role==='member'?' selected':'')+'>member</option>'+
+          '<option value="admin"'+(role==='admin'?' selected':'')+'>admin</option>'+
+        '</select>'+
+        '<button type="button" class="btn" data-admin-del-user="'+esc(u.email)+'">Remove</button>'+
+      '</div></div>';
   }
-  html+='</tbody></table>';
   host.innerHTML=html;
   host.querySelectorAll('[data-admin-role-email]').forEach(sel=>{
     sel.onchange=async()=>{
@@ -17976,6 +18020,73 @@ function renderAdminPeople(){
   });
 }
 
+function groupTourGrants(groupId){
+  const out=[];
+  for(const p of adminCache.projects||[]){
+    const g=(p.grants||[]).find(x=>x.principal_type==='group' && String(x.principal_id)===String(groupId));
+    if(g) out.push({ key:p.key, permission:g.permission==='edit'?'edit':'view' });
+  }
+  out.sort((a,b)=>cloudTourDisplayName(a.key).localeCompare(cloudTourDisplayName(b.key)));
+  return out;
+}
+
+async function saveGroupTours(groupId, tours){
+  const seen=new Map();
+  for(const t of tours||[]){
+    const key=String(t&&t.key||'').trim();
+    if(!key) continue;
+    seen.set(key, { key, permission:t.permission==='edit'?'edit':'view' });
+  }
+  const unique=[...seen.values()];
+  await adminFetch('/api/admin/groups/'+encodeURIComponent(groupId)+'/tours', {
+    method:'PUT',
+    headers:{ 'Content-Type':'application/json' },
+    body:JSON.stringify({ tours: unique })
+  });
+  for(const p of adminCache.projects||[]){
+    p.grants=(p.grants||[]).filter(g=>!(g.principal_type==='group' && String(g.principal_id)===String(groupId)));
+  }
+  for(const t of unique){
+    let proj=(adminCache.projects||[]).find(p=>p.key===t.key);
+    if(!proj){
+      proj={ key:t.key, grants:[] };
+      if(!Array.isArray(adminCache.projects)) adminCache.projects=[];
+      adminCache.projects.push(proj);
+    }
+    if(!Array.isArray(proj.grants)) proj.grants=[];
+    proj.grants.push({ principal_type:'group', principal_id:groupId, permission:t.permission });
+  }
+  return unique;
+}
+
+function isAdminDirectoryEmail(email){
+  const e=String(email||'').trim().toLowerCase();
+  if(!e.includes('@')) return false;
+  const u=(adminCache.users||[]).find(x=>String(x&&x.email||'').toLowerCase()===e);
+  return !!(u && u.role==='admin');
+}
+
+function normalizeAdminGroupMembers(raw){
+  const out=[];
+  const seen=new Set();
+  for(const m of Array.isArray(raw)?raw:[]){
+    let email='', permission='view';
+    if(typeof m==='string'){
+      email=String(m||'').trim().toLowerCase();
+      permission='edit';
+    } else if(m && typeof m==='object'){
+      email=String(m.email||'').trim().toLowerCase();
+      permission=m.permission==='edit'?'edit':'view';
+    }
+    if(!email.includes('@') || seen.has(email)) continue;
+    seen.add(email);
+    // Administrators always have Edit in groups.
+    if(isAdminDirectoryEmail(email)) permission='edit';
+    out.push({ email, permission });
+  }
+  return out;
+}
+
 function renderAdminGroups(){
   const listHost=document.getElementById('adminGroupsList');
   const detailHost=document.getElementById('adminGroupDetail');
@@ -17983,7 +18094,7 @@ function renderAdminGroups(){
   const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 
   async function saveGroupMembers(groupId, members){
-    const unique=[...new Set(members.map(e=>String(e||'').trim().toLowerCase()).filter(e=>e.includes('@')))];
+    const unique=normalizeAdminGroupMembers(members);
     await adminFetch('/api/admin/groups/'+encodeURIComponent(groupId)+'/members', {
       method:'PUT',
       headers:{ 'Content-Type':'application/json' },
@@ -18008,8 +18119,12 @@ function renderAdminGroups(){
     ? adminCache.groups
     : adminCache.groups.filter(g=>{
         if(String(g.name||'').toLowerCase().includes(q)) return true;
-        const members=Array.isArray(g.members)?g.members:[];
-        return members.some(e=>String(e).toLowerCase().includes(q));
+        const members=normalizeAdminGroupMembers(g.members);
+        if(members.some(m=>m.email.includes(q))) return true;
+        return groupTourGrants(g.id).some(t=>{
+          const name=cloudTourDisplayName(t.key).toLowerCase();
+          return name.includes(q) || String(t.key).toLowerCase().includes(q);
+        });
       });
 
   if(!filteredGroups.length){
@@ -18027,19 +18142,25 @@ function renderAdminGroups(){
   listHost.className='';
   let listHtml='';
   for(const g of filteredGroups){
-    const members=Array.isArray(g.members)?g.members:[];
+    const members=normalizeAdminGroupMembers(g.members);
+    const tours=groupTourGrants(g.id);
     const selected=String(g.id)===String(adminSelectedGroupId);
     listHtml+='<div class="admin-group-row'+(selected?' is-selected':'')+'" data-admin-select-group="'+esc(g.id)+'" role="button" tabindex="0" aria-selected="'+(selected?'true':'false')+'">'+
       '<span class="admin-group-row-name">'+esc(g.name)+'</span>'+
-      '<span class="admin-group-row-meta">'+members.length+'</span>'+
+      '<span class="admin-group-row-meta">'+members.length+' · '+tours.length+'</span>'+
       '</div>';
   }
   listHost.innerHTML=listHtml;
 
   const g=filteredGroups.find(x=>String(x.id)===String(adminSelectedGroupId))||filteredGroups[0];
-  const members=Array.isArray(g.members)?g.members:[];
-  const memberSet=new Set(members.map(e=>String(e).toLowerCase()));
+  const members=normalizeAdminGroupMembers(g.members);
+  const memberSet=new Set(members.map(m=>m.email));
   const available=(adminCache.users||[]).filter(u=>u && u.email && !memberSet.has(String(u.email).toLowerCase()));
+  const tours=groupTourGrants(g.id);
+  const tourKeys=new Set(tours.map(t=>t.key));
+  const availableTours=(adminCache.projects||[]).filter(p=>p && p.key && !tourKeys.has(p.key))
+    .slice()
+    .sort((a,b)=>cloudTourDisplayName(a.key).localeCompare(cloudTourDisplayName(b.key)));
 
   detailHost.className='';
   let detailHtml=
@@ -18050,7 +18171,7 @@ function renderAdminGroups(){
         '<button type="button" class="btn" data-admin-del-group="'+esc(g.id)+'">Delete</button>'+
       '</span>'+
     '</div>'+
-    '<p class="admin-group-detail-hint">People in this group.</p>'+
+    '<p class="admin-group-detail-hint">Assign people and cloud tours. Person View/Edit caps access on the tours listed here. Administrators are always Edit.</p>'+
     '<div class="admin-group-detail-cols">'+
       '<div class="admin-group-col">'+
         '<div class="admin-group-col-title">People</div>'+
@@ -18058,22 +18179,103 @@ function renderAdminGroups(){
   if(!members.length){
     detailHtml+='<div class="admin-empty" style="padding:8px 0">No people yet — pick from the directory below.</div>';
   } else {
-    for(const email of members){
-      detailHtml+='<div class="admin-member-row"><span>'+esc(email)+'</span>'+
-        '<button type="button" class="btn" data-admin-remove-member="'+esc(g.id)+'" data-email="'+esc(email)+'">Remove</button></div>';
+    for(const m of members){
+      const isAdmin=isAdminDirectoryEmail(m.email);
+      const perm=isAdmin || m.permission==='edit'?'edit':'view';
+      detailHtml+='<div class="admin-member-row">'+
+        '<div class="admin-member-name">'+
+          '<span>'+esc(m.email)+'</span>'+
+          (isAdmin?'<span class="admin-perm-badge admin">admin</span>':'')+
+        '</div>'+
+        '<div class="admin-member-actions">'+
+          '<select class="admin-grant-perm '+esc(perm)+'" data-admin-member-perm="'+esc(g.id)+'" data-email="'+esc(m.email)+'" title="'+(isAdmin?'Administrators always have Edit':'Access')+'"'+(isAdmin?' disabled':'')+'>'+
+            '<option value="view"'+(perm==='view'?' selected':'')+'>View</option>'+
+            '<option value="edit"'+(perm==='edit'?' selected':'')+'>Edit</option>'+
+          '</select>'+
+          '<button type="button" class="btn" data-admin-remove-member="'+esc(g.id)+'" data-email="'+esc(m.email)+'">Remove</button>'+
+        '</div></div>';
     }
   }
   detailHtml+='</div><div class="admin-add-member">'+
     '<select data-admin-pick-user="'+esc(g.id)+'">'+
     '<option value="">Pick a person…</option>';
   for(const u of available){
-    detailHtml+='<option value="'+esc(u.email)+'">'+esc(u.email)+'</option>';
+    const roleTag=u.role==='admin'?' (admin)':'';
+    detailHtml+='<option value="'+esc(u.email)+'" data-role="'+esc(u.role==='admin'?'admin':'member')+'">'+esc(u.email)+roleTag+'</option>';
   }
   detailHtml+='</select>'+
+    '<select class="view" data-admin-add-perm="'+esc(g.id)+'" title="Access for new person">'+
+      '<option value="view" selected>View</option>'+
+      '<option value="edit">Edit</option>'+
+    '</select>'+
     '<button type="button" class="btn" data-admin-add-picked="'+esc(g.id)+'"'+(available.length?'':' disabled')+'>Add</button>'+
-    '<button type="button" class="btn" data-admin-add-all-people="'+esc(g.id)+'" title="Add everyone not already in this group"'+(available.length?'':' disabled')+'>Add all</button>'+
+    '<button type="button" class="btn" data-admin-add-all-people="'+esc(g.id)+'" title="Add remaining people (admins as Edit, others as View)"'+(available.length?'':' disabled')+'>Add all</button>'+
+    '</div></div>'+
+    '<div class="admin-group-col">'+
+      '<div class="admin-group-col-title">Tours</div>'+
+      '<div class="admin-member-list'+(tours.length?'':' is-empty')+'">';
+  if(!tours.length){
+    detailHtml+='<div class="admin-empty" style="padding:8px 0">No tours yet — assign a cloud tour below.</div>';
+  } else {
+    for(const t of tours){
+      const perm=t.permission==='edit'?'edit':'view';
+      const name=cloudTourDisplayName(t.key);
+      detailHtml+='<div class="admin-member-row">'+
+        '<div class="admin-member-name" title="'+esc(t.key)+'">'+
+          '<span>'+esc(name)+'</span>'+
+        '</div>'+
+        '<div class="admin-member-actions">'+
+          '<select class="admin-grant-perm '+esc(perm)+'" data-admin-tour-perm-change="'+esc(g.id)+'" data-tour-key="'+esc(t.key)+'" title="Tour access for this group">'+
+            '<option value="view"'+(perm==='view'?' selected':'')+'>View</option>'+
+            '<option value="edit"'+(perm==='edit'?' selected':'')+'>Edit</option>'+
+          '</select>'+
+          '<button type="button" class="btn" data-admin-remove-tour="'+esc(g.id)+'" data-tour-key="'+esc(t.key)+'">Remove</button>'+
+        '</div></div>';
+    }
+  }
+  detailHtml+='</div><div class="admin-add-member">'+
+    '<select data-admin-pick-tour="'+esc(g.id)+'">'+
+    '<option value="">Pick a tour…</option>';
+  for(const p of availableTours){
+    detailHtml+='<option value="'+esc(p.key)+'">'+esc(cloudTourDisplayName(p.key))+'</option>';
+  }
+  detailHtml+='</select>'+
+    '<select class="view" data-admin-tour-perm="'+esc(g.id)+'" title="Access for new tour">'+
+      '<option value="view" selected>View</option>'+
+      '<option value="edit">Edit</option>'+
+    '</select>'+
+    '<button type="button" class="btn" data-admin-add-tour="'+esc(g.id)+'"'+(availableTours.length?'':' disabled')+'>Add</button>'+
+    '<button type="button" class="btn" data-admin-add-all-tours="'+esc(g.id)+'" title="Add every remaining cloud tour"'+(availableTours.length?'':' disabled')+'>Add all</button>'+
     '</div></div></div>';
   detailHost.innerHTML=detailHtml;
+
+  function syncPermSelectStyle(sel){
+    if(!sel) return;
+    const edit=sel.value==='edit';
+    sel.classList.toggle('edit', edit);
+    sel.classList.toggle('view', !edit);
+  }
+  detailHost.querySelectorAll('[data-admin-add-perm], [data-admin-tour-perm]').forEach(sel=>{
+    syncPermSelectStyle(sel);
+    sel.addEventListener('change', ()=>syncPermSelectStyle(sel));
+  });
+
+  const pickUser=detailHost.querySelector('[data-admin-pick-user]');
+  const addPerm=detailHost.querySelector('[data-admin-add-perm]');
+  if(pickUser && addPerm){
+    const syncAddPermForPick=()=>{
+      const email=String(pickUser.value||'').toLowerCase();
+      if(email && isAdminDirectoryEmail(email)){
+        addPerm.value='edit';
+        addPerm.disabled=true;
+      } else {
+        addPerm.disabled=false;
+      }
+      syncPermSelectStyle(addPerm);
+    };
+    pickUser.onchange=syncAddPermForPick;
+    syncAddPermForPick();
+  }
 
   function selectGroup(id){
     if(!id || String(id)===String(adminSelectedGroupId)) return;
@@ -18122,21 +18324,52 @@ function renderAdminGroups(){
     };
   });
 
+  detailHost.querySelectorAll('[data-admin-member-perm]').forEach(sel=>{
+    sel.onchange=async()=>{
+      const id=sel.getAttribute('data-admin-member-perm');
+      const email=String(sel.getAttribute('data-email')||'').toLowerCase();
+      if(isAdminDirectoryEmail(email)){
+        sel.value='edit';
+        toast('Administrators always have Edit', true);
+        return;
+      }
+      const permission=sel.value==='edit'?'edit':'view';
+      const grp=adminCache.groups.find(x=>x.id===id);
+      const cur=normalizeAdminGroupMembers(grp?.members);
+      const next=cur.map(m=>m.email===email ? { email, permission } : m);
+      sel.classList.toggle('edit', permission==='edit');
+      sel.classList.toggle('view', permission==='view');
+      sel.disabled=true;
+      try{
+        adminSelectedGroupId=id;
+        await saveGroupMembers(id, next);
+        toast(email+' set to '+permission);
+      }catch(err){
+        toast(err.message||'Could not update access', true);
+        refreshAdminPanel();
+      }finally{
+        sel.disabled=false;
+      }
+    };
+  });
+
   detailHost.querySelectorAll('[data-admin-add-picked]').forEach(btn=>{
     btn.onclick=async()=>{
       const id=btn.getAttribute('data-admin-add-picked');
       const sel=detailHost.querySelector('[data-admin-pick-user]');
+      const permEl=detailHost.querySelector('[data-admin-add-perm]');
       const email=sel?sel.value:'';
       if(!email){ toast('Pick a person first', true); return; }
       const e=String(email).trim().toLowerCase();
       if(!e.includes('@')){ toast('Enter a valid email', true); return; }
+      const permission=isAdminDirectoryEmail(e)?'edit':(permEl&&permEl.value==='edit'?'edit':'view');
       const grp=adminCache.groups.find(x=>x.id===id);
-      const cur=Array.isArray(grp?.members)?grp.members.map(x=>String(x).toLowerCase()):[];
-      if(cur.includes(e)){ toast('Already in this group', true); return; }
+      const cur=normalizeAdminGroupMembers(grp?.members);
+      if(cur.some(m=>m.email===e)){ toast('Already in this group', true); return; }
       try{
         adminSelectedGroupId=id;
-        await saveGroupMembers(id, cur.concat([e]));
-        toast('Added '+e);
+        await saveGroupMembers(id, cur.concat([{ email:e, permission }]));
+        toast('Added '+e+' ('+permission+')');
         refreshAdminPanel();
       }catch(err){ toast(err.message||'Add failed', true); }
     };
@@ -18145,14 +18378,18 @@ function renderAdminGroups(){
     btn.onclick=async()=>{
       const id=btn.getAttribute('data-admin-add-all-people');
       const grp=adminCache.groups.find(x=>x.id===id);
-      const cur=Array.isArray(grp?.members)?grp.members.map(x=>String(x).toLowerCase()):[];
-      const curSet=new Set(cur);
+      const cur=normalizeAdminGroupMembers(grp?.members);
+      const curSet=new Set(cur.map(m=>m.email));
       const toAdd=(adminCache.users||[])
-        .map(u=>String(u&&u.email||'').trim().toLowerCase())
-        .filter(e=>e.includes('@') && !curSet.has(e));
+        .map(u=>{
+          const email=String(u&&u.email||'').trim().toLowerCase();
+          if(!email.includes('@') || curSet.has(email)) return null;
+          return { email, permission: u.role==='admin'?'edit':'view' };
+        })
+        .filter(Boolean);
       if(!toAdd.length){ toast('Everyone is already in this group'); return; }
       const n=toAdd.length;
-      if(!window.confirm('Add all '+n+' remaining '+(n===1?'person':'people')+' to this group?')) return;
+      if(!window.confirm('Add all '+n+' remaining '+(n===1?'person':'people')+'? Admins get Edit; others get View.')) return;
       try{
         adminSelectedGroupId=id;
         await saveGroupMembers(id, cur.concat(toAdd));
@@ -18166,11 +18403,87 @@ function renderAdminGroups(){
       const id=btn.getAttribute('data-admin-remove-member');
       const email=String(btn.getAttribute('data-email')||'').toLowerCase();
       const grp=adminCache.groups.find(x=>x.id===id);
-      const next=(Array.isArray(grp?.members)?grp.members:[]).filter(x=>String(x).toLowerCase()!==email);
+      const next=normalizeAdminGroupMembers(grp?.members).filter(m=>m.email!==email);
       try{
         adminSelectedGroupId=id;
         await saveGroupMembers(id, next);
         toast('Removed '+email);
+        refreshAdminPanel();
+      }catch(err){ toast(err.message||'Remove failed', true); }
+    };
+  });
+
+  detailHost.querySelectorAll('[data-admin-tour-perm-change]').forEach(sel=>{
+    sel.onchange=async()=>{
+      const id=sel.getAttribute('data-admin-tour-perm-change');
+      const key=sel.getAttribute('data-tour-key')||'';
+      const permission=sel.value==='edit'?'edit':'view';
+      if(!id || !key) return;
+      const cur=groupTourGrants(id).map(t=>t.key===key ? { key, permission } : t);
+      sel.classList.toggle('edit', permission==='edit');
+      sel.classList.toggle('view', permission==='view');
+      sel.disabled=true;
+      try{
+        adminSelectedGroupId=id;
+        await saveGroupTours(id, cur);
+        toast(cloudTourDisplayName(key)+' set to '+permission);
+      }catch(err){
+        toast(err.message||'Could not update tour access', true);
+        refreshAdminPanel();
+      }finally{
+        sel.disabled=false;
+      }
+    };
+  });
+  detailHost.querySelectorAll('[data-admin-add-tour]').forEach(btn=>{
+    btn.onclick=async()=>{
+      const id=btn.getAttribute('data-admin-add-tour');
+      const sel=detailHost.querySelector('[data-admin-pick-tour]');
+      const permEl=detailHost.querySelector('[data-admin-tour-perm]');
+      const key=sel?sel.value:'';
+      const permission=permEl&&permEl.value==='edit'?'edit':'view';
+      if(!key){ toast('Pick a tour first', true); return; }
+      const cur=groupTourGrants(id);
+      if(cur.some(t=>t.key===key)){ toast('Tour already assigned', true); return; }
+      try{
+        adminSelectedGroupId=id;
+        await saveGroupTours(id, cur.concat([{ key, permission }]));
+        toast('Tour assigned ('+permission+')');
+        refreshAdminPanel();
+      }catch(err){ toast(err.message||'Assign failed', true); }
+    };
+  });
+  detailHost.querySelectorAll('[data-admin-add-all-tours]').forEach(btn=>{
+    btn.onclick=async()=>{
+      const id=btn.getAttribute('data-admin-add-all-tours');
+      const permEl=detailHost.querySelector('[data-admin-tour-perm]');
+      const permission=permEl&&permEl.value==='edit'?'edit':'view';
+      const cur=groupTourGrants(id);
+      const curKeys=new Set(cur.map(t=>t.key));
+      const toAdd=(adminCache.projects||[])
+        .filter(p=>p && p.key && !curKeys.has(p.key))
+        .map(p=>({ key:p.key, permission }));
+      if(!toAdd.length){ toast('All cloud tours are already assigned'); return; }
+      const n=toAdd.length;
+      if(!window.confirm('Add all '+n+' remaining tour'+(n===1?'':'s')+' as '+permission+'?')) return;
+      try{
+        adminSelectedGroupId=id;
+        await saveGroupTours(id, cur.concat(toAdd));
+        toast('Added '+n+' tour'+(n===1?'':'s')+' ('+permission+')');
+        refreshAdminPanel();
+      }catch(err){ toast(err.message||'Add all tours failed', true); }
+    };
+  });
+  detailHost.querySelectorAll('[data-admin-remove-tour]').forEach(btn=>{
+    btn.onclick=async()=>{
+      const id=btn.getAttribute('data-admin-remove-tour');
+      const key=btn.getAttribute('data-tour-key')||'';
+      if(!id || !key) return;
+      const next=groupTourGrants(id).filter(t=>t.key!==key);
+      try{
+        adminSelectedGroupId=id;
+        await saveGroupTours(id, next);
+        toast('Tour removed from group');
         refreshAdminPanel();
       }catch(err){ toast(err.message||'Remove failed', true); }
     };
@@ -19356,7 +19669,7 @@ window.addEventListener('resize', ()=>{ if(isDoubleTour()){ resizeDoublePanes();
 /* __BME_INSP360_INTEGRATION__ */
 (function(){
   /** Semver only (no product prefix). Patch rolls 0–99 then middle number +1. */
-  const VERSION_NUM="1.2.95";
+  const VERSION_NUM="1.3.2";
   /**
    * Product line for this HTML copy:
    * - QR360 = standalone Inspections viewer (file / :8788 / workers.dev)
