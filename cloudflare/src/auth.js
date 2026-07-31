@@ -293,29 +293,68 @@ async function sendOtpEmail(env, email, code) {
   })
 }
 
-/** Build tour-assignment notification content for one recipient. */
-/** Parked for a future tour-assignment email identity (Admin Projects notify removed). */
-export function buildTourAssignEmail({ displayName, email, tourName, viewerUrl, note, assignedBy }) {
+/** Build tour-assignment / group access notification content for one recipient. */
+export function buildTourAssignEmail({
+  displayName,
+  email,
+  tourName,
+  tourNames,
+  groupName,
+  viewerUrl,
+  note,
+  assignedBy,
+}) {
   const hi = displayName ? `Hi ${displayName},` : 'Hi,'
-  const tour = tourName || 'a 360° tour'
+  const names = Array.isArray(tourNames)
+    ? tourNames.map((n) => String(n || '').trim()).filter(Boolean)
+    : []
+  if (!names.length && tourName) names.push(String(tourName))
   const by = assignedBy ? `\nAssigned by: ${assignedBy}` : ''
   const noteBlock = note ? `\n\nNote from admin:\n${note}` : ''
-  const subject = `INSP 360: You've been assigned — ${tour}`
-  const text =
-    `${hi}\n\nYou've been given access to the 360° tour "${tour}" in INSP 360.\n\n` +
-    `Open the viewer: ${viewerUrl}\n` +
-    `Sign in with this email (${email}), then open Cloud tours to find it.${by}${noteBlock}\n\n— QuadReal INSP 360`
-  const noteHtml = note
-    ? `<p style="margin:16px 0 0;padding:12px 14px;background:#f4f6f9;border-radius:8px;color:#333"><strong>Note:</strong> ${escapeHtml(note)}</p>`
-    : ''
-  const html =
-    `<p>${escapeHtml(hi)}</p>` +
-    `<p>You've been given access to the 360° tour <strong>${escapeHtml(tour)}</strong> in INSP 360.</p>` +
-    `<p><a href="${escapeHtml(viewerUrl)}">Open INSP 360 Viewer</a></p>` +
-    `<p>Sign in with <strong>${escapeHtml(email)}</strong>, then open <em>Cloud tours</em> to find it.</p>` +
-    (assignedBy ? `<p style="color:#666;font-size:13px">Assigned by ${escapeHtml(assignedBy)}</p>` : '') +
-    noteHtml +
-    `<p style="color:#666;font-size:13px;margin-top:24px">— QuadReal INSP 360</p>`
+  const groupBit = groupName ? ` (group “${groupName}”)` : ''
+
+  let subject
+  let text
+  let html
+  if (names.length <= 1) {
+    const tour = names[0] || 'a 360° tour'
+    subject = `INSP 360: You've been assigned — ${tour}`
+    text =
+      `${hi}\n\nYou've been given access to the 360° tour "${tour}"${groupBit} in INSP 360.\n\n` +
+      `Open the viewer: ${viewerUrl}\n` +
+      `Sign in with this email (${email}), then open Cloud tours to find it.${by}${noteBlock}\n\n— QuadReal INSP 360`
+    const noteHtml = note
+      ? `<p style="margin:16px 0 0;padding:12px 14px;background:#f4f6f9;border-radius:8px;color:#333"><strong>Note:</strong> ${escapeHtml(note)}</p>`
+      : ''
+    html =
+      `<p>${escapeHtml(hi)}</p>` +
+      `<p>You've been given access to the 360° tour <strong>${escapeHtml(tour)}</strong>${groupName ? ` in group <strong>${escapeHtml(groupName)}</strong>` : ''} in INSP 360.</p>` +
+      `<p><a href="${escapeHtml(viewerUrl)}">Open INSP 360 Viewer</a></p>` +
+      `<p>Sign in with <strong>${escapeHtml(email)}</strong>, then open <em>Cloud tours</em> to find it.</p>` +
+      (assignedBy ? `<p style="color:#666;font-size:13px">Assigned by ${escapeHtml(assignedBy)}</p>` : '') +
+      noteHtml +
+      `<p style="color:#666;font-size:13px;margin-top:24px">— QuadReal INSP 360</p>`
+  } else {
+    subject = `INSP 360: Tour access${groupName ? ` — ${groupName}` : ''}`
+    const listText = names.map((n) => `• ${n}`).join('\n')
+    const listHtml = `<ul>${names.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>`
+    text =
+      `${hi}\n\nYou've been given access to these 360° tours${groupBit} in INSP 360:\n\n${listText}\n\n` +
+      `Open the viewer: ${viewerUrl}\n` +
+      `Sign in with this email (${email}), then open Cloud tours to find them.${by}${noteBlock}\n\n— QuadReal INSP 360`
+    const noteHtml = note
+      ? `<p style="margin:16px 0 0;padding:12px 14px;background:#f4f6f9;border-radius:8px;color:#333"><strong>Note:</strong> ${escapeHtml(note)}</p>`
+      : ''
+    html =
+      `<p>${escapeHtml(hi)}</p>` +
+      `<p>You've been given access to these 360° tours${groupName ? ` in group <strong>${escapeHtml(groupName)}</strong>` : ''} in INSP 360:</p>` +
+      listHtml +
+      `<p><a href="${escapeHtml(viewerUrl)}">Open INSP 360 Viewer</a></p>` +
+      `<p>Sign in with <strong>${escapeHtml(email)}</strong>, then open <em>Cloud tours</em> to find them.</p>` +
+      (assignedBy ? `<p style="color:#666;font-size:13px">Assigned by ${escapeHtml(assignedBy)}</p>` : '') +
+      noteHtml +
+      `<p style="color:#666;font-size:13px;margin-top:24px">— QuadReal INSP 360</p>`
+  }
   return { subject, text, html }
 }
 

@@ -23,15 +23,18 @@
  *   DELETE /api/tours/<key>/mpu/<uploadId>       — abort
  *   DELETE /api/tours/<key>                      — admin or edit permission
  *   PATCH /api/tours/<key>/status                — captureStatus skeleton|in_progress|complete
- *   /api/admin/*  (admin role only; People/Groups + tour grants + activity-log;
+ *   /api/admin/*  (admin role only; People/Groups/Email + tour grants + activity-log;
  *                 GET /api/admin/projects, PUT /api/admin/groups/:id/tours,
+ *                 POST /api/admin/notify,
  *                 GET /api/admin/activity-log, POST /api/admin/activity-log/send)
  * Cron: daily activity digest → quadreal.rpiwin@gmail.com
  */
 
 import {
   authWallResponse,
+  buildTourAssignEmail,
   handleAuthApi,
+  sendResendEmail,
   verifySession,
 } from './auth.js'
 import {
@@ -808,6 +811,94 @@ async function handleAdmin(request, env, user, path) {
       /* telemetry must not block */
     }
     return json({ ok: true, id, tours: cleaned })
+  }
+
+  // POST /api/admin/notify — email chosen people about group/tour access
+  if (path === '/api/admin/notify' && request.method === 'POST') {
+    const body = await readJsonBody(request)
+    const emails = [
+      ...new Set(
+        (Array.isArray(body?.emails) ? body.emails : [])
+          .map((e) => String(e || '').trim().toLowerCase())
+          .filter((e) => e.includes('@')),
+      ),
+    ].slice(0, 50)
+    if (!emails.length) return json({ error: 'Select at least one recipient' }, 400)
+
+    const note = String(body?.note || '').trim().slice(0, 2000)
+    const groupId = body?.groupId != null ? String(body.groupId) : ''
+    let groupName = ''
+    if (groupId) {
+      const g = await env.INSP360_DB.prepare('SELECT name FROM groups WHERE id = ?')
+        .bind(groupId)
+        .first()
+      if (!g) return json({ error: 'Group not found' }, 404)
+      groupName = g.name || ''
+    }
+
+    let cloudKeys = [
+      ...new Set(
+        (Array.isArray(body?.cloudKeys) ? body.cloudKeys : [])
+          .map((k) => String(k || '').trim())
+          .filter(Boolean),
+      ),
+    ].slice(0, 40)
+    if (!cloudKeys.length && groupId) {
+      const grantRows = await env.INSP360_DB.prepare(
+        `SELECT cloud_key FROM project_grants
+         WHERE principal_type = 'group' AND principal_id = ?`,
+      )
+        .bind(groupId)
+        .all()
+      cloudKeys = (grantRows.results || []).map((r) => r.cloud_key).filter(Boolean)
+    }
+
+    const tourNames = cloudKeys.map((key) => {
+      const base = key.split('/').pop() || key
+      return base.replace(/\.insp360$/i, '') || key
+    })
+
+    const viewerUrl = String(body?.viewerUrl || new URL(request.url).origin).replace(/\/$/, '')
+    const assignedBy = user.email || ''
+    const usersRows = await env.INSP360_DB.prepare(
+      `SELECT email, display_name FROM users`,
+    ).all()
+    const nameByEmail = new Map(
+      (usersRows.results || []).map((u) => [
+        String(u.email || '').toLowerCase(),
+        u.display_name || '',
+      ]),
+    )
+
+    const sent = []
+    const failed = []
+    for (const email of emails) {
+      const content = buildTourAssignEmail({
+        displayName: nameByEmail.get(email) || '',
+        email,
+        tourNames,
+        groupName,
+        viewerUrl,
+        note,
+        assignedBy,
+      })
+      const result = await sendResendEmail(env, {
+        to: email,
+        subject: content.subject,
+        text: content.text,
+        html: content.html,
+      })
+      if (result.ok) sent.push(email)
+      else failed.push({ email, error: result.error || 'Send failed' })
+    }
+
+    if (!sent.length) {
+      return json(
+        { ok: false, error: failed[0]?.error || 'Failed to send email', sent, failed },
+        502,
+      )
+    }
+    return json({ ok: true, sent, failed, groupName, tours: tourNames })
   }
 
   // GET /api/admin/activity-log?hours=24 — last N hours digest (default 24, max 168)

@@ -655,6 +655,34 @@ async function handleAdmin(req, res, user, pathname, url) {
     return json(res, { ok: true, id, tours: cleaned })
   }
 
+  if (pathname === '/api/admin/notify' && req.method === 'POST') {
+    const body = (await readJsonBody(req)) || {}
+    const emails = [
+      ...new Set(
+        (Array.isArray(body.emails) ? body.emails : [])
+          .map((e) => String(e || '').trim().toLowerCase())
+          .filter((e) => e.includes('@')),
+      ),
+    ].slice(0, 50)
+    if (!emails.length) return json(res, { error: 'Select at least one recipient' }, 400)
+    let groupName = ''
+    const groupId = body.groupId != null ? String(body.groupId) : ''
+    if (groupId) {
+      const g = await aclDb.prepare('SELECT name FROM groups WHERE id = ?').bind(groupId).first()
+      if (!g) return json(res, { error: 'Group not found' }, 404)
+      groupName = g.name || ''
+    }
+    return json(res, {
+      ok: true,
+      local: true,
+      sent: emails,
+      failed: [],
+      groupName,
+      tours: Array.isArray(body.cloudKeys) ? body.cloudKeys : [],
+      hint: 'Local API does not send Resend email',
+    })
+  }
+
   return json(res, { error: 'Not found' }, 404)
 }
 
