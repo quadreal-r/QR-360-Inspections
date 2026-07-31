@@ -53,7 +53,14 @@
   .topbar{
     position:fixed; top:0; left:0; right:0; height:52px; z-index:20;
     display:flex; align-items:center; gap:5px; padding:0 14px;
-    background:linear-gradient(180deg, rgba(19,32,73,.92), rgba(19,32,73,0)); pointer-events:none;
+    background:none; pointer-events:none;
+  }
+  /* Gradient banner drawn as a pseudo-element so its fade can extend below the
+     52px bar without moving the controls inside it. Tune --topbar-fade only. */
+  .topbar::before{
+    content:''; position:absolute; left:0; right:0; top:0;
+    height:var(--topbar-fade, 92px); pointer-events:none;
+    background:linear-gradient(180deg, rgba(19,32,73,.92), rgba(19,32,73,0));
   }
   .topbar > *{pointer-events:auto}
   body:not(.proj-open) .topbar .topbtn{display:none}
@@ -63,11 +70,11 @@
   .brand img{width:26px; height:26px; object-fit:contain; flex:0 0 auto; display:block}
   .brand .brand-text{display:flex; flex-direction:column; gap:1px; min-width:0}
   .brand b{font-weight:600; font-size:13px; letter-spacing:-.02em; color:var(--text)}
-  .brand span{color:var(--muted); font-size:10px; letter-spacing:.04em}
+  .brand span{color:rgba(255,255,255,.9); font-size:10px; letter-spacing:.04em}
   .qr-mark{display:block; width:min(168px,52vw); height:auto; margin:0 auto 4px; object-fit:contain}
   #appVer{
     flex:0 0 auto; pointer-events:none; user-select:none;
-    font-family:var(--font); font-size:11px; color:var(--muted-dim); letter-spacing:.04em;
+    font-family:var(--font); font-size:11px; color:rgba(255,255,255,.92); letter-spacing:.04em;
     padding:5px 8px; border:1px solid var(--border); border-radius:7px; background:rgba(21,26,33,.72);
   }
   /* Tour name — plain sign/label (not a button chip) */
@@ -123,19 +130,16 @@
   #saveProgOverlay .sp-pct{
     flex:0 0 auto; color:var(--text); font-variant-numeric:tabular-nums; min-width:28px; text-align:right; opacity:.9;
   }
-  /* Cloud upload / large saves: centered card so progress is obvious */
-  body.save-prog-prominent::before{
-    content:''; position:fixed; inset:0; z-index:239; background:rgba(0,0,0,.5);
-    pointer-events:none;
-  }
+  /* Cloud upload / large saves: centered card so progress is obvious.
+     Scrim is a 100vmax box-shadow on the card itself (not body::before) so the
+     dialog can never sit under the dimmer — even if reparenting fails. */
   #saveProgOverlay.prominent{
     position:fixed; left:50%; top:44%; transform:translate(-50%,-50%);
     z-index:240; flex:none; width:min(460px,92vw); max-width:none;
     padding:20px 22px; flex-direction:column; align-items:stretch; gap:12px;
     pointer-events:auto; border-radius:14px;
-    background:rgba(16,24,40,.97); border:1px solid rgba(255,255,255,.16);
-    box-shadow:0 24px 70px rgba(0,0,0,.55);
-    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    background:#101828; border:1px solid rgba(255,255,255,.18);
+    box-shadow:0 0 0 100vmax rgba(0,0,0,.55), 0 24px 70px rgba(0,0,0,.55);
   }
   #saveProgOverlay.prominent .sp-row{
     flex-direction:column; align-items:stretch; gap:10px;
@@ -262,7 +266,8 @@
   }
   .btn svg{width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
 
-  #empty{position:fixed; inset:0; z-index:10; display:flex; flex-direction:column; align-items:center; justify-content:safe center; gap:22px; text-align:center; padding:40px 24px; overflow-y:auto; background:var(--bg)}
+  /* background intentionally unset (as v1.1.79) so a soft-parked tour shows through instead of a flat navy sheet */
+  #empty{position:fixed; inset:0; z-index:10; display:flex; flex-direction:column; align-items:center; justify-content:safe center; gap:22px; text-align:center; padding:40px 24px; overflow-y:auto}
   #empty .ring{width:96px; height:96px; border-radius:50%; border:1.5px solid var(--border); position:relative; display:grid; place-items:center}
   #empty .ring::before,#empty .ring::after{content:""; position:absolute; border:1px solid var(--border-soft); border-radius:50%}
   #empty .ring::before{inset:-12px} #empty .ring::after{inset:-24px; border-color:rgba(42,51,63,.4)}
@@ -338,7 +343,7 @@
   /* Section name comes from Local/Cloud tabs — hide redundant heading */
   .dash-title{display:none}
   .dash-head{display:flex; align-items:baseline; justify-content:flex-end; gap:8px; margin:0 4px 8px}
-  .dash-summary{font-family:var(--sans); font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap}
+  .dash-summary{font-family:var(--sans); font-size:12px; color:var(--accent); font-variant-numeric:tabular-nums; white-space:nowrap}
   /* Admin fills the right start/viewer space; Local/Cloud stay on the left */
   #adminPane{
     display:none; position:fixed; right:16px; top:68px; bottom:16px; z-index:12;
@@ -1052,7 +1057,7 @@
   /* Dashboard stays available in embed so users can reach Double Tour Inspection */
   body.embed.proj-open #btnDashboard,
   body.embed.double-tour #btnDashboard{display:inline-flex !important}
-  /* Soft dashboard: tour stays loaded; show Cloud browser; #dashBack returns to the sphere */
+  /* Soft dashboard: tour stays loaded; show Cloud browser; topbar Back returns to the sphere */
   body.embed-dash #stage,
   body.embed-dash #library,
   body.embed-dash #libShow,
@@ -1077,13 +1082,6 @@
   body.embed #empty.has-dash{padding-left:calc(var(--dash-w, 604px) + 56px)}
   body.embed-dash #empty.has-admin,
   body.embed #empty.has-admin{padding-right:calc(var(--admin-w, 735px) + 32px)}
-  #dashBack{
-    display:none; width:100%; margin:0 0 10px; justify-content:flex-start; gap:6px;
-    font-size:12px; padding:8px 10px; font-weight:600;
-    border-color:var(--accent); color:#fff; background:rgba(73,116,255,.22);
-    flex:0 0 auto;
-  }
-  body.embed-dash #dashBack{display:inline-flex}
   body.embed #projEmpty{display:none !important}
   #openLinkedProj{display:none !important}
   body.embed #empty.show-linked #openLinkedProj{display:inline-flex !important}
@@ -1166,6 +1164,8 @@
   .ds-thumb{flex:0 0 auto; width:112px; position:relative; border:1.5px solid var(--border); border-radius:8px; overflow:hidden; background:var(--qr-blue1); cursor:pointer; padding:0; text-align:left; color:inherit; font:inherit}
   .ds-thumb:hover{border-color:var(--accent-dim)}
   .ds-thumb.on{border-color:var(--accent); box-shadow:0 0 0 1px var(--accent)}
+  .ds-thumb.ds-pending{opacity:.72}
+  .ds-thumb.ds-pending img{background:repeating-linear-gradient(-45deg, #0a1228, #0a1228 6px, #132049 6px, #132049 12px)}
   .ds-thumb img{display:block; width:100%; height:56px; object-fit:cover; background:#0a1228}
   .ds-media{position:relative; display:block}
   .ds-thumb .ds-check{position:absolute; top:auto; bottom:5px; left:5px; width:18px; height:18px; border-radius:5px; background:rgba(19,32,73,.88); border:1.5px solid var(--border); display:grid; place-items:center; color:transparent}
@@ -1262,12 +1262,80 @@
   }
   #adminPane #adminPeopleList{
     flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;
-    margin:0; padding-right:2px; scrollbar-width:thin;
+    margin:0; padding:8px; scrollbar-width:thin;
+    display:flex; flex-direction:column; gap:6px;
+    background:#cfd6e2; border:1.5px solid #8e99ad; border-radius:10px;
+    box-sizing:border-box;
+  }
+  #adminPane #adminPeopleList.admin-empty{
+    display:block; background:transparent; border:none; padding:14px 12px;
   }
   #adminPane #adminPeopleList::-webkit-scrollbar{width:8px}
   #adminPane #adminPeopleList::-webkit-scrollbar-thumb{background:#8e99ad; border-radius:4px}
-  #adminPane #adminGroups.admin-section.on > .admin-groups-split{
+  #adminPane #adminPeopleList .admin-member-row{padding:6px 8px}
+  #adminPane #adminPeopleList .admin-member-name{font-size:12px}
+  #adminPane #adminPeopleList .admin-member-actions .admin-role-select,
+  #adminPane #adminPeopleList .admin-member-actions .btn{
+    font-size:11px; padding:4px 8px;
+  }
+  #adminPane #adminPeopleList .admin-member-actions .admin-role-select{
+    min-width:78px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+    border-radius:4px; padding:2px 18px 2px 6px; min-height:0; cursor:pointer;
+    -webkit-appearance:none; appearance:none;
+    background-repeat:no-repeat; background-position:right 5px center;
+  }
+  #adminPane #adminPeopleList .admin-member-actions .admin-role-select.member{
+    background-color:#d5dbe6; color:#2a3344; border:1px solid #8e99ad;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%232a3344' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  }
+  #adminPane #adminPeopleList .admin-member-actions .admin-role-select.admin{
+    background-color:#4974FF; color:#fff; border:1px solid #385ED0;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%23ffffff' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  }
+  #adminPane #adminGroups.admin-section.on > .admin-groups-split,
+  #adminPane #adminEmail.admin-section.on > .admin-groups-split{
     flex:1 1 auto; min-height:0; display:flex; gap:12px; overflow:hidden;
+  }
+  #adminPane #adminEmail.admin-section.on{
+    display:flex; flex-direction:column; flex:1 1 auto; min-height:0; overflow:hidden;
+  }
+  #adminPanel #adminEmailList{
+    flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+    margin:0; padding-right:2px; scrollbar-width:thin;
+    display:flex; flex-direction:column; gap:4px;
+  }
+  #adminPanel #adminEmailList::-webkit-scrollbar{width:8px}
+  #adminPanel #adminEmailList::-webkit-scrollbar-thumb{background:#8e99ad; border-radius:4px}
+  #adminPanel #adminEmailList.admin-empty,
+  #adminPanel #adminEmailDetail.admin-empty{
+    display:block; padding:14px 12px;
+  }
+  #adminPanel #adminEmailDetail{
+    flex:1 1 auto; min-height:0; overflow:hidden;
+    display:flex; flex-direction:column; gap:10px;
+    padding:0; margin:0; border:1px solid #8e99ad; border-radius:10px;
+    background:#e8ecf2; box-sizing:border-box;
+  }
+  #adminPanel #adminEmailDetail:not(.admin-empty){padding:12px}
+  #adminPanel #adminEmail .admin-notify-note{
+    width:100%; box-sizing:border-box; min-height:64px; resize:vertical; margin:0;
+    font-family:var(--sans); font-size:13px; color:#151b26; background:#eef1f5;
+    border:1px solid #8e99ad; border-radius:8px; padding:10px 12px;
+  }
+  #adminPanel #adminEmail .admin-member-row.admin-notify-pick{
+    cursor:pointer; user-select:none;
+  }
+  #adminPanel #adminEmail .admin-member-row.admin-notify-pick .admin-member-name{
+    display:flex; align-items:center; gap:8px;
+  }
+  #adminPanel #adminEmail .admin-member-row.admin-notify-pick input{
+    width:15px; height:15px; flex:0 0 auto; accent-color:#2a3344; cursor:pointer;
+  }
+  #adminPanel #adminEmail #adminEmailSend{
+    background:#2a3344; border-color:#2a3344; color:#fff;
+  }
+  #adminPanel #adminEmail #adminEmailSend:hover{
+    background:#364357; border-color:#364357; color:#fff;
   }
   /* Projects: freeze search + capped tour list; scroll grants/detail below */
   #adminPane #adminProjects.admin-section.on{
@@ -1456,6 +1524,9 @@
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left;
   }
   #adminPanel .admin-grant-row.off .admin-grant-label{color:#5c677a; font-weight:500}
+  #adminPanel .admin-member-row .admin-grant-perm,
+  #adminPanel .admin-add-member select[data-admin-add-perm],
+  #adminPanel .admin-add-member select[data-admin-tour-perm],
   #adminPanel .admin-grant-row .admin-grant-perm{
     flex:0 0 auto; font-family:var(--sans); font-size:10px; font-weight:700;
     text-transform:uppercase; letter-spacing:.05em; text-align:left; text-align-last:left;
@@ -1464,13 +1535,21 @@
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%232a3344' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
     background-repeat:no-repeat; background-position:right 5px center;
   }
+  #adminPanel .admin-member-row .admin-grant-perm.view,
+  #adminPanel .admin-add-member select[data-admin-add-perm].view,
+  #adminPanel .admin-add-member select[data-admin-tour-perm].view,
   #adminPanel .admin-grant-row .admin-grant-perm.view{
     background-color:#d5dbe6; color:#2a3344; border:1px solid #8e99ad;
   }
+  #adminPanel .admin-member-row .admin-grant-perm.edit,
+  #adminPanel .admin-add-member select[data-admin-add-perm].edit,
+  #adminPanel .admin-add-member select[data-admin-tour-perm].edit,
   #adminPanel .admin-grant-row .admin-grant-perm.edit{
-    background-color:#f5e8b8; color:#6b5200; border:1px solid #d4b84a;
-    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%236b5200' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-color:#f0c14a; color:#3d2e00; border:1px solid #c49212;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%233d2e00' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   }
+  #adminPanel .admin-member-row .admin-grant-perm:disabled,
+  #adminPanel .admin-add-member select[data-admin-add-perm]:disabled,
   #adminPanel .admin-grant-row .admin-grant-perm:disabled{
     opacity:.55; cursor:default;
   }
@@ -1564,13 +1643,20 @@
     background:transparent; border:none; padding:0; max-height:none; overflow:visible;
   }
   #adminPanel .admin-member-row{
-    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
     flex:0 0 auto;
     padding:8px 10px; border:1px solid #8e99ad; border-radius:8px; background:#eef1f5;
   }
-  #adminPanel .admin-member-row span{font-size:13px; word-break:break-all; min-width:0}
+  #adminPanel .admin-member-row .admin-member-name{
+    flex:1 1 auto; min-width:0; font-size:13px; word-break:break-all;
+    display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  }
+  #adminPanel .admin-member-row .admin-member-actions{
+    display:flex; align-items:center; gap:6px; flex:0 0 auto; margin-left:auto;
+  }
   #adminPanel .admin-member-row .admin-member-meta{display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; flex:1}
   #adminPanel .admin-member-row button{flex:0 0 auto; font-size:12px; padding:6px 10px}
+  #adminPanel .admin-member-row .admin-member-actions .admin-grant-perm{flex:0 0 auto}
   #adminPanel .admin-add-member{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
   #adminPanel .admin-add-member select,
   #adminPanel .admin-add-member input{flex:1 1 160px}
@@ -1658,15 +1744,19 @@
   #adminPanel .admin-groups-split .admin-member-row{
     padding:6px 8px;
   }
-  #adminPanel .admin-groups-split .admin-member-row span{font-size:12px}
+  #adminPanel .admin-groups-split .admin-member-row .admin-member-name{font-size:12px}
   #adminPanel .admin-groups-split .admin-member-row button{font-size:11px; padding:4px 8px}
+  #adminPanel .admin-groups-split .admin-member-row .admin-member-actions .admin-grant-perm{
+    font-size:11px; padding:4px 6px; min-width:64px;
+  }
   #adminPanel .admin-groups-split .admin-add-member{
     flex:0 0 auto; flex-wrap:nowrap; gap:6px;
   }
   #adminPanel .admin-groups-split .admin-add-member select{
     flex:1 1 auto; min-width:0; font-size:12px; padding:7px 8px;
   }
-  #adminPanel .admin-groups-split .admin-add-member select[data-admin-tour-perm]{
+  #adminPanel .admin-groups-split .admin-add-member select[data-admin-tour-perm],
+  #adminPanel .admin-groups-split .admin-add-member select[data-admin-add-perm]{
     flex:0 0 auto; width:76px;
   }
   #adminPanel .admin-groups-split .admin-add-member .btn{
@@ -1808,7 +1898,7 @@
   <button class="btn icon topbtn" id="btnBlurFaces" title="Privacy blur — faces or licence plates (auto or manual)"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/><path d="M8.6 8.2l-.8.8M15.4 8.2l.8.8M11 12.4h2"/></svg></button>
   <button class="btn icon topbtn" id="btnPrivacySettings" title="Privacy settings — automatic face &amp; licence-plate blur"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   <button type="button" class="btn" id="btnAdmin" title="Admin — people, groups, and tour access">Admin</button>
-  <span id="appVer" title="Standalone QR-360° viewer">QR360-v1.2.84</span>
+  <span id="appVer" title="Standalone QR-360° viewer">QR360-v1.3.8</span>
 </div>
 
 <div id="privacySettings">
@@ -1821,7 +1911,7 @@
   <img class="qr-mark" src="data:image/png;base64,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" alt="QuadReal" width="168" height="40">
   <div>
     <h1>Load a 360° photos</h1>
-    <p>Open one or more <b>equirectangular</b> panoramas (2:1 <b>.jpg</b> / <b>.png</b>) — the stitched output exported from Insta360 Studio or your camera. Drag to look, scroll to zoom.</p>
+    <p>Open one or more <b>equirectangular</b> panoramas (2:1 <b>.jpg</b>) — the stitched output exported from Insta360 Studio or your camera. Drag to look, scroll to zoom.</p>
   </div>
   <div id="dbStatus" style="display:none"></div>
   <button type="button" id="gateContinue"></button>
@@ -1841,7 +1931,6 @@
   <div class="hint">drop equirectangular photos anywhere &nbsp;·&nbsp; <span class="kbd">drag</span> look &nbsp; <span class="kbd">scroll</span> zoom</div>
   <div id="dash">
     <div class="pane-resize" id="dashResize" role="separator" aria-orientation="vertical" aria-label="Resize tour list" title="Drag to resize tour list"></div>
-    <button type="button" class="btn" id="dashBack" title="Back to the tour you were viewing"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Back to tour</button>
     <div class="dash-head">
       <div class="dash-title" id="dashTitle">Recent projects</div>
       <div class="dash-summary" id="dashSummary">0 projects</div>
@@ -1887,7 +1976,7 @@
       <div class="admin-subtabs" id="adminSubtabs">
         <button type="button" class="on" data-admin="people">People</button>
         <button type="button" data-admin="groups">Groups</button>
-        <button type="button" data-admin="projects">Projects</button>
+        <button type="button" data-admin="email" title="E-mail Notification">E-mail Notification</button>
       </div>
       <div class="admin-section on" id="adminPeople">
         <div class="admin-toolbar">
@@ -1929,66 +2018,20 @@
           </div>
         </div>
       </div>
-      <div class="admin-section" id="adminProjects">
-        <input id="adminProjectsSearch" class="admin-search" type="search" placeholder="Search cloud tours…" autocomplete="off">
-        <div id="adminProjectsList" class="admin-empty">Loading…</div>
-        <input type="hidden" id="adminProjectSelect" value="">
-        <div id="adminProjectSelected" class="admin-project-selected" style="display:none"></div>
-        <div id="adminProjectGrantsHint" class="admin-empty">Pick a project above to manage View / Edit grants.</div>
-        <div id="adminProjectDetail">
-          <div class="admin-toolbar" id="adminGrantSaveRow">
-            <button type="button" class="btn danger" id="adminTourDelete" title="Permanently delete this tour from cloud storage">Delete tour</button>
-            <button type="button" class="btn" id="adminGrantSave">Save grants</button>
+      <div class="admin-section" id="adminEmail">
+        <div class="admin-groups-split">
+          <div class="admin-groups-pane admin-groups-list-pane">
+            <input id="adminEmailSearch" class="admin-search" type="search" placeholder="Search groups, people, tours…" autocomplete="off">
+            <div id="adminEmailList" class="admin-empty">Loading…</div>
           </div>
-          <div class="admin-group-card admin-project-fold" data-project-fold="groups">
-            <div class="admin-group-head" data-admin-toggle-project-fold="groups" role="button" tabindex="0" aria-expanded="false">
-              <div class="admin-group-title">
-                <span class="admin-group-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
-                <b>Assign groups</b>
-                <span class="admin-group-count" id="adminFoldGroupsCount"></span>
-              </div>
-            </div>
-            <div class="admin-group-body">
-              <div id="adminProjectGroupGrants"></div>
-            </div>
-          </div>
-          <div class="admin-group-card admin-project-fold" data-project-fold="people">
-            <div class="admin-group-head" data-admin-toggle-project-fold="people" role="button" tabindex="0" aria-expanded="false">
-              <div class="admin-group-title">
-                <span class="admin-group-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
-                <b>Assign people</b>
-                <span class="admin-group-count" id="adminFoldPeopleCount"></span>
-              </div>
-            </div>
-            <div class="admin-group-body">
-              <div id="adminProjectPeopleGrants"></div>
-            </div>
-          </div>
-          <div class="admin-group-card admin-project-fold" data-project-fold="email">
-            <div class="admin-group-head" data-admin-toggle-project-fold="email" role="button" tabindex="0" aria-expanded="false">
-              <div class="admin-group-title">
-                <span class="admin-group-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
-                <b>Send emails</b>
-              </div>
-            </div>
-            <div class="admin-group-body">
-              <div id="adminNotifyBox" class="admin-notify">
-                <p class="admin-notify-hint">Select who should get an email about this tour assignment, then send. Use <b>Select all</b> for everyone, or <b>Select granted</b> for people (and group members) already on this tour.</p>
-                <div class="admin-notify-actions">
-                  <button type="button" class="btn" id="adminNotifySelectGranted">Select granted</button>
-                  <button type="button" class="btn" id="adminNotifySelectAll">Select all</button>
-                  <button type="button" class="btn" id="adminNotifySelectNone">Clear</button>
-                </div>
-                <div id="adminNotifyList" class="admin-notify-list"></div>
-                <textarea id="adminNotifyNote" placeholder="Optional note to include in the email…" autocomplete="off"></textarea>
-                <button type="button" class="btn" id="adminNotifySend">Send email to selected</button>
-              </div>
-            </div>
+          <div class="admin-groups-pane admin-groups-detail-pane">
+            <div id="adminEmailDetail" class="admin-empty">Select a group</div>
           </div>
         </div>
       </div>
     </div>
   </div>
+
 
 
 <div id="doubleRoot" aria-label="Double Tour Inspection">
@@ -2299,10 +2342,10 @@
     <div class="plan-editor" id="planEditor" hidden aria-hidden="true"></div>
 </div>
 
-<input type="file" id="fileInput" accept=".jpg,.jpeg,.png,image/*" multiple>
+<input type="file" id="fileInput" accept=".jpg,.jpeg,image/jpeg" multiple>
 <input type="file" id="folderInput" webkitdirectory directory multiple>
 <input type="file" id="tourFile" accept="application/json,.json">
-<input type="file" id="projFile" accept=".insp360,.zip,application/zip">
+<input type="file" id="projFile" accept=".insp360,.360skeleton,.zip,application/zip">
 <input type="file" id="coverPick" accept="image/*">
 <input type="file" id="hsImgPick" accept="image/*" multiple>
 
@@ -2368,26 +2411,6 @@
       <div class="pi-stat"><span class="pi-n" id="piN2d">0</span><span class="pi-l">2D photos</span></div>
       <div class="pi-stat"><span class="pi-n" id="piNfloors">0</span><span class="pi-l">Floors / plans</span></div>
     </div>
-    <div id="piAcl" class="pi-acl" aria-live="polite">
-      <div class="pi-acl-h" id="piAclTitle">Assigned groups</div>
-      <p class="pi-acl-hint" id="piAclHint" style="display:none">Choose which groups can access this tour after it is uploaded to the cloud. You can also create a new group from the project name below — edit the name first if you want.</p>
-      <div id="piAclCreate" class="pi-acl-create">
-        <button type="button" class="pi-acl-create-toggle" id="piAclCreateToggle" aria-expanded="false" aria-controls="piAclCreateBody">
-          <span class="pi-acl-create-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
-          <span class="pi-acl-create-toggle-label">Create a new group</span>
-        </button>
-        <div class="pi-acl-create-body" id="piAclCreateBody">
-          <div class="pi-acl-create-row">
-            <label>New group name
-              <input type="text" id="piNewGroupName" placeholder="Starts from project name — edit before creating" spellcheck="false" autocomplete="off">
-            </label>
-            <button class="gm-btn" id="piCreateGroup" type="button">Create group</button>
-          </div>
-          <p class="pi-acl-create-note">Uses the project name by default. Change it anytime before Create group or Create project.</p>
-        </div>
-      </div>
-      <div id="piAclGroups" class="pi-acl-list"></div>
-    </div>
     <div class="pi-actions">
       <button class="gm-btn" id="piCancel" type="button">Cancel</button>
       <button class="gm-btn" id="piShare" type="button">Share…</button>
@@ -2415,7 +2438,7 @@ import * as THREE from 'three';
 
 /* ============================================================
    INSP 360 Viewer — equirectangular panorama viewer
-   Loads 2:1 equirectangular .jpg / .png panoramas (the stitched
+   Loads 2:1 equirectangular .jpg panoramas (the stitched
    output from Insta360 Studio or the camera) and maps them onto
    an inward-facing sphere via a fragment shader. Adds a linked
    virtual-tour layer (hotspots, labels, links) on top.
@@ -3394,21 +3417,32 @@ function photoTimeMs(it){
   return null;
 }
 /**
- * Time-based pairing of fresh photos into unfilled pin slots that carry a shoot-log ts.
- * Mirrors Capture's autoByTime: sort photos by time, remove the median phone↔camera clock
- * offset, then assign each pin its nearest unused photo. Returns {pairs, files, off}.
+ * Time-based pairing of candidate photos into unfilled pin slots that carry a shoot-log ts.
+ * Sorts pins by capture time, estimates phone↔camera clock offset from nearest-neighbor
+ * deltas (robust when the folder has many extra shots), then assigns each pin its nearest
+ * unused photo after offset. Optional maxDeltaMs drops weak matches.
  */
-async function pairFreshPhotosByTime(fresh, slotsWithTs){
+async function pairFreshPhotosByTime(fresh, slotsWithTs, opts){
+  opts=opts||{};
+  const maxDeltaMs=(opts.maxDeltaMs!=null)?+opts.maxDeltaMs:(30*60*1000); // 30 min after clock sync
   for(const it of fresh){ try{ await ensureMeta(it); }catch(_){} }
   const files=fresh.map(it=>({it, time:photoTimeMs(it)})).filter(f=>f.time!=null);
-  if(!files.length || !slotsWithTs.length) return { pairs:[], files, off:0 };
+  if(!files.length || !slotsWithTs.length) return { pairs:[], files, off:0, rejected:0 };
   files.sort((a,b)=>a.time-b.time);
-  const pins=slotsWithTs;
-  const k=Math.min(pins.length, files.length), diffs=[];
-  for(let i=0;i<k;i++) diffs.push(files[i].time - pins[i].ts);
-  diffs.sort((a,b)=>a-b);
-  const off=diffs.length?(diffs[Math.floor(diffs.length/2)]||0):0;
-  const used=new Set(), pairs=[];
+  const pins=slotsWithTs.slice().sort((a,b)=>a.ts-b.ts);
+  // Robust clock offset: median of (nearest-photo − pin) before exclusive assignment.
+  const rough=[];
+  for(const pin of pins){
+    let bt=null, bd=Infinity;
+    for(const f of files){
+      const d=Math.abs(f.time-pin.ts);
+      if(d<bd){ bd=d; bt=f.time-pin.ts; }
+    }
+    if(bt!=null) rough.push(bt);
+  }
+  rough.sort((a,b)=>a-b);
+  const off=rough.length?(rough[Math.floor(rough.length/2)]||0):0;
+  const used=new Set(), pairs=[], rejected=[];
   for(const pin of pins){
     let best=-1, bd=Infinity;
     for(let j=0;j<files.length;j++){
@@ -3416,9 +3450,24 @@ async function pairFreshPhotosByTime(fresh, slotsWithTs){
       const d=Math.abs((files[j].time-off)-pin.ts);
       if(d<bd){ bd=d; best=j; }
     }
-    if(best>=0){ used.add(best); pairs.push({ slot:pin.slot, it:files[best].it, delta:bd }); }
+    if(best<0) continue;
+    if(isFinite(maxDeltaMs) && bd>maxDeltaMs){ rejected.push({ slot:pin.slot, delta:bd }); continue; }
+    used.add(best);
+    pairs.push({ slot:pin.slot, it:files[best].it, delta:bd });
   }
-  return { pairs, files, off };
+  return { pairs, files, off, rejected:rejected.length };
+}
+/** Unfilled pin slots that have a shoot-log capture timestamp. */
+function collectUnfilledSlotsWithTs(){
+  const slots=collectUnfilledPinSlots();
+  const out=[];
+  if(!(shootLogTsMap&&shootLogTsMap.size)) return out;
+  for(const s of slots){
+    const key = s.kind==='rename' ? normPinKey(s.target) : normPinKey(s.marker && (s.marker.label||s.marker.target));
+    const ts = key ? shootLogTsMap.get(key) : null;
+    if(ts!=null) out.push({ slot:s, ts });
+  }
+  return out;
 }
 /**
  * Orchestrate auto-linking of freshly ingested photos:
@@ -3436,15 +3485,7 @@ async function autoLinkFresh(fromIdx, folderName){
     if(addrWarn){ try{ toast('Folder \u201C'+addrWarn.folder+'\u201D doesn\u2019t match project address \u201C'+addrWarn.address+'\u201D.', true); }catch(_){} }
     return { linked:0, addrWarn };
   }
-  // Slots that have a known capture timestamp from the retained shoot-log.
-  let slotsWithTs=[];
-  if(shootLogTsMap && shootLogTsMap.size){
-    for(const s of slots){
-      const key = s.kind==='rename' ? normPinKey(s.target) : normPinKey(s.marker && s.marker.label);
-      const ts = key ? shootLogTsMap.get(key) : null;
-      if(ts!=null) slotsWithTs.push({ slot:s, ts });
-    }
-  }
+  const slotsWithTs=collectUnfilledSlotsWithTs();
   const useTime = slotsWithTs.length>0;
   if(!useTime){
     // No pin timestamps → order-based fallback. Confirm only if an address warning applies.
@@ -3479,13 +3520,88 @@ async function autoLinkFresh(fromIdx, folderName){
   if(n) _postAutoLink();
   return { linked:n, mode:'time', matched, unmatched, addrWarn };
 }
+/**
+ * Add JPEG panoramas to the library.
+ * Folder picks (and any pick when pin shoot-log times exist): only keep photos that
+ * match unfilled pins by capture date/time — leftover folder shots are not added.
+ */
 async function ingest(fileList, opts){
   opts=opts||{};
+  const fromFolder=!!opts.folderName;
   const files=[...fileList].filter(f=>{
     const n=f.name.toLowerCase();
-    return n.endsWith('.jpg')||n.endsWith('.jpeg')||n.endsWith('.png')||(f.type||'').startsWith('image/');
+    // 360 library photos are JPEG only — PNG/WebP/etc. belong on the floor-plan / drawing side.
+    return n.endsWith('.jpg')||n.endsWith('.jpeg')||(f.type||'')==='image/jpeg';
   }).sort((a,b)=> ((a.lastModified||0)-(b.lastModified||0)) || a.name.localeCompare(b.name,undefined,{numeric:true}));
-  if(!files.length){ toast('No .jpg / .png images in that selection.', true); return; }
+  if(!files.length){ toast('No .jpg photos in that selection (PNG and other formats are treated as drawings).', true); return; }
+
+  const slotsWithTs=collectUnfilledSlotsWithTs();
+  const preferTime=slotsWithTs.length>0 && (fromFolder || files.length>slotsWithTs.length || opts.matchByTime);
+
+  if(preferTime){
+    toast('Matching folder photos to pin times\u2026', 4000);
+    const provisional=files.map(file=>({
+      file, name:file.name, thumbUrl:null, el:null, hotspots:[], view0:null, lastView:null,
+      headingTag:null, gps:null, gpsBearing:null, metaRead:false, dateTaken:null, _photoBytesDirty:true
+    }));
+    const res=await pairFreshPhotosByTime(provisional, slotsWithTs);
+    const matched=res.pairs.length;
+    if(!matched){
+      toast('No photos matched pin capture times (within 30 min after clock sync). Check shoot-log times vs photo EXIF.', true);
+      return;
+    }
+    const skipped=files.length-matched;
+    const unmatchedPins=slotsWithTs.length-matched;
+    const addrWarn=fromFolder ? folderAddressMismatch(opts.folderName) : null;
+    const lines=[];
+    if(addrWarn) lines.push('Address warning: folder \u201C'+addrWarn.folder+'\u201D does not match project address \u201C'+addrWarn.address+'\u201D.','');
+    lines.push('Add '+matched+' photo'+(matched===1?'':'s')+' matched by date/time to '+matched+' pin'+(matched===1?'':'s')+'?');
+    if(skipped>0) lines.push(skipped+' other folder photo'+(skipped===1?'':'s')+' will be skipped.');
+    if(unmatchedPins>0) lines.push(unmatchedPins+' pin'+(unmatchedPins===1?'':'s')+' still unmatched.');
+    if(!window.confirm(lines.join('\n'))) return;
+
+    const firstNew=items.length;
+    let n=0;
+    for(const pr of res.pairs){
+      const it={
+        file:pr.it.file, name:pr.it.name, thumbUrl:null, el:null, hotspots:[], view0:null, lastView:null,
+        headingTag:pr.it.headingTag||null, gps:pr.it.gps||null, gpsBearing:pr.it.gpsBearing||null,
+        metaRead:!!pr.it.metaRead, dateTaken:pr.it.dateTaken||null, _photoBytesDirty:true
+      };
+      items.push(it); addThumbEl(it);
+      if(pr.slot.kind==='rename'){
+        const base=String(pr.slot.target||'').replace(/(\.(?:jpe?g|png))$/i,'').trim();
+        if(base && renamePhoto(it, base)) n++;
+      } else if(pr.slot.kind==='bind' && pr.slot.marker){
+        pr.slot.marker.target=it.name; n++;
+      }
+    }
+    if(n) _postAutoLink();
+    markProjStructureDirty();
+    enterProjectMode();
+    if(currentIndex<0 && items.length) selectImage(firstNew);
+    for(let i=firstNew;i<items.length;i++){
+      const it=items[i]; it.thumbUrl=await makeThumb(it.file);
+      if(it.el&&it.thumbUrl) it.el.querySelector('img').src=it.thumbUrl;
+    }
+    if((autoBlurFaces||autoBlurPlates) && _autoBlurHook && firstNew<items.length){
+      const nNew=items.length-firstNew;
+      for(let i=firstNew;i<items.length;i++){ items[i]._autoBlurDone=false; items[i]._autoPlatesDone=false; _autoBlurHook(items[i]); }
+      toast('Auto-blur queued for '+nNew+' uploaded photo'+(nNew>1?'s':'')+'\u2026');
+    } else {
+      toast('Added '+matched+' photo'+(matched===1?'':'s')+' matched by time'+(skipped?(' \u00B7 '+skipped+' skipped'):'')+(unmatchedPins?(' \u00B7 '+unmatchedPins+' pins still open'):'')+'.');
+    }
+    if(projStorage==='cloud' && cloudKey && (_projPhotosDirty || _projStructureDirty)){
+      try{ toast('Photos matched — tap Save when you want to upload them to cloud.'); }catch(_){}
+    }
+    return;
+  }
+
+  if(fromFolder && collectUnfilledPinSlots().length && !(shootLogTsMap&&shootLogTsMap.size)){
+    toast('This project has pins but no capture timestamps. Log shots in Capture (so shoot-log keeps times), then retry the folder — only time-matched photos will be added.', true);
+    return;
+  }
+
   const firstNew=items.length;
   for(const file of files){
     const it={file,name:file.name,thumbUrl:null,el:null,hotspots:[],view0:null,lastView:null,headingTag:null,gps:null,gpsBearing:null,metaRead:false,_photoBytesDirty:true};
@@ -3494,9 +3610,6 @@ async function ingest(fileList, opts){
   const linkRes=await autoLinkFresh(firstNew, opts.folderName||null);
   const linked=(linkRes&&linkRes.linked)||0;
   markProjStructureDirty();
-  // #region agent log
-  fetch('http://127.0.0.1:7329/ingest/e032ab42-effc-401b-9493-a1e614014266',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'d5e460'},body:JSON.stringify({sessionId:'d5e460',runId:'pre-fix',hypothesisId:'D',location:'viewer:ingest',message:'photos ingested + structure dirty',data:{added:files.length,itemsLen:items.length,linked,projStorage,cloudKey:cloudKey||null,photosDirty:!!_projPhotosDirty,structureDirty:!!_projStructureDirty,cacheStale:!!(cloudKey&&isCloudTourCacheStale(cloudKey))},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   enterProjectMode();
   if(currentIndex<0) selectImage(firstNew);
   for(let i=firstNew;i<items.length;i++){ const it=items[i]; it.thumbUrl=await makeThumb(it.file); if(it.el&&it.thumbUrl) it.el.querySelector('img').src=it.thumbUrl; }
@@ -3504,7 +3617,7 @@ async function ingest(fileList, opts){
   if((autoBlurFaces||autoBlurPlates) && _autoBlurHook && firstNew<items.length){
     const nNew=items.length-firstNew;
     for(let i=firstNew;i<items.length;i++){ items[i]._autoBlurDone=false; items[i]._autoPlatesDone=false; _autoBlurHook(items[i]); }
-    toast('Auto-blur queued for '+nNew+' uploaded photo'+(nNew>1?'s':'')+'…');
+    toast('Auto-blur queued for '+nNew+' uploaded photo'+(nNew>1?'s':'')+'\u2026');
   } else if(linked){
     if(linkRes.mode==='time'){
       toast('Linked '+linked+' photo'+(linked===1?'':'s')+' to pins by time'+(linkRes.unmatched?(' \u00B7 '+linkRes.unmatched+' unmatched'):'')+'.');
@@ -3578,23 +3691,50 @@ let embedDashResumeIdx=-1;
 const _BTN_DASHBOARD_HTML='<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard';
 const _BTN_BACK_HTML='<svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Back';
 
+function hasLoadedTourForDash(){
+  return !!(document.body.classList.contains('proj-open') || (typeof items!=='undefined' && items && items.length)
+    || (typeof isDoubleTour==='function' && isDoubleTour()));
+}
+
+/** Topbar Dashboard ↔ Back. Hidden when no tour is loaded (empty home). */
 function setEmbedDashButton(mode){
   const btn=document.getElementById('btnDashboard');
   if(!btn) return;
   if(mode==='hide'){ btn.style.display='none'; return; }
-  btn.style.display='';
   if(mode==='back'){
-    // Soft dashboard: topbar becomes Back (tour still loaded). #dashBack mirrors this in the panel.
+    // Soft dashboard: only show Back when a tour is parked underneath.
+    if(!hasLoadedTourForDash()){
+      btn.style.display='none';
+      return;
+    }
+    btn.style.display='';
     btn.innerHTML=_BTN_BACK_HTML;
     btn.title='Back to the tour you were viewing';
     btn.setAttribute('aria-label','Back to tour');
-    btn.onclick=backFromEmbedDashboard;
-  } else {
-    btn.innerHTML=_BTN_DASHBOARD_HTML;
-    btn.title='Return to dashboard — recent projects & cloud tours';
-    btn.setAttribute('aria-label','Dashboard');
-    btn.onclick=openEmbedCloudDashboard;
+    return;
   }
+  // Dashboard label — only while a tour is open (not on empty home).
+  if(!hasLoadedTourForDash()){
+    btn.style.display='none';
+    return;
+  }
+  btn.style.display='';
+  btn.innerHTML=_BTN_DASHBOARD_HTML;
+  btn.title='Return to dashboard — recent projects & cloud tours';
+  btn.setAttribute('aria-label','Dashboard');
+}
+
+/** Single click handler — always resumes when soft-parked; never no-ops as Dashboard on home. */
+function onBtnDashboardClick(){
+  if(document.body.classList.contains('embed-dash') || embedDashOpen){
+    backFromEmbedDashboard();
+    return;
+  }
+  if(!hasLoadedTourForDash()){
+    setEmbedDashButton('hide');
+    return;
+  }
+  openEmbedCloudDashboard();
 }
 
 function notifyEmbedDash(open){
@@ -3614,8 +3754,9 @@ async function openEmbedCloudDashboard(){
     exitDoubleTour();
     return; // exitDoubleTour already lands on the dashboard
   }
-  // No tour loaded — already on the home/dashboard screen
+  // No tour loaded — already on the home/dashboard screen (hide noop Dashboard button)
   if(!document.body.classList.contains('proj-open') && !(items&&items.length)){
+    try{ setEmbedDashButton('hide'); }catch(_){}
     try{
       if(lastTourDashTab==='cloud'||lastTourDashTab==='local') setDashViewTab(lastTourDashTab);
     }catch(_){}
@@ -3623,8 +3764,8 @@ async function openEmbedCloudDashboard(){
     return;
   }
   if(document.body.classList.contains('embed-dash')){
-    // Already on soft dashboard — keep Back semantics
-    setEmbedDashButton('back');
+    // Already soft-parked — treat as Back (resume tour), not a no-op
+    backFromEmbedDashboard();
     return;
   }
   embedDashOpen=true;
@@ -3636,6 +3777,8 @@ async function openEmbedCloudDashboard(){
     }
   }catch(_){}
   document.body.classList.add('embed-dash');
+  // Keep proj-open so Back / Back-to-tour chrome stays available
+  if(items&&items.length) document.body.classList.add('proj-open');
   emptyEl.style.display='flex';
   emptyEl.classList.add('has-dash');
   // Normal dashboard (Local / Cloud). Double Tour only when the user clicks that button.
@@ -3846,7 +3989,6 @@ function goHome(opts){
   shootLogTsMap=null;
   photoSourceHint=null;
   tourSidecarHandle=null;
-  pendingProjectGroupGrants=[];
   projStorage='local'; cloudKey=null; cloudPermission=null;
   try{ window._localTourPath=''; }catch(_){}
   // Don't carry a previous .insp360 into a different / new project Save prompt
@@ -3876,9 +4018,9 @@ function goHome(opts){
 }
 document.getElementById('btnHome').onclick=goHome;
 // Dashboard soft-parks the loaded tour; Back / Esc / same-card click resume instantly.
-try{ setEmbedDashButton('dashboard'); }catch(_){}
-document.getElementById('btnDashboard').onclick=openEmbedCloudDashboard;
-{ const _dashBack=document.getElementById('dashBack'); if(_dashBack) _dashBack.onclick=backFromEmbedDashboard; }
+// Hidden until a tour is loaded — empty home must not show a dead Dashboard button.
+try{ setEmbedDashButton('hide'); }catch(_){}
+document.getElementById('btnDashboard').onclick=onBtnDashboardClick;
 function toggleFull(){ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.(); else document.exitFullscreen?.(); }
 document.getElementById('btnResetView').onclick=()=>{
   const it=curItem(); if(!it){ toast('Load a photo first.'); return; }
@@ -3923,7 +4065,7 @@ async function pickAndIngestPhotos(mode){
     try{
       const handles=await window.showOpenFilePicker({
         multiple:true,
-        types:[{description:'Images', accept:{'image/*':['.jpg','.jpeg','.png']}}],
+        types:[{description:'360 photos (JPEG)', accept:{'image/jpeg':['.jpg','.jpeg']}}],
         excludeAcceptAllOption:false,
         startIn: photoSourceHint||projectDir||startHint||'documents'
       });
@@ -3948,11 +4090,11 @@ async function pickAndIngestPhotos(mode){
       for await (const [name, ent] of dir.entries()){
         if(ent.kind!=='file') continue;
         const n=String(name||'').toLowerCase();
-        if(!(n.endsWith('.jpg')||n.endsWith('.jpeg')||n.endsWith('.png'))) continue;
+        if(!(n.endsWith('.jpg')||n.endsWith('.jpeg'))) continue;
         try{ files.push(await ent.getFile()); }catch(_){}
       }
       if(files.length){ await ingest(files, { folderName:(dir&&dir.name)||'' }); return; }
-      toast('No .jpg / .png images in that folder.', true);
+      toast('No .jpg photos in that folder (PNG and other formats are treated as drawings).', true);
       return;
     }catch(err){ if(err && err.name==='AbortError') return; /* fall through */ }
   }
@@ -4596,8 +4738,6 @@ let projStorage='local';   // 'local' | 'cloud'
 let cloudKey=null;         // R2 object key when projStorage==='cloud'
 let cloudPermission=null;  // 'view' | 'edit' | 'admin' | null (from ACL)
 let aclMe=null;            // { email, name, role, groups[] } from /api/me
-/** Group grants chosen at Create Project — applied on first cloud upload. */
-let pendingProjectGroupGrants=[];
 // Hosted http(s) opens on Cloud; file:// / offline stays on Local recents.
 // After a tour is opened, Dashboard prefers that tour's storage (see lastTourDashTab).
 let dashViewTab=(function(){
@@ -5614,8 +5754,7 @@ function tourData(){
     out.meta={ name:projectMeta.name||'', address:projectMeta.address||'', tenant:projectMeta.tenant||'', sf:projectMeta.sf||'', creator:projectMeta.creator||'', type:projectMeta.type||'', created:projectMeta.created||projectMeta.modified, modified:projectMeta.modified };
     const lp=normalizeLocalTourPath(window._localTourPath||projectMeta.localPath||'');
     if(lp) out.meta.localPath=lp;
-    const pending=normalizePendingGroupGrants(projectMeta.pendingGroupGrants||pendingProjectGroupGrants);
-    if(pending.length) out.meta.pendingGroupGrants=pending;
+    try{ delete projectMeta.pendingGroupGrants; }catch(_){}
   }
   if(geoIndex && Array.isArray(geoIndex.buildings) && Array.isArray(geoIndex.polys)){
     // Inside BME the live map portfolio is the source of truth — do not freeze an old copy into the tour.
@@ -5782,10 +5921,9 @@ function syncStorageUi(){
     }
   }
   if(up){
-    const show=document.body.classList.contains('proj-open') && projStorage==='local' && !document.body.classList.contains('embed') && !(aclMe && aclMe.role==='member' && cloudPermission==='view');
-    // Members without admin cannot upload new tours unless they have edit somewhere; admins always can.
-    const canUpload=!aclMe || aclMe.role==='admin' || !viewOnly;
-    up.style.display=(show && canUpload)?'':'none';
+    // Local projects: any signed-in user can upload a new cloud tour (Worker grants them edit).
+    const show=document.body.classList.contains('proj-open') && projStorage==='local' && !document.body.classList.contains('embed');
+    up.style.display=show?'':'none';
   }
   try{ syncLocalGateAddressBar(); }catch(_){}
 }
@@ -5913,11 +6051,7 @@ function applyTourText(text){
         window._localTourPath=metaPath;
         try{ void persistLocalTourPath(metaPath); }catch(_){}
       }
-      const pending=normalizePendingGroupGrants(data.meta.pendingGroupGrants);
-      if(pending.length){
-        projectMeta.pendingGroupGrants=pending;
-        pendingProjectGroupGrants=pending.slice();
-      }
+      try{ delete projectMeta.pendingGroupGrants; }catch(_){}
       setProjTitle();
       if(data.meta.status==='skeleton' || data.meta.pendingPhotos){
         try{ toast('Skeleton project — markers ready; hydrate X5 photos via PC sync (insp-sync-shots)', false); }catch(_){}
@@ -6123,11 +6257,11 @@ async function buildTourPatchTail(srcFile, tourText){
 }
 /** Sidecar file name beside an .insp360: `Tour.insp360` → `Tour.tour.json`. */
 function tourSidecarFileName(inspName){
-  return String(inspName||'project.insp360').replace(/\.(insp360|zip)$/i,'')+'.tour.json';
+  return String(inspName||'project.insp360').replace(/\.(insp360|360skeleton|zip)$/i,'')+'.tour.json';
 }
 /** R2 companion key: `building/tour.insp360` → `building/tour.tour.json`. */
 function tourCompanionCloudKey(inspKey){
-  return String(inspKey||'').replace(/\.(insp360|zip)$/i,'')+'.tour.json';
+  return String(inspKey||'').replace(/\.(insp360|360skeleton|zip)$/i,'')+'.tour.json';
 }
 function setProjectSaveBusy(on){
   const busy=!!on;
@@ -7524,7 +7658,7 @@ async function openProjectPicker(){
   if(hasFSAccess()){
     try{
       const pickerOpts={
-        types:[{description:'INSP360 project', accept:{'application/zip':['.insp360','.zip']}}],
+        types:[{description:'INSP360 / 360skeleton', accept:{'application/zip':['.insp360','.360skeleton','.zip']}}],
         multiple:false
       };
       const start=projectDir||photoSourceHint||startHint;
@@ -7957,295 +8091,10 @@ function ensureGeoIndexSf(){
   if(n) try{ idbSet('geoIndex', geoIndex); }catch(e){}
   return n;
 }
-function normalizePendingGroupGrants(raw){
-  if(!Array.isArray(raw)) return [];
-  const out=[];
-  const seen=new Set();
-  for(const g of raw){
-    const id=String((g&&(g.id||g.principal_id||g.groupId))||'').trim();
-    if(!id || seen.has(id)) continue;
-    seen.add(id);
-    out.push({
-      id,
-      name:String((g&&g.name)||'').trim(),
-      permission:(g&&g.permission)==='edit'?'edit':'view'
-    });
-  }
-  return out;
-}
-function readPiAclGroupPicks(){
-  return [...document.querySelectorAll('#piAclGroups .pi-acl-pick')].map(row=>{
-    const cb=row.querySelector('input[type="checkbox"]');
-    const sel=row.querySelector('select');
-    if(!cb || !cb.checked) return null;
-    return {
-      id:String(cb.value||'').trim(),
-      name:String(row.getAttribute('data-name')||'').trim(),
-      permission:(sel&&sel.value)==='edit'?'edit':'view'
-    };
-  }).filter(g=>g && g.id);
-}
-async function loadGroupsForProjectInfo(){
-  // Prefer /api/me groups (members + admins). Admins can also refresh full admin list.
-  try{ await refreshAclMe(); }catch(_){}
-  let groups=Array.isArray(aclMe&&aclMe.groups)?aclMe.groups.slice():[];
-  if(aclMe && aclMe.role==='admin'){
-    try{
-      const groupsRes=await adminFetch('/api/admin/groups');
-      adminCache.groups=Array.isArray(groupsRes.groups)?groupsRes.groups:[];
-      if(adminCache.groups.length){
-        groups=adminCache.groups.map(g=>({ id:g.id, name:g.name||'' }));
-      }
-    }catch(_){}
-  }
-  return groups.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''), undefined, {sensitivity:'base'}));
-}
-async function applyPendingProjectGroupGrants(tourKey){
-  // Map embed uses Cloudflare Access — do not assign Inspections ACL groups.
-  if(document.body.classList.contains('embed')){
-    pendingProjectGroupGrants=[];
-    try{ if(projectMeta) delete projectMeta.pendingGroupGrants; }catch(_){}
-    return { ok:true, applied:0, skipped:'embed' };
-  }
-  const key=sanitizeCloudKey(tourKey||cloudKey||'');
-  const pending=normalizePendingGroupGrants(
-    (projectMeta&&projectMeta.pendingGroupGrants)||pendingProjectGroupGrants
-  );
-  if(!key || !pending.length) return { ok:true, applied:0 };
-  if(!(aclMe && aclMe.role==='admin')){
-    // Members cannot write ACL grants — keep pending in meta until an admin uploads/applies.
-    return { ok:false, applied:0, reason:'admin-only' };
-  }
-  try{
-    if(!(adminCache.projects||[]).length){
-      const projectsRes=await adminFetch('/api/admin/projects');
-      adminCache.projects=Array.isArray(projectsRes.projects)?projectsRes.projects:[];
-    }
-    let proj=adminCache.projects.find(p=>p.key===key);
-    if(!proj){
-      proj={ key, grants:[] };
-      adminCache.projects.push(proj);
-    }
-    const grants=normalizeGrantList(proj.grants);
-    for(const g of pending){
-      const i=grants.findIndex(x=>x.principal_type==='group' && String(x.principal_id)===String(g.id));
-      if(i>=0) grants[i].permission=g.permission;
-      else grants.push({ principal_type:'group', principal_id:g.id, permission:g.permission });
-    }
-    await putProjectGrants(key, grants);
-    pendingProjectGroupGrants=[];
-    if(projectMeta) delete projectMeta.pendingGroupGrants;
-    try{ await persistTourDataQuiet(); }catch(_){}
-    return { ok:true, applied:pending.length };
-  }catch(e){
-    console.warn('applyPendingProjectGroupGrants', e);
-    return { ok:false, applied:0, reason:e.message||'failed' };
-  }
-}
-function syncPiNewGroupNameFromProject(force){
-  const nameEl=document.getElementById('piName');
-  const groupEl=document.getElementById('piNewGroupName');
-  if(!nameEl || !groupEl) return;
-  if(!force && groupEl.dataset.dirty==='1') return;
-  groupEl.value=(nameEl.value||'').trim();
-}
-
-function wirePiAclCreateGroup(){
-  const createBox=document.getElementById('piAclCreate');
-  const groupEl=document.getElementById('piNewGroupName');
-  const btn=document.getElementById('piCreateGroup');
-  const toggle=document.getElementById('piAclCreateToggle');
-  const isAdmin=!!(aclMe && aclMe.role==='admin');
-  if(createBox){
-    createBox.classList.toggle('show', isAdmin);
-    if(!createBox.classList.contains('open') && toggle){
-      toggle.setAttribute('aria-expanded','false');
-    }
-  }
-  if(toggle && toggle.dataset.wired!=='1'){
-    toggle.dataset.wired='1';
-    toggle.onclick=()=>{
-      if(!createBox) return;
-      const open=createBox.classList.toggle('open');
-      toggle.setAttribute('aria-expanded', open?'true':'false');
-      if(open && groupEl){
-        try{ groupEl.focus(); }catch(_){}
-      }
-    };
-  }
-  if(!isAdmin || !groupEl || !btn) return;
-  if(groupEl.dataset.wired==='1') return;
-  groupEl.dataset.wired='1';
-  groupEl.oninput=()=>{ groupEl.dataset.dirty='1'; };
-  btn.onclick=async()=>{
-    const name=(groupEl.value||'').trim() || (document.getElementById('piName')?.value||'').trim();
-    if(!name){
-      toast('Enter a group name (or set the project name first).', true);
-      groupEl.focus();
-      return;
-    }
-    // Keep current checkbox picks while we create + refresh.
-    pendingProjectGroupGrants=normalizePendingGroupGrants(readPiAclGroupPicks());
-    btn.disabled=true;
-    try{
-      const res=await adminFetch('/api/admin/groups', {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json' },
-        body:JSON.stringify({ name })
-      });
-      const created=res && res.group ? res.group : null;
-      if(!created || !created.id) throw new Error('Group create failed');
-      if(!Array.isArray(adminCache.groups)) adminCache.groups=[];
-      if(!adminCache.groups.some(g=>String(g.id)===String(created.id))){
-        adminCache.groups.push({ id:created.id, name:created.name||name, members:[] });
-      }
-      if(aclMe){
-        if(!Array.isArray(aclMe.groups)) aclMe.groups=[];
-        if(!aclMe.groups.some(g=>String(g.id)===String(created.id))){
-          aclMe.groups.push({ id:created.id, name:created.name||name });
-        }
-      }
-      if(!pendingProjectGroupGrants.some(g=>String(g.id)===String(created.id))){
-        pendingProjectGroupGrants.push({ id:String(created.id), permission:'view' });
-      }
-      toast('Group “'+name+'” created and selected');
-      groupEl.dataset.dirty='';
-      groupEl.value=name;
-      await fillProjInfoAssignedGroups(true);
-    }catch(e){
-      toast(e.message||'Could not create group', true);
-    }finally{
-      btn.disabled=false;
-    }
-  };
-}
-
-async function fillProjInfoAssignedGroups(create){
-  const box=document.getElementById('piAcl');
-  const list=document.getElementById('piAclGroups');
-  const title=document.getElementById('piAclTitle');
-  const hint=document.getElementById('piAclHint');
-  const createBox=document.getElementById('piAclCreate');
-  if(!box || !list) return;
-  const hide=()=>{
-    box.classList.remove('show');
-    list.innerHTML='';
-    if(hint) hint.style.display='none';
-    if(createBox){
-      createBox.classList.remove('show','open');
-      const t=document.getElementById('piAclCreateToggle');
-      if(t) t.setAttribute('aria-expanded','false');
-    }
-  };
-  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-
-  // Map embed: never show Assign groups — Access already controls who opens the map.
-  if(document.body.classList.contains('embed')){
-    pendingProjectGroupGrants=[];
-    try{ if(projectMeta) delete projectMeta.pendingGroupGrants; }catch(_){}
-    hide();
-    return;
-  }
-
-  // Create project: pick groups (members see their groups; admins see all).
-  if(create){
-    box.classList.add('show');
-    if(title) title.textContent='Assign groups';
-    if(hint) hint.style.display='block';
-    syncPiNewGroupNameFromProject(false);
-    list.innerHTML='<div class="pi-acl-empty">Loading groups…</div>';
-    try{
-      const groups=await loadGroupsForProjectInfo();
-      wirePiAclCreateGroup();
-      syncPiNewGroupNameFromProject(false);
-      const selected=new Map(
-        normalizePendingGroupGrants(pendingProjectGroupGrants).map(g=>[String(g.id), g.permission])
-      );
-      if(!groups.length){
-        list.innerHTML='<div class="pi-acl-empty">'+(aclMe
-          ? (aclMe.role==='admin'
-            ? 'No groups yet — create one above from the project name.'
-            : 'No groups available yet. An admin can create groups under Admin → Groups.')
-          : 'Sign in to assign groups to this tour.')+'</div>';
-        return;
-      }
-      let html='';
-      for(const g of groups){
-        const id=String(g.id||'');
-        const on=selected.has(id);
-        const perm=selected.get(id)||'view';
-        html+='<label class="pi-acl-pick" data-name="'+esc(g.name||id)+'">'+
-          '<input type="checkbox" value="'+esc(id)+'"'+(on?' checked':'')+'>'+
-          '<span class="pi-acl-name">'+esc(g.name||id)+'</span>'+
-          '<select'+(on?'':' disabled')+'>'+
-          '<option value="view"'+(perm==='view'?' selected':'')+'>View</option>'+
-          '<option value="edit"'+(perm==='edit'?' selected':'')+'>Edit</option>'+
-          '</select></label>';
-      }
-      list.innerHTML=html;
-      list.querySelectorAll('.pi-acl-pick').forEach(row=>{
-        const cb=row.querySelector('input[type="checkbox"]');
-        const sel=row.querySelector('select');
-        if(!cb || !sel) return;
-        cb.onchange=()=>{ sel.disabled=!cb.checked; };
-      });
-    }catch(e){
-      list.innerHTML='<div class="pi-acl-empty">'+(e.message||'Could not load groups.')+'</div>';
-    }
-    return;
-  }
-
-  // Existing cloud tour: read-only list of assigned groups.
-  if(typeof projStorage==='undefined' || projStorage!=='cloud' || !cloudKey){
-    // Local project with pending create picks — still show them for editing.
-    const pending=normalizePendingGroupGrants(
-      (projectMeta&&projectMeta.pendingGroupGrants)||pendingProjectGroupGrants
-    );
-    if(pending.length || (aclMe && (aclMe.groups||[]).length)){
-      // Reuse create picker so local projects can adjust before upload.
-      return fillProjInfoAssignedGroups(true);
-    }
-    hide();
-    return;
-  }
-  const isAdmin=aclMe && aclMe.role==='admin';
-  if(!isAdmin && !(adminCache.projects||[]).length){
-    hide();
-    return;
-  }
-  box.classList.add('show');
-  if(title) title.textContent='Assigned groups';
-  if(hint) hint.style.display='none';
-  list.innerHTML='<div class="pi-acl-empty">Loading assigned groups…</div>';
-  try{
-    if(isAdmin){
-      const [projectsRes, groupsRes]=await Promise.all([
-        adminFetch('/api/admin/projects'),
-        adminFetch('/api/admin/groups')
-      ]);
-      adminCache.projects=Array.isArray(projectsRes.projects)?projectsRes.projects:[];
-      adminCache.groups=Array.isArray(groupsRes.groups)?groupsRes.groups:[];
-    }
-    const proj=(adminCache.projects||[]).find(p=>p.key===cloudKey);
-    const grants=(proj && Array.isArray(proj.grants)?proj.grants:[])
-      .filter(g=>g.principal_type==='group');
-    if(!grants.length){
-      list.innerHTML='<div class="pi-acl-empty">No groups assigned — only admins can see this tour until you grant a group.</div>';
-      return;
-    }
-    let html='';
-    for(const g of grants){
-      const grp=(adminCache.groups||[]).find(x=>String(x.id)===String(g.principal_id));
-      const name=grp?grp.name:('Group '+g.principal_id);
-      const perm=g.permission==='edit'?'edit':'view';
-      html+='<div class="pi-acl-row"><span>'+esc(name)+'</span>'+
-        '<span class="admin-perm-badge '+esc(perm)+'">'+esc(perm)+'</span></div>';
-    }
-    list.innerHTML=html;
-  }catch(e){
-    list.innerHTML='<div class="pi-acl-empty">'+(e.message||'Could not load assigned groups.')+'</div>';
-  }
-}
+async function applyPendingProjectGroupGrants(){ return { ok:true, applied:0, skipped:'removed' }; }
+async function fillProjInfoAssignedGroups(){ /* Admin project ACL UI removed */ }
+function syncPiNewGroupNameFromProject(){}
+function wirePiAclCreateGroup(){}
 
 function openProjInfo(mode){
   const ov=document.getElementById('projInfo'), g=id=>document.getElementById(id);
@@ -8318,7 +8167,7 @@ function openProjInfo(mode){
       const gate=(window.embedGateTitle||'').trim();
       nameEl.value=gate ? (b.a+' \u2014 '+gate) : (b.a+' \u2014 Inspection');
     }
-    if(create) syncPiNewGroupNameFromProject(false);
+    
     // tenant: always refresh from DB when picking an address (user chose a new building)
     applyTenantFromDb(b.a, g('piTenant'), true);
     // type: fill from the building's park/portfolio only when blank (don't clobber a manual entry)
@@ -8421,11 +8270,9 @@ function openProjInfo(mode){
   };
   g('piName').onblur=applyNameToAddress;
   g('piName').onchange=applyNameToAddress;
-  g('piName').oninput=()=>{ if(create) syncPiNewGroupNameFromProject(false); };
+  g('piName').oninput=()=>{};
   g('piCreate').onclick=()=>{ const f=readForm();
     if(!f.name){ toast('Give the project a name.', true); g('piName').focus(); return; }
-    const embedMode=document.body.classList.contains('embed');
-    const groupPicks=embedMode ? [] : normalizePendingGroupGrants(readPiAclGroupPicks());
     goHome({force:true});                         // clean slate: drop any plans, overlay maps and photos from a previously open project
     projHandleRemembered=null; lastProjName=null; tourSidecarHandle=null;
     try{ idbSet('projHandle', null); idbSet('lastProjName', null); }catch(_){}
@@ -8436,32 +8283,15 @@ function openProjInfo(mode){
     try{ window._gateSourceFile=null; }catch(_){}
     const now=new Date().toISOString();
     projectMeta=syncMetaAddressFromName({ ...f, created:now, modified:now });
-    pendingProjectGroupGrants=groupPicks;
-    if(groupPicks.length) projectMeta.pendingGroupGrants=groupPicks.slice();
-    else try{ delete projectMeta.pendingGroupGrants; }catch(_){}
+    try{ delete projectMeta.pendingGroupGrants; }catch(_){}
     done();
     enterProjectMode({ alreadyLinked:false });               // stay in project shell even before photos are chosen
     pickAndIngestPhotos('files');
-    const gNote=groupPicks.length
-      ? (' · '+groupPicks.length+' group'+(groupPicks.length===1?'':'s')+' will get access on cloud upload')
-      : '';
-    toast('Project \u201C'+f.name+'\u201D created \u2014 add your 360 photos to get started.'+gNote);
+    toast('Project \u201C'+f.name+'\u201D created \u2014 add your 360 photos to get started.');
   };
   g('piSave').onclick=()=>{
     commit();
-    // Local / pre-upload: keep group picks from the dialog so cloud upload can apply them.
-    // Map embed: never store group assignments.
-    if(document.body.classList.contains('embed')){
-      pendingProjectGroupGrants=[];
-      try{ if(projectMeta) delete projectMeta.pendingGroupGrants; }catch(_){}
-    } else if(projStorage!=='cloud'){
-      const picks=normalizePendingGroupGrants(readPiAclGroupPicks());
-      pendingProjectGroupGrants=picks;
-      if(projectMeta){
-        if(picks.length) projectMeta.pendingGroupGrants=picks.slice();
-        else delete projectMeta.pendingGroupGrants;
-      }
-    }
+    try{ if(projectMeta) delete projectMeta.pendingGroupGrants; }catch(_){}
     done();
     saveProject();
   };
@@ -9582,7 +9412,7 @@ async function openRecent(rec){
     try{
       const pickerOpts={
         multiple:false,
-        types:[{description:'INSP360 project', accept:{'application/zip':['.insp360','.zip']}}]
+        types:[{description:'INSP360 / 360skeleton', accept:{'application/zip':['.insp360','.360skeleton','.zip']}}]
       };
       if(wantName) pickerOpts.suggestedName=/\.(insp360|zip)$/i.test(wantName)?wantName:(wantName+'.insp360');
       const startIn=(rec&&rec.dirHandle)||projectDir||startHint||photoSourceHint;
@@ -9687,22 +9517,26 @@ async function renderDashboard(){
     : (recs.length+' project'+(recs.length===1?'':'s'));
   grid.innerHTML='';
   if(!recs.length){
-    if(document.body.classList.contains('embed')){
-      // No gate-matching local recents — keep the strip and show Cloud for this gate.
-      dash.classList.add('show'); emptyEl.classList.add('has-dash');
-      const sum=document.getElementById('dashSummary');
-      if(sum) sum.textContent = doublePickMode ? 'Pick 2 projects · 0 available' : '0 projects for this gate';
-      grid.innerHTML='';
-      const empty=document.getElementById('dashEmpty');
-      if(empty){
-        empty.style.display='block';
+    // Keep the Local panel open with an empty state — never hide the whole dashboard.
+    dash.classList.add('show'); emptyEl.classList.add('has-dash');
+    if(sum) sum.textContent = doublePickMode
+      ? 'Pick 2 projects \u00B7 0 available'
+      : (document.body.classList.contains('embed') ? '0 projects for this gate' : '0 projects');
+    grid.innerHTML='';
+    const empty=document.getElementById('dashEmpty');
+    if(empty){
+      empty.style.display='block';
+      if(document.body.classList.contains('embed')){
         empty.textContent=doublePickMode
           ? 'No matching local tours for this building. Switch to Cloud (R2) or open a local .insp360 for this address.'
           : 'No local recent tours match this building address. Use Cloud (R2), or Open local project.';
+      } else {
+        empty.textContent=doublePickMode
+          ? 'No local projects to pick. Open a local .insp360, or switch to Cloud (R2).'
+          : 'No local tours yet. Create a new project or open a local .insp360.';
       }
-      return;
     }
-    dash.classList.remove('show'); emptyEl.classList.remove('has-dash'); return;
+    return;
   }
   dash.classList.add('show'); emptyEl.classList.add('has-dash');
   try{
@@ -9800,9 +9634,28 @@ function filterDash(){
     return;
   }
   const grid=document.getElementById('dashGrid');
-  let shown=0;
-  if(grid) grid.querySelectorAll('.dash-card').forEach(c=>{ const hit = !q || (c.dataset.search||'').includes(q); c.style.display = hit?'':'none'; if(hit) shown++; });
-  if(empty) empty.style.display = (q && shown===0) ? 'block' : 'none';
+  let shown=0, total=0;
+  if(grid) grid.querySelectorAll('.dash-card').forEach(c=>{
+    total++;
+    const hit = !q || (c.dataset.search||'').includes(q);
+    c.style.display = hit?'':'none';
+    if(hit) shown++;
+  });
+  if(empty){
+    if(total===0){
+      empty.style.display='block';
+      if(!empty.textContent || empty.textContent==='No matches'){
+        empty.textContent=document.body.classList.contains('embed')
+          ? 'No local recent tours match this building address. Use Cloud (R2), or Open local project.'
+          : 'No local tours yet. Create a new project or open a local .insp360.';
+      }
+    } else if(q && shown===0){
+      empty.style.display='block';
+      empty.textContent='No matches';
+    } else {
+      empty.style.display='none';
+    }
+  }
 }
 function filterLib(){
   const q=(document.getElementById('libSearch').value||'').trim().toLowerCase();
@@ -10740,7 +10593,6 @@ function setPlanEdit(on){
   document.getElementById('planPlace').classList.toggle('on', on); try{syncPinsToggle();}catch(e){}
   if(!on){ planSel=null; planPanel.classList.remove('editing'); renderMarkers(); refreshLinkPick(); }
   try{ syncPlacingPinsUi(); }catch(_){}
-  if(on && !planSel){ try{ addPinAtMapCenter(); }catch(_){} }
 }
 
 const peTarget=document.getElementById('peTarget'), peLabel=document.getElementById('peLabel'), peNum=document.getElementById('peNum');
@@ -11463,8 +11315,7 @@ function setGmapPlace(on){
   applyGmapPlaceGestures(!!(on && p && p.isLiveMap));
   try{ syncPlacingPinsUi(); }catch(_){}
   if(on){
-    try{ if(!_gmapSel) addPinAtMapCenter(); }catch(_){}
-    toast('Pin edit on \u2014 drag the new pin into place, or tap another pin to edit it.');
+    toast('Pin edit on \u2014 tap a pin to edit it, or use Add new pin.');
   }
 }
 function syncPlacingPinsUi(){
@@ -16090,7 +15941,7 @@ function sanitizeCloudKey(name){
   if(k.includes('..')) k=k.split('/').filter(p=>p&&p!=='..').join('/');
   k=k.replace(/[\u0000-\u001f\u007f]/g,'');
   if(!k) k='tour.insp360';
-  if(!/\.insp360$/i.test(k)) k+='.insp360';
+  else if(!/\.(insp360|360skeleton)$/i.test(k)) k+='.insp360';
   if(k.length>512) k=k.slice(0,504)+'.insp360';
   return k;
 }
@@ -16757,31 +16608,26 @@ async function rangeZipExtractEntry(readRange, en){
   const bytes=(en.method===8) ? await inflateRawZipBytes(raw) : raw;
   return new Blob([bytes], { type:zipEntryMime(en.name) });
 }
-/** True for panorama entries shown in the library (skip preview/cover companions). */
+/** True for panorama entries shown in the library — JPEG only. PNG/WebP/PDF/etc. are drawings, not 360s. */
 function isLibraryTourPhotoEntry(e){
   if(!e || (e.method!==0 && e.method!==8)) return false;   // STORED or DEFLATE (inflate on read)
   const name=String(e.name||'').replace(/\\/g,'/');
   const base=name.split('/').pop().toLowerCase();
-  if(!/\.(jpe?g|png)$/i.test(base)) return false;
+  if(!/\.jpe?g$/i.test(base)) return false;
   if(base==='preview.jpg' || base==='cover.jpg' || base.endsWith('.cover.jpg')) return false;
   return true;
 }
 /**
- * Last-resort enumerator: any raster image entry that could be a panorama, regardless of
- * compression method or unusual naming — used ONLY when the normal enumeration + tour.json
- * yield nothing, so a real archive full of photos can never present an empty library.
- * Excludes the known non-photo companions (plan images/PDF, cover/preview, tour.json,
- * shoot-log.json, manifest/draft json). Plan images/PDFs live inside tour.json (base64) or as
- * Floor Plans/*.pdf, so they won't match the raster extensions here anyway.
+ * Last-resort enumerator: any JPEG that could be a panorama — used ONLY when the normal
+ * enumeration + tour.json yield nothing. Non-JPEG rasters (PNG/WebP/…) and PDFs are drawings.
  */
 function looseArchiveImageEntry(e){
   if(!e || (e.method!==0 && e.method!==8)) return false;
   const name=String(e.name||'').replace(/\\/g,'/');
   const base=name.split('/').pop().toLowerCase();
-  if(!/\.(jpe?g|jpe|png|webp)$/i.test(base)) return false;
+  if(!/\.jpe?g$/i.test(base)) return false;
   if(base==='preview.jpg' || base==='cover.jpg' || base.endsWith('.cover.jpg')) return false;
   if(base==='tour.json' || base==='shoot-log.json' || base==='manifest.json' || base==='draft.json') return false;
-  if(base.endsWith('.pdf')) return false;
   return true;
 }
 function photoEntryBaseName(name){
@@ -17358,7 +17204,7 @@ function requestEmbedCloudList(prefix){
   });
 }
 function coverCompanionKey(tourKey){
-  return String(tourKey||'').replace(/\.insp360$/i,'')+'.cover.jpg';
+  return String(tourKey||'').replace(/\.(insp360|360skeleton)$/i,'')+'.cover.jpg';
 }
 function publicCoverUrlForKey(tourKey, explicitCoverUrl){
   if(explicitCoverUrl) return String(explicitCoverUrl);
@@ -17520,15 +17366,6 @@ async function deleteCloudTour(key, opts){
       if(tgt&&tgt.cacheUrl) await deleteCachedCloudTour(tgt.cacheUrl);
     }catch(_){}
     try{ _sessionCloudTours.delete(sessionCloudTourMapKey(k)); }catch(_){}
-    try{
-      if(adminCache && Array.isArray(adminCache.projects)){
-        adminCache.projects=adminCache.projects.filter(p=>p && p.key!==k);
-      }
-    }catch(_){}
-    try{
-      const sel=document.getElementById('adminProjectSelect');
-      if(sel && sel.value===k){ sel.value=''; adminDraftGrants=[]; }
-    }catch(_){}
     if(projStorage==='cloud' && cloudKey===k){
       try{ toast('Deleted from Cloudflare — return to dashboard to continue.'); }catch(_){}
     } else {
@@ -17953,13 +17790,6 @@ async function uploadCurrentToCloud(){
   // #endregion
   if(projStorage==='cloud'){ toast('This project is already on the cloud.'); return; }
   if(!inProject()){ toast('Open a local project first.'); return; }
-  if(aclMe && aclMe.role!=='admin'){
-    // #region agent log
-    fetch('http://127.0.0.1:7574/ingest/5d9a1b8d-28ec-4647-bad2-07deacdce245',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f50159'},body:JSON.stringify({sessionId:'f50159',runId:'post-fix',hypothesisId:'G',location:'viewer:uploadCurrentToCloud',message:'blocked non-admin',data:{aclRole:aclMe.role},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    toast('Only admins can upload new cloud tours. Ask an admin for edit access.', true);
-    return;
-  }
   const api=await ensureCloudApi();
   if(!api){
     // #region agent log
@@ -17992,6 +17822,7 @@ async function uploadCurrentToCloud(){
     // (stayLocal left projStorage=local, so reopen re-downloaded and dropped in-memory photos).
     await saveProjectToCloud(key, { stayLocal:false });
     try{ window._lastCloudUploadKey=sanitizeCloudKey(key); }catch(_){}
+    try{ cloudPermission='edit'; }catch(_){}
     // #region agent log
     fetch('http://127.0.0.1:7574/ingest/5d9a1b8d-28ec-4647-bad2-07deacdce245',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f50159'},body:JSON.stringify({sessionId:'f50159',runId:'post-fix',hypothesisId:'I',location:'viewer:uploadCurrentToCloud',message:'saveProjectToCloud returned ok',data:{key},timestamp:Date.now()})}).catch(()=>{});
     // #endregion
@@ -18028,10 +17859,9 @@ async function uploadCurrentToCloud(){
 
 /* ================= ACL /api/me + Admin panel ================= */
 let adminCache={ users:[], groups:[], projects:[] };
-let adminDraftGrants=[];
 let adminSubTab='people';
+let adminSelectedEmailGroupId=null;
 let adminSelectedGroupId=null;
-let adminOpenProjectFolds=new Set();
 
 function sessionLogoutUrl(){
   try{
@@ -18134,7 +17964,7 @@ function collapseAdminActivityLog(){
   }catch(_){}
 }
 function setAdminSubTab(tab){
-  adminSubTab=tab==='groups'?'groups':(tab==='projects'?'projects':'people');
+  adminSubTab=tab==='groups'?'groups':(tab==='email'?'email':'people');
   document.querySelectorAll('#adminSubtabs button').forEach(b=>{
     b.classList.toggle('on', b.getAttribute('data-admin')===adminSubTab);
   });
@@ -18142,7 +17972,7 @@ function setAdminSubTab(tab){
     const id=sec.id||'';
     const on=(adminSubTab==='people'&&id==='adminPeople')
       ||(adminSubTab==='groups'&&id==='adminGroups')
-      ||(adminSubTab==='projects'&&id==='adminProjects');
+      ||(adminSubTab==='email'&&id==='adminEmail');
     sec.classList.toggle('on', on);
   });
   collapseAdminActivityLog();
@@ -18173,9 +18003,10 @@ async function refreshAdminPanel(){
     adminCache.users=Array.isArray(usersRes.users)?usersRes.users:[];
     adminCache.groups=Array.isArray(groupsRes.groups)?groupsRes.groups:[];
     adminCache.projects=Array.isArray(projectsRes.projects)?projectsRes.projects:[];
+    await upgradeGroupTourGrantsToEdit();
     renderAdminPeople();
     renderAdminGroups();
-    renderAdminProjects();
+    renderAdminEmailNotify();
   }catch(e){
     const pe=document.getElementById('adminPeopleList');
     if(pe) pe.innerHTML='<div class="admin-empty">'+(e.message||'Could not load admin data.')+'</div>';
@@ -18185,7 +18016,7 @@ async function refreshAdminPanel(){
 function renderAdminPeople(){
   const host=document.getElementById('adminPeopleList');
   if(!host) return;
-  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
   const q=(document.getElementById('adminPeopleSearch')?.value||'').trim().toLowerCase();
   const users=!q
     ? (adminCache.users||[])
@@ -18195,31 +18026,44 @@ function renderAdminPeople(){
         return email.includes(q) || role.includes(q);
       });
   if(!adminCache.users.length){
-    host.innerHTML='<div class="admin-empty">No users yet. Add someone by Access email.</div>';
+    host.className='admin-empty';
+    host.innerHTML='No users yet. Add someone by Access email.';
     return;
   }
   if(!users.length){
-    host.innerHTML='<div class="admin-empty">No people match “'+esc(q)+'”.</div>';
+    host.className='admin-empty';
+    host.innerHTML='No people match “'+esc(q)+'”.';
     return;
   }
-  let html='<table class="admin-table"><thead><tr><th>Email</th><th>Role</th><th></th></tr></thead><tbody>';
+  host.className='';
+  let html='';
   for(const u of users){
     const role=u.role==='admin'?'admin':'member';
-    html+='<tr><td>'+esc(u.email)+'</td><td>'+
-      '<select class="admin-role-select" data-admin-role-email="'+esc(u.email)+'" title="Change role">'+
-        '<option value="member"'+(role==='member'?' selected':'')+'>member</option>'+
-        '<option value="admin"'+(role==='admin'?' selected':'')+'>admin</option>'+
-      '</select></td><td class="admin-actions">'+
-      '<button type="button" class="btn" data-admin-del-user="'+esc(u.email)+'">Remove</button></td></tr>';
+    html+='<div class="admin-member-row">'+
+      '<div class="admin-member-name"><span>'+esc(u.email)+'</span></div>'+
+      '<div class="admin-member-actions">'+
+        '<select class="admin-role-select '+esc(role)+'" data-admin-role-email="'+esc(u.email)+'" data-prev-role="'+esc(role)+'" title="Change role">'+
+          '<option value="member"'+(role==='member'?' selected':'')+'>member</option>'+
+          '<option value="admin"'+(role==='admin'?' selected':'')+'>admin</option>'+
+        '</select>'+
+        '<button type="button" class="btn" data-admin-del-user="'+esc(u.email)+'">Remove</button>'+
+      '</div></div>';
   }
-  html+='</tbody></table>';
   host.innerHTML=html;
+  function syncRoleSelectStyle(sel){
+    if(!sel) return;
+    const admin=sel.value==='admin';
+    sel.classList.toggle('admin', admin);
+    sel.classList.toggle('member', !admin);
+  }
   host.querySelectorAll('[data-admin-role-email]').forEach(sel=>{
+    syncRoleSelectStyle(sel);
     sel.onchange=async()=>{
       const email=sel.getAttribute('data-admin-role-email');
       const next=sel.value==='admin'?'admin':'member';
-      const prev=sel.getAttribute('data-prev-role')||(sel.querySelector('option[selected]')?.value)||'member';
+      const prev=sel.getAttribute('data-prev-role')||'member';
       sel.setAttribute('data-prev-role', next);
+      syncRoleSelectStyle(sel);
       sel.disabled=true;
       try{
         const existing=(adminCache.users||[]).find(x=>String(x.email).toLowerCase()===String(email).toLowerCase());
@@ -18241,12 +18085,12 @@ function renderAdminPeople(){
       }catch(e){
         sel.value=prev;
         sel.setAttribute('data-prev-role', prev);
+        syncRoleSelectStyle(sel);
         toast(e.message||'Role update failed', true);
       }finally{
         sel.disabled=false;
       }
     };
-    sel.setAttribute('data-prev-role', sel.value);
   });
   host.querySelectorAll('[data-admin-del-user]').forEach(btn=>{
     btn.onclick=async()=>{
@@ -18271,42 +18115,248 @@ function groupTourGrants(groupId){
   return out;
 }
 
-function normalizeGrantList(grants){
-  return (grants||[]).map(g=>({
-    principal_type:g.principal_type==='group'?'group':'user',
-    principal_id:g.principal_id,
-    permission:g.permission==='edit'?'edit':'view'
-  }));
+/** Tours are assignment-only now; migrate any leftover group View grants to Edit. */
+async function upgradeGroupTourGrantsToEdit(){
+  const byGroup=new Map();
+  for(const p of adminCache.projects||[]){
+    for(const g of p.grants||[]){
+      if(g.principal_type!=='group' || !g.principal_id || !p.key) continue;
+      const id=String(g.principal_id);
+      if(!byGroup.has(id)) byGroup.set(id, []);
+      byGroup.get(id).push({ key:p.key, permission:g.permission==='edit'?'edit':'view' });
+    }
+  }
+  for(const [groupId, tours] of byGroup){
+    if(!tours.some(t=>t.permission!=='edit')) continue;
+    try{ await saveGroupTours(groupId, tours); }catch(_){}
+  }
 }
 
-async function putProjectGrants(key, grants){
-  await adminFetch('/api/admin/projects/'+encodeTourKeyPath(key)+'/grants', {
+async function saveGroupTours(groupId, tours){
+  const seen=new Map();
+  for(const t of tours||[]){
+    const key=String(t&&t.key||'').trim();
+    if(!key) continue;
+    // Tour grants are assignment-only; person View/Edit caps effective access.
+    seen.set(key, { key, permission:'edit' });
+  }
+  const unique=[...seen.values()];
+  await adminFetch('/api/admin/groups/'+encodeURIComponent(groupId)+'/tours', {
     method:'PUT',
     headers:{ 'Content-Type':'application/json' },
-    body:JSON.stringify({ grants })
+    body:JSON.stringify({ tours: unique })
   });
-  const proj=adminCache.projects.find(p=>p.key===key);
-  if(proj) proj.grants=grants.slice();
+  for(const p of adminCache.projects||[]){
+    p.grants=(p.grants||[]).filter(g=>!(g.principal_type==='group' && String(g.principal_id)===String(groupId)));
+  }
+  for(const t of unique){
+    let proj=(adminCache.projects||[]).find(p=>p.key===t.key);
+    if(!proj){
+      proj={ key:t.key, grants:[] };
+      if(!Array.isArray(adminCache.projects)) adminCache.projects=[];
+      adminCache.projects.push(proj);
+    }
+    if(!Array.isArray(proj.grants)) proj.grants=[];
+    proj.grants.push({ principal_type:'group', principal_id:groupId, permission:t.permission });
+  }
+  return unique;
 }
 
-async function setGroupTourGrant(groupId, tourKey, permission){
-  const proj=adminCache.projects.find(p=>p.key===tourKey);
-  if(!proj) throw new Error('Tour not found');
-  const grants=normalizeGrantList(proj.grants);
-  const i=grants.findIndex(g=>g.principal_type==='group' && String(g.principal_id)===String(groupId));
-  const perm=permission==='edit'?'edit':'view';
-  if(i>=0) grants[i].permission=perm;
-  else grants.push({ principal_type:'group', principal_id:groupId, permission:perm });
-  await putProjectGrants(tourKey, grants);
+function isAdminDirectoryEmail(email){
+  const e=String(email||'').trim().toLowerCase();
+  if(!e.includes('@')) return false;
+  const u=(adminCache.users||[]).find(x=>String(x&&x.email||'').toLowerCase()===e);
+  return !!(u && u.role==='admin');
 }
 
-async function removeGroupTourGrant(groupId, tourKey){
-  const proj=adminCache.projects.find(p=>p.key===tourKey);
-  if(!proj) return;
-  const grants=normalizeGrantList(proj.grants).filter(g=>
-    !(g.principal_type==='group' && String(g.principal_id)===String(groupId))
-  );
-  await putProjectGrants(tourKey, grants);
+function normalizeAdminGroupMembers(raw){
+  const out=[];
+  const seen=new Set();
+  for(const m of Array.isArray(raw)?raw:[]){
+    let email='', permission='view';
+    if(typeof m==='string'){
+      email=String(m||'').trim().toLowerCase();
+      permission='edit';
+    } else if(m && typeof m==='object'){
+      email=String(m.email||'').trim().toLowerCase();
+      permission=m.permission==='edit'?'edit':'view';
+    }
+    if(!email.includes('@') || seen.has(email)) continue;
+    seen.add(email);
+    // Administrators always have Edit in groups.
+    if(isAdminDirectoryEmail(email)) permission='edit';
+    out.push({ email, permission });
+  }
+  return out;
+}
+
+
+function renderAdminEmailNotify(){
+  const listHost=document.getElementById('adminEmailList');
+  const detailHost=document.getElementById('adminEmailDetail');
+  if(!listHost || !detailHost) return;
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+  if(!adminCache.groups.length){
+    adminSelectedEmailGroupId=null;
+    listHost.className='admin-empty';
+    listHost.innerHTML='No groups yet. Create a group first.';
+    detailHost.className='admin-empty';
+    detailHost.innerHTML='Create a group under Groups to send notifications.';
+    return;
+  }
+
+  const q=(document.getElementById('adminEmailSearch')?.value||'').trim().toLowerCase();
+  const filteredGroups=!q
+    ? adminCache.groups
+    : adminCache.groups.filter(g=>{
+        if(String(g.name||'').toLowerCase().includes(q)) return true;
+        const members=normalizeAdminGroupMembers(g.members).filter(m=>!isAdminDirectoryEmail(m.email));
+        if(members.some(m=>m.email.includes(q))) return true;
+        return groupTourGrants(g.id).some(t=>{
+          const name=cloudTourDisplayName(t.key).toLowerCase();
+          return name.includes(q) || String(t.key).toLowerCase().includes(q);
+        });
+      });
+
+  if(!filteredGroups.length){
+    listHost.className='admin-empty';
+    listHost.innerHTML='No groups match “'+esc(q)+'”.';
+    detailHost.className='admin-empty';
+    detailHost.innerHTML='No group selected.';
+    return;
+  }
+
+  if(!adminSelectedEmailGroupId || !filteredGroups.some(g=>String(g.id)===String(adminSelectedEmailGroupId))){
+    adminSelectedEmailGroupId=filteredGroups[0].id;
+  }
+
+  listHost.className='';
+  let listHtml='';
+  for(const g of filteredGroups){
+    const memberCount=normalizeAdminGroupMembers(g.members).filter(m=>!isAdminDirectoryEmail(m.email)).length;
+    const tours=groupTourGrants(g.id);
+    const selected=String(g.id)===String(adminSelectedEmailGroupId);
+    listHtml+='<div class="admin-group-row'+(selected?' is-selected':'')+'" data-admin-email-select-group="'+esc(g.id)+'" role="button" tabindex="0" aria-selected="'+(selected?'true':'false')+'">'+
+      '<span class="admin-group-row-name">'+esc(g.name)+'</span>'+
+      '<span class="admin-group-row-meta">'+memberCount+' · '+tours.length+'</span>'+
+      '</div>';
+  }
+  listHost.innerHTML=listHtml;
+
+  const g=filteredGroups.find(x=>String(x.id)===String(adminSelectedEmailGroupId))||filteredGroups[0];
+  const members=normalizeAdminGroupMembers(g.members).filter(m=>!isAdminDirectoryEmail(m.email));
+  const tours=groupTourGrants(g.id);
+
+  detailHost.className='';
+  let detailHtml=
+    '<div class="admin-group-detail-head">'+
+      '<b>'+esc(g.name)+'</b>'+
+      '<span class="admin-actions">'+
+        '<button type="button" class="btn" id="adminEmailSend" data-admin-email-send="'+esc(g.id)+'" title="Send email to chosen people below">Send email</button>'+
+      '</span>'+
+    '</div>'+
+    '<p class="admin-group-detail-hint">Choose people below, then use Send email. Message covers this group’s assigned tours.</p>'+
+    '<div class="admin-notify-actions">'+
+      '<button type="button" class="btn" data-admin-email-select-all>Select all</button>'+
+      '<button type="button" class="btn" data-admin-email-select-none>Clear</button>'+
+    '</div>'+
+    '<textarea class="admin-notify-note" id="adminEmailNote" placeholder="Optional note included in the email…"></textarea>'+
+    '<div class="admin-group-detail-cols">'+
+      '<div class="admin-group-col">'+
+        '<div class="admin-group-col-title">People</div>'+
+        '<div class="admin-member-list admin-people-list'+(members.length?'':' is-empty')+'">';
+  if(!members.length){
+    detailHtml+='<div class="admin-empty" style="padding:8px 0">No members in this group.</div>';
+  } else {
+    for(const m of members){
+      detailHtml+='<label class="admin-member-row admin-notify-pick">'+
+        '<div class="admin-member-name">'+
+          '<input type="checkbox" data-admin-email-to="'+esc(m.email)+'" checked>'+
+          '<span>'+esc(m.email)+'</span>'+
+        '</div>'+
+        '<div class="admin-member-actions">'+
+          '<span class="admin-perm-badge '+(m.permission==='edit'?'edit':'view')+'">'+(m.permission==='edit'?'edit':'view')+'</span>'+
+        '</div></label>';
+    }
+  }
+  detailHtml+='</div></div>'+
+    '<div class="admin-group-col">'+
+      '<div class="admin-group-col-title">Tours</div>'+
+      '<div class="admin-member-list'+(tours.length?'':' is-empty')+'">';
+  if(!tours.length){
+    detailHtml+='<div class="admin-empty" style="padding:8px 0">No tours assigned to this group.</div>';
+  } else {
+    for(const t of tours){
+      const name=cloudTourDisplayName(t.key);
+      detailHtml+='<div class="admin-member-row">'+
+        '<div class="admin-member-name" title="'+esc(t.key)+'"><span>'+esc(name)+'</span></div>'+
+        '</div>';
+    }
+  }
+  detailHtml+='</div></div></div>';
+  detailHost.innerHTML=detailHtml;
+
+  function selectGroup(id){
+    if(!id || String(id)===String(adminSelectedEmailGroupId)) return;
+    adminSelectedEmailGroupId=id;
+    renderAdminEmailNotify();
+  }
+  listHost.querySelectorAll('[data-admin-email-select-group]').forEach(row=>{
+    const id=row.getAttribute('data-admin-email-select-group');
+    row.onclick=()=>selectGroup(id);
+    row.onkeydown=e=>{
+      if(e.key!=='Enter' && e.key!==' ') return;
+      e.preventDefault();
+      selectGroup(id);
+    };
+  });
+
+  detailHost.querySelectorAll('[data-admin-email-select-all]').forEach(btn=>{
+    btn.onclick=()=>{
+      detailHost.querySelectorAll('[data-admin-email-to]').forEach(cb=>{ cb.checked=true; });
+    };
+  });
+  detailHost.querySelectorAll('[data-admin-email-select-none]').forEach(btn=>{
+    btn.onclick=()=>{
+      detailHost.querySelectorAll('[data-admin-email-to]').forEach(cb=>{ cb.checked=false; });
+    };
+  });
+
+  const sendBtn=detailHost.querySelector('[data-admin-email-send]');
+  if(sendBtn){
+    sendBtn.onclick=async()=>{
+      const id=sendBtn.getAttribute('data-admin-email-send');
+      const emails=[...detailHost.querySelectorAll('[data-admin-email-to]:checked')]
+        .map(cb=>String(cb.getAttribute('data-admin-email-to')||'').toLowerCase())
+        .filter(e=>e.includes('@'));
+      if(!emails.length){ toast('Choose at least one person below', true); return; }
+      const note=(document.getElementById('adminEmailNote')?.value||'').trim();
+      const cloudKeys=groupTourGrants(id).map(t=>t.key);
+      const n=emails.length;
+      if(!window.confirm('Send access email to '+n+' '+(n===1?'person':'people')+'?')) return;
+      sendBtn.disabled=true;
+      try{
+        const viewerUrl=(typeof cloudApiOrigin==='function' && cloudApiOrigin()) || location.origin;
+        const res=await adminFetch('/api/admin/notify', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json' },
+          body:JSON.stringify({
+            emails,
+            note,
+            groupId:id,
+            cloudKeys,
+            viewerUrl:String(viewerUrl||location.origin).replace(/\/$/,'')
+          })
+        });
+        const sent=(res.sent||[]).length;
+        const failed=(res.failed||[]).length;
+        if(failed) toast('Sent '+sent+', failed '+failed, true);
+        else toast(res.local ? ('Queued locally for '+sent+' (no Resend on localhost)') : ('Email sent to '+sent));
+      }catch(err){ toast(err.message||'Send failed', true); }
+      finally{ sendBtn.disabled=false; }
+    };
+  }
 }
 
 function renderAdminGroups(){
@@ -18316,7 +18366,7 @@ function renderAdminGroups(){
   const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 
   async function saveGroupMembers(groupId, members){
-    const unique=[...new Set(members.map(e=>String(e||'').trim().toLowerCase()).filter(e=>e.includes('@')))];
+    const unique=normalizeAdminGroupMembers(members);
     await adminFetch('/api/admin/groups/'+encodeURIComponent(groupId)+'/members', {
       method:'PUT',
       headers:{ 'Content-Type':'application/json' },
@@ -18341,8 +18391,8 @@ function renderAdminGroups(){
     ? adminCache.groups
     : adminCache.groups.filter(g=>{
         if(String(g.name||'').toLowerCase().includes(q)) return true;
-        const members=Array.isArray(g.members)?g.members:[];
-        if(members.some(e=>String(e).toLowerCase().includes(q))) return true;
+        const members=normalizeAdminGroupMembers(g.members);
+        if(members.some(m=>m.email.includes(q))) return true;
         return groupTourGrants(g.id).some(t=>{
           const name=cloudTourDisplayName(t.key).toLowerCase();
           return name.includes(q) || String(t.key).toLowerCase().includes(q);
@@ -18364,23 +18414,33 @@ function renderAdminGroups(){
   listHost.className='';
   let listHtml='';
   for(const g of filteredGroups){
-    const members=Array.isArray(g.members)?g.members:[];
+    const memberCount=normalizeAdminGroupMembers(g.members).filter(m=>!isAdminDirectoryEmail(m.email)).length;
     const tours=groupTourGrants(g.id);
     const selected=String(g.id)===String(adminSelectedGroupId);
     listHtml+='<div class="admin-group-row'+(selected?' is-selected':'')+'" data-admin-select-group="'+esc(g.id)+'" role="button" tabindex="0" aria-selected="'+(selected?'true':'false')+'">'+
       '<span class="admin-group-row-name">'+esc(g.name)+'</span>'+
-      '<span class="admin-group-row-meta">'+members.length+' · '+tours.length+'</span>'+
+      '<span class="admin-group-row-meta">'+memberCount+' · '+tours.length+'</span>'+
       '</div>';
   }
   listHost.innerHTML=listHtml;
 
   const g=filteredGroups.find(x=>String(x.id)===String(adminSelectedGroupId))||filteredGroups[0];
-  const members=Array.isArray(g.members)?g.members:[];
-  const memberSet=new Set(members.map(e=>String(e).toLowerCase()));
-  const available=(adminCache.users||[]).filter(u=>u && u.email && !memberSet.has(String(u.email).toLowerCase()));
+  const members=normalizeAdminGroupMembers(g.members);
+  // Admins already have unrestricted tour access — omit from group people UI.
+  const memberPeople=members.filter(m=>!isAdminDirectoryEmail(m.email));
+  const memberSet=new Set(members.map(m=>m.email));
+  const available=(adminCache.users||[]).filter(u=>{
+    if(!u || !u.email) return false;
+    const email=String(u.email).toLowerCase();
+    if(memberSet.has(email)) return false;
+    if(u.role==='admin') return false;
+    return true;
+  });
   const tours=groupTourGrants(g.id);
   const tourKeys=new Set(tours.map(t=>t.key));
-  const availableTours=(adminCache.projects||[]).filter(p=>p && p.key && !tourKeys.has(p.key));
+  const availableTours=(adminCache.projects||[]).filter(p=>p && p.key && !tourKeys.has(p.key))
+    .slice()
+    .sort((a,b)=>cloudTourDisplayName(a.key).localeCompare(cloudTourDisplayName(b.key)));
 
   detailHost.className='';
   let detailHtml=
@@ -18391,17 +18451,27 @@ function renderAdminGroups(){
         '<button type="button" class="btn" data-admin-del-group="'+esc(g.id)+'">Delete</button>'+
       '</span>'+
     '</div>'+
-    '<p class="admin-group-detail-hint">People in this group can open the tours listed here.</p>'+
+    '<p class="admin-group-detail-hint">Assign members and cloud tours. Each person’s View/Edit caps access on the tours listed here. Administrators already have full access to every tour and are not listed in groups.</p>'+
     '<div class="admin-group-detail-cols">'+
       '<div class="admin-group-col">'+
         '<div class="admin-group-col-title">People</div>'+
-        '<div class="admin-member-list admin-people-list'+(members.length?'':' is-empty')+'">';
-  if(!members.length){
-    detailHtml+='<div class="admin-empty" style="padding:8px 0">No people yet — pick from the directory below.</div>';
+        '<div class="admin-member-list admin-people-list'+(memberPeople.length?'':' is-empty')+'">';
+  if(!memberPeople.length){
+    detailHtml+='<div class="admin-empty" style="padding:8px 0">No members yet — pick from the directory below.</div>';
   } else {
-    for(const email of members){
-      detailHtml+='<div class="admin-member-row"><span>'+esc(email)+'</span>'+
-        '<button type="button" class="btn" data-admin-remove-member="'+esc(g.id)+'" data-email="'+esc(email)+'">Remove</button></div>';
+    for(const m of memberPeople){
+      const perm=m.permission==='edit'?'edit':'view';
+      detailHtml+='<div class="admin-member-row">'+
+        '<div class="admin-member-name">'+
+          '<span>'+esc(m.email)+'</span>'+
+        '</div>'+
+        '<div class="admin-member-actions">'+
+          '<select class="admin-grant-perm '+esc(perm)+'" data-admin-member-perm="'+esc(g.id)+'" data-email="'+esc(m.email)+'" title="Access">'+
+            '<option value="view"'+(perm==='view'?' selected':'')+'>View</option>'+
+            '<option value="edit"'+(perm==='edit'?' selected':'')+'>Edit</option>'+
+          '</select>'+
+          '<button type="button" class="btn" data-admin-remove-member="'+esc(g.id)+'" data-email="'+esc(m.email)+'">Remove</button>'+
+        '</div></div>';
     }
   }
   detailHtml+='</div><div class="admin-add-member">'+
@@ -18412,7 +18482,7 @@ function renderAdminGroups(){
   }
   detailHtml+='</select>'+
     '<button type="button" class="btn" data-admin-add-picked="'+esc(g.id)+'"'+(available.length?'':' disabled')+'>Add</button>'+
-    '<button type="button" class="btn" data-admin-add-all-people="'+esc(g.id)+'" title="Add everyone not already in this group"'+(available.length?'':' disabled')+'>Add all</button>'+
+    '<button type="button" class="btn" data-admin-add-all-people="'+esc(g.id)+'" title="Add remaining members as View"'+(available.length?'':' disabled')+'>Add all</button>'+
     '</div></div>'+
     '<div class="admin-group-col">'+
       '<div class="admin-group-col-title">Tours</div>'+
@@ -18421,9 +18491,14 @@ function renderAdminGroups(){
     detailHtml+='<div class="admin-empty" style="padding:8px 0">No tours yet — assign a cloud tour below.</div>';
   } else {
     for(const t of tours){
-      detailHtml+='<div class="admin-member-row"><div class="admin-member-meta"><span>'+esc(cloudTourDisplayName(t.key))+
-        '</span><span class="admin-perm-badge '+esc(t.permission)+'">'+esc(t.permission)+'</span></div>'+
-        '<button type="button" class="btn" data-admin-remove-tour="'+esc(g.id)+'" data-tour-key="'+esc(t.key)+'">Remove</button></div>';
+      const name=cloudTourDisplayName(t.key);
+      detailHtml+='<div class="admin-member-row">'+
+        '<div class="admin-member-name" title="'+esc(t.key)+'">'+
+          '<span>'+esc(name)+'</span>'+
+        '</div>'+
+        '<div class="admin-member-actions">'+
+          '<button type="button" class="btn" data-admin-remove-tour="'+esc(g.id)+'" data-tour-key="'+esc(t.key)+'">Remove</button>'+
+        '</div></div>';
     }
   }
   detailHtml+='</div><div class="admin-add-member">'+
@@ -18433,13 +18508,18 @@ function renderAdminGroups(){
     detailHtml+='<option value="'+esc(p.key)+'">'+esc(cloudTourDisplayName(p.key))+'</option>';
   }
   detailHtml+='</select>'+
-    '<select data-admin-tour-perm="'+esc(g.id)+'">'+
-    '<option value="view">View</option>'+
-    '<option value="edit">Edit</option>'+
-    '</select>'+
-    '<button type="button" class="btn" data-admin-add-tour="'+esc(g.id)+'">Add</button>'+
+    '<button type="button" class="btn" data-admin-add-tour="'+esc(g.id)+'"'+(availableTours.length?'':' disabled')+'>Add</button>'+
+    '<button type="button" class="btn" data-admin-add-all-tours="'+esc(g.id)+'" title="Add every remaining cloud tour"'+(availableTours.length?'':' disabled')+'>Add all</button>'+
     '</div></div></div>';
   detailHost.innerHTML=detailHtml;
+
+  function syncPermSelectStyle(sel){
+    if(!sel) return;
+    const edit=sel.value==='edit';
+    sel.classList.toggle('edit', edit);
+    sel.classList.toggle('view', !edit);
+  }
+  detailHost.querySelectorAll('[data-admin-member-perm]').forEach(sel=>syncPermSelectStyle(sel));
 
   function selectGroup(id){
     if(!id || String(id)===String(adminSelectedGroupId)) return;
@@ -18460,7 +18540,7 @@ function renderAdminGroups(){
   detailHost.querySelectorAll('[data-admin-del-group]').forEach(btn=>{
     btn.onclick=async()=>{
       const id=btn.getAttribute('data-admin-del-group');
-      if(!id || !window.confirm('Delete this group and its project grants?')) return;
+      if(!id || !window.confirm('Delete this group?')) return;
       try{
         await adminFetch('/api/admin/groups/'+encodeURIComponent(id), { method:'DELETE' });
         if(String(adminSelectedGroupId)===String(id)) adminSelectedGroupId=null;
@@ -18488,6 +18568,35 @@ function renderAdminGroups(){
     };
   });
 
+  detailHost.querySelectorAll('[data-admin-member-perm]').forEach(sel=>{
+    sel.onchange=async()=>{
+      const id=sel.getAttribute('data-admin-member-perm');
+      const email=String(sel.getAttribute('data-email')||'').toLowerCase();
+      if(isAdminDirectoryEmail(email)){
+        toast('Administrators already have full tour access', true);
+        refreshAdminPanel();
+        return;
+      }
+      const permission=sel.value==='edit'?'edit':'view';
+      const grp=adminCache.groups.find(x=>x.id===id);
+      const cur=normalizeAdminGroupMembers(grp?.members).filter(m=>!isAdminDirectoryEmail(m.email));
+      const next=cur.map(m=>m.email===email ? { email, permission } : m);
+      sel.classList.toggle('edit', permission==='edit');
+      sel.classList.toggle('view', permission==='view');
+      sel.disabled=true;
+      try{
+        adminSelectedGroupId=id;
+        await saveGroupMembers(id, next);
+        toast(email+' set to '+permission);
+      }catch(err){
+        toast(err.message||'Could not update access', true);
+        refreshAdminPanel();
+      }finally{
+        sel.disabled=false;
+      }
+    };
+  });
+
   detailHost.querySelectorAll('[data-admin-add-picked]').forEach(btn=>{
     btn.onclick=async()=>{
       const id=btn.getAttribute('data-admin-add-picked');
@@ -18496,12 +18605,14 @@ function renderAdminGroups(){
       if(!email){ toast('Pick a person first', true); return; }
       const e=String(email).trim().toLowerCase();
       if(!e.includes('@')){ toast('Enter a valid email', true); return; }
+      if(isAdminDirectoryEmail(e)){ toast('Administrators already have full tour access — no need to add them to groups', true); return; }
+      const permission='view';
       const grp=adminCache.groups.find(x=>x.id===id);
-      const cur=Array.isArray(grp?.members)?grp.members.map(x=>String(x).toLowerCase()):[];
-      if(cur.includes(e)){ toast('Already in this group', true); return; }
+      const cur=normalizeAdminGroupMembers(grp?.members).filter(m=>!isAdminDirectoryEmail(m.email));
+      if(cur.some(m=>m.email===e)){ toast('Already in this group', true); return; }
       try{
         adminSelectedGroupId=id;
-        await saveGroupMembers(id, cur.concat([e]));
+        await saveGroupMembers(id, cur.concat([{ email:e, permission }]));
         toast('Added '+e);
         refreshAdminPanel();
       }catch(err){ toast(err.message||'Add failed', true); }
@@ -18511,14 +18622,19 @@ function renderAdminGroups(){
     btn.onclick=async()=>{
       const id=btn.getAttribute('data-admin-add-all-people');
       const grp=adminCache.groups.find(x=>x.id===id);
-      const cur=Array.isArray(grp?.members)?grp.members.map(x=>String(x).toLowerCase()):[];
-      const curSet=new Set(cur);
+      const cur=normalizeAdminGroupMembers(grp?.members).filter(m=>!isAdminDirectoryEmail(m.email));
+      const curSet=new Set(cur.map(m=>m.email));
       const toAdd=(adminCache.users||[])
-        .map(u=>String(u&&u.email||'').trim().toLowerCase())
-        .filter(e=>e.includes('@') && !curSet.has(e));
-      if(!toAdd.length){ toast('Everyone is already in this group'); return; }
+        .map(u=>{
+          const email=String(u&&u.email||'').trim().toLowerCase();
+          if(!email.includes('@') || curSet.has(email)) return null;
+          if(u.role==='admin') return null;
+          return { email, permission: 'view' };
+        })
+        .filter(Boolean);
+      if(!toAdd.length){ toast('All members are already in this group'); return; }
       const n=toAdd.length;
-      if(!window.confirm('Add all '+n+' remaining '+(n===1?'person':'people')+' to this group?')) return;
+      if(!window.confirm('Add all '+n+' remaining '+(n===1?'person':'people')+' as View?')) return;
       try{
         adminSelectedGroupId=id;
         await saveGroupMembers(id, cur.concat(toAdd));
@@ -18532,7 +18648,8 @@ function renderAdminGroups(){
       const id=btn.getAttribute('data-admin-remove-member');
       const email=String(btn.getAttribute('data-email')||'').toLowerCase();
       const grp=adminCache.groups.find(x=>x.id===id);
-      const next=(Array.isArray(grp?.members)?grp.members:[]).filter(x=>String(x).toLowerCase()!==email);
+      const next=normalizeAdminGroupMembers(grp?.members)
+        .filter(m=>!isAdminDirectoryEmail(m.email) && m.email!==email);
       try{
         adminSelectedGroupId=id;
         await saveGroupMembers(id, next);
@@ -18546,16 +18663,35 @@ function renderAdminGroups(){
     btn.onclick=async()=>{
       const id=btn.getAttribute('data-admin-add-tour');
       const sel=detailHost.querySelector('[data-admin-pick-tour]');
-      const permEl=detailHost.querySelector('[data-admin-tour-perm]');
       const key=sel?sel.value:'';
-      const permission=permEl&&permEl.value==='edit'?'edit':'view';
       if(!key){ toast('Pick a tour first', true); return; }
+      const cur=groupTourGrants(id);
+      if(cur.some(t=>t.key===key)){ toast('Tour already assigned', true); return; }
       try{
         adminSelectedGroupId=id;
-        await setGroupTourGrant(id, key, permission);
+        await saveGroupTours(id, cur.concat([{ key }]));
         toast('Tour assigned');
         refreshAdminPanel();
       }catch(err){ toast(err.message||'Assign failed', true); }
+    };
+  });
+  detailHost.querySelectorAll('[data-admin-add-all-tours]').forEach(btn=>{
+    btn.onclick=async()=>{
+      const id=btn.getAttribute('data-admin-add-all-tours');
+      const cur=groupTourGrants(id);
+      const curKeys=new Set(cur.map(t=>t.key));
+      const toAdd=(adminCache.projects||[])
+        .filter(p=>p && p.key && !curKeys.has(p.key))
+        .map(p=>({ key:p.key }));
+      if(!toAdd.length){ toast('All cloud tours are already assigned'); return; }
+      const n=toAdd.length;
+      if(!window.confirm('Add all '+n+' remaining tour'+(n===1?'':'s')+'?')) return;
+      try{
+        adminSelectedGroupId=id;
+        await saveGroupTours(id, cur.concat(toAdd));
+        toast('Added '+n+' tour'+(n===1?'':'s'));
+        refreshAdminPanel();
+      }catch(err){ toast(err.message||'Add all tours failed', true); }
     };
   });
   detailHost.querySelectorAll('[data-admin-remove-tour]').forEach(btn=>{
@@ -18563,352 +18699,15 @@ function renderAdminGroups(){
       const id=btn.getAttribute('data-admin-remove-tour');
       const key=btn.getAttribute('data-tour-key')||'';
       if(!id || !key) return;
+      const next=groupTourGrants(id).filter(t=>t.key!==key);
       try{
         adminSelectedGroupId=id;
-        await removeGroupTourGrant(id, key);
+        await saveGroupTours(id, next);
         toast('Tour removed from group');
         refreshAdminPanel();
       }catch(err){ toast(err.message||'Remove failed', true); }
     };
   });
-}
-
-function adminGrantedEmailsForDraft(){
-  const emails=new Set();
-  for(const g of adminDraftGrants||[]){
-    if(g.principal_type==='user' && g.principal_id){
-      emails.add(String(g.principal_id).toLowerCase());
-    } else if(g.principal_type==='group'){
-      const grp=(adminCache.groups||[]).find(x=>x.id===g.principal_id);
-      for(const m of (grp && grp.members)||[]){
-        if(m) emails.add(String(m).toLowerCase());
-      }
-    }
-  }
-  return emails;
-}
-
-function renderAdminNotifyList(preselect){
-  const list=document.getElementById('adminNotifyList');
-  const sel=document.getElementById('adminProjectSelect');
-  if(!list) return;
-  const key=sel?.value||'';
-  if(!key){ list.innerHTML=''; return; }
-  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
-  const prefer=preselect instanceof Set ? preselect : null;
-  const users=[...(adminCache.users||[])].sort((a,b)=>
-    String(a.email||'').localeCompare(String(b.email||''), undefined, {sensitivity:'base'})
-  );
-  if(!users.length){
-    list.innerHTML='<div class="admin-empty">No people in the directory yet.</div>';
-    return;
-  }
-  let html='';
-  for(const u of users){
-    const email=String(u.email||'').toLowerCase();
-    const checked=prefer ? prefer.has(email) : false;
-    const role=u.role==='admin'?'admin':'member';
-    html+='<label class="admin-notify-row">'+
-      '<input type="checkbox" class="admin-notify-cb" value="'+esc(email)+'"'+(checked?' checked':'')+'>'+
-      '<span>'+esc(u.email)+' <span class="admin-notify-meta">('+role+')</span></span></label>';
-  }
-  list.innerHTML=html;
-}
-
-function adminNotifySelectedEmails(){
-  return [...document.querySelectorAll('#adminNotifyList .admin-notify-cb:checked')]
-    .map(cb=>String(cb.value||'').trim().toLowerCase())
-    .filter(e=>e.includes('@'));
-}
-
-function setAdminNotifyChecks(mode){
-  const boxes=[...document.querySelectorAll('#adminNotifyList .admin-notify-cb')];
-  if(!boxes.length) return;
-  if(mode==='none'){ boxes.forEach(cb=>{ cb.checked=false; }); return; }
-  if(mode==='all'){ boxes.forEach(cb=>{ cb.checked=true; }); return; }
-  if(mode==='granted'){
-    const granted=adminGrantedEmailsForDraft();
-    boxes.forEach(cb=>{ cb.checked=granted.has(String(cb.value||'').toLowerCase()); });
-  }
-}
-
-function syncAdminProjectFolds(){
-  document.querySelectorAll('#adminProjectDetail .admin-project-fold[data-project-fold]').forEach(card=>{
-    const id=card.getAttribute('data-project-fold')||'';
-    const open=adminOpenProjectFolds.has(id);
-    card.classList.toggle('open', open);
-    const head=card.querySelector('[data-admin-toggle-project-fold]');
-    if(head) head.setAttribute('aria-expanded', open?'true':'false');
-  });
-}
-
-function renderAdminProjects(){
-  const sel=document.getElementById('adminProjectSelect');
-  const listHost=document.getElementById('adminProjectsList');
-  const selectedLbl=document.getElementById('adminProjectSelected');
-  const detail=document.getElementById('adminProjectDetail');
-  const hint=document.getElementById('adminProjectGrantsHint');
-  const groupHost=document.getElementById('adminProjectGroupGrants');
-  const peopleHost=document.getElementById('adminProjectPeopleGrants');
-  const searchEl=document.getElementById('adminProjectsSearch');
-  if(!sel || !listHost || !detail || !groupHost || !peopleHost) return;
-  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-  const prev=sel.value;
-  if(prev && !(adminCache.projects||[]).some(p=>p.key===prev)){
-    sel.value='';
-    adminDraftGrants=[];
-  }
-
-  function syncSelectedLabel(key){
-    if(!selectedLbl) return;
-    if(!key){
-      selectedLbl.style.display='none';
-      selectedLbl.innerHTML='';
-      return;
-    }
-    selectedLbl.style.display='block';
-    selectedLbl.innerHTML='Selected: <b>'+esc(cloudTourDisplayName(key))+'</b>';
-  }
-
-  function renderTourList(){
-    const q=((searchEl&&searchEl.value)||'').trim().toLowerCase();
-    const projects=[...(adminCache.projects||[])].sort((a,b)=>
-      cloudTourDisplayName(a.key).localeCompare(cloudTourDisplayName(b.key), undefined, {sensitivity:'base'})
-    );
-    const filtered=q
-      ? projects.filter(p=>{
-          const name=cloudTourDisplayName(p.key).toLowerCase();
-          const key=String(p.key||'').toLowerCase();
-          return name.includes(q) || key.includes(q);
-        })
-      : projects;
-    if(!projects.length){
-      listHost.className='admin-empty';
-      listHost.innerHTML='No cloud tours yet.';
-      return;
-    }
-    if(!filtered.length){
-      listHost.className='admin-empty';
-      listHost.innerHTML='No tours match “'+esc(q)+'”.';
-      return;
-    }
-    listHost.className='';
-    const selected=sel.value||'';
-    let html='';
-    for(const p of filtered){
-      const name=cloudTourDisplayName(p.key);
-      const n=(p.grants||[]).length;
-      const grantLabel=n===1?'1 grant':(n+' grants');
-      const on=selected && selected===p.key;
-      html+='<button type="button" class="admin-tour-row'+(on?' on':'')+'" data-admin-pick-project="'+esc(p.key)+'" title="'+esc(p.key)+'">'+
-        '<span style="min-width:0; flex:1">'+
-        '<span class="admin-tour-name">'+esc(name)+'</span>'+
-        (name!==p.key?'<span class="admin-tour-key">'+esc(p.key)+'</span>':'')+
-        '</span>'+
-        '<span class="admin-tour-meta">'+esc(grantLabel)+'</span>'+
-        '</button>';
-    }
-    listHost.innerHTML=html;
-    listHost.querySelectorAll('[data-admin-pick-project]').forEach(btn=>{
-      btn.onclick=()=>{
-        const key=btn.getAttribute('data-admin-pick-project')||'';
-        if(!key || sel.value===key) return;
-        sel.value=key;
-        if(typeof sel.onchange==='function') sel.onchange();
-        else renderAdminProjects();
-      };
-    });
-  }
-
-  function wireGrantHost(host){
-    if(!host) return;
-    host.querySelectorAll('[data-admin-rm-grant]').forEach(btn=>{
-      btn.onclick=()=>{
-        const i=Number(btn.getAttribute('data-admin-rm-grant'));
-        if(!Number.isFinite(i)) return;
-        adminDraftGrants.splice(i, 1);
-        renderGrants();
-      };
-    });
-    host.querySelectorAll('[data-admin-add-group]').forEach(btn=>{
-      btn.onclick=()=>{
-        const id=btn.getAttribute('data-admin-add-group')||'';
-        if(!id) return;
-        if(adminDraftGrants.some(g=>g.principal_type==='group' && String(g.principal_id)===id)) return;
-        adminDraftGrants.push({ principal_type:'group', principal_id:id, permission:'view' });
-        const proj=adminCache.projects.find(p=>p.key===sel.value);
-        if(proj) proj.grants=adminDraftGrants.slice();
-        renderGrants();
-      };
-    });
-    host.querySelectorAll('[data-admin-add-user]').forEach(btn=>{
-      btn.onclick=()=>{
-        const email=(btn.getAttribute('data-admin-add-user')||'').trim().toLowerCase();
-        if(!email.includes('@')) return;
-        if(adminDraftGrants.some(g=>g.principal_type!=='group' && String(g.principal_id).toLowerCase()===email)) return;
-        adminDraftGrants.push({ principal_type:'user', principal_id:email, permission:'view' });
-        const proj=adminCache.projects.find(p=>p.key===sel.value);
-        if(proj) proj.grants=adminDraftGrants.slice();
-        renderGrants();
-      };
-    });
-    host.querySelectorAll('[data-admin-perm-grant]').forEach(selEl=>{
-      selEl.onchange=()=>{
-        const i=Number(selEl.getAttribute('data-admin-perm-grant'));
-        if(!Number.isFinite(i) || !adminDraftGrants[i]) return;
-        const perm=selEl.value==='edit'?'edit':'view';
-        adminDraftGrants[i].permission=perm;
-        selEl.classList.toggle('edit', perm==='edit');
-        selEl.classList.toggle('view', perm==='view');
-        const proj=adminCache.projects.find(p=>p.key===sel.value);
-        if(proj) proj.grants=adminDraftGrants.slice();
-      };
-    });
-  }
-
-  function renderGrants(opts){
-    opts=opts||{};
-    const key=sel.value;
-    syncSelectedLabel(key);
-    renderTourList();
-    if(!key){
-      detail.classList.remove('show');
-      if(hint) hint.style.display='';
-      groupHost.innerHTML='';
-      peopleHost.innerHTML='';
-      renderAdminNotifyList();
-      return;
-    }
-    detail.classList.add('show');
-    if(hint) hint.style.display='none';
-    syncAdminProjectFolds();
-    // Selecting a tour starts with no email recipients checked; use Select granted / Select all as needed.
-    if(opts.resetNotify) renderAdminNotifyList();
-    else renderAdminNotifyList(new Set(adminNotifySelectedEmails()));
-
-    const groups=[...(adminCache.groups||[])].sort((a,b)=>
-      String(a.name||'').localeCompare(String(b.name||''), undefined, {sensitivity:'base'})
-    );
-    const groupGrantIdx=new Map();
-    adminDraftGrants.forEach((g, idx)=>{
-      if(g.principal_type==='group') groupGrantIdx.set(String(g.principal_id), idx);
-    });
-    const people=[...(adminCache.users||[])].sort((a,b)=>
-      String(a.email||'').localeCompare(String(b.email||''), undefined, {sensitivity:'base'})
-    );
-    const peopleGrantIdx=new Map();
-    adminDraftGrants.forEach((g, idx)=>{
-      if(g.principal_type!=='group') peopleGrantIdx.set(String(g.principal_id||'').toLowerCase(), idx);
-    });
-    const assignedGroups=[...groupGrantIdx.keys()].length;
-    const assignedPeople=peopleGrantIdx.size;
-
-    const groupsCountEl=document.getElementById('adminFoldGroupsCount');
-    if(groupsCountEl){
-      groupsCountEl.textContent=assignedGroups
-        ? (assignedGroups+' assigned · '+groups.length+' total')
-        : (groups.length+' total');
-    }
-    const peopleCountEl=document.getElementById('adminFoldPeopleCount');
-    if(peopleCountEl){
-      peopleCountEl.textContent=assignedPeople
-        ? (assignedPeople+' assigned · '+people.length+' total')
-        : (people.length+' total');
-    }
-
-    function permSelectHtml(gIdx, perm){
-      return '<select class="admin-grant-perm '+esc(perm)+'" data-admin-perm-grant="'+gIdx+'" title="Permission">'+
-        '<option value="view"'+(perm==='view'?' selected':'')+'>View</option>'+
-        '<option value="edit"'+(perm==='edit'?' selected':'')+'>Edit</option>'+
-        '</select>';
-    }
-
-    let gHtml='<div class="admin-grants-scroll" role="list">';
-    if(!groups.length){
-      gHtml+='<div class="admin-empty" style="padding:12px 4px">No groups yet — create one under Admin → Groups.</div>';
-    } else {
-      for(const grp of groups){
-        const id=String(grp.id||'');
-        const gIdx=groupGrantIdx.has(id)?groupGrantIdx.get(id):-1;
-        const on=gIdx>=0;
-        const perm=on?(adminDraftGrants[gIdx].permission==='edit'?'edit':'view'):'view';
-        const label=grp.name||id;
-        gHtml+='<div class="admin-grant-row'+(on?'':' off')+'" role="listitem">'+
-          '<div class="admin-grant-namefield" title="'+esc(label)+'">'+
-          '<span class="admin-grant-label">'+esc(label)+'</span>'+
-          (on ? permSelectHtml(gIdx, perm) : '<span class="admin-perm-badge view" style="opacity:.55">—</span>')+
-          '</div>'+
-          (on
-            ? '<button type="button" class="btn" data-admin-rm-grant="'+gIdx+'">Remove</button>'
-            : '<button type="button" class="btn" data-admin-add-group="'+esc(id)+'">Add</button>')+
-          '</div>';
-      }
-    }
-    gHtml+='</div>';
-    groupHost.innerHTML=gHtml;
-
-    let pHtml='<div class="admin-grants-scroll" role="list">';
-    if(!people.length){
-      pHtml+='<div class="admin-empty" style="padding:12px 4px">No people yet — add someone under Admin → People.</div>';
-    } else {
-      for(const u of people){
-        const email=String(u.email||'').toLowerCase();
-        if(!email.includes('@')) continue;
-        const gIdx=peopleGrantIdx.has(email)?peopleGrantIdx.get(email):-1;
-        const on=gIdx>=0;
-        const perm=on?(adminDraftGrants[gIdx].permission==='edit'?'edit':'view'):'view';
-        const label=u.email;
-        pHtml+='<div class="admin-grant-row'+(on?'':' off')+'" role="listitem">'+
-          '<div class="admin-grant-namefield" title="'+esc(label)+'">'+
-          '<span class="admin-grant-label">'+esc(label)+'</span>'+
-          (on ? permSelectHtml(gIdx, perm) : '<span class="admin-perm-badge view" style="opacity:.55">—</span>')+
-          '</div>'+
-          (on
-            ? '<button type="button" class="btn" data-admin-rm-grant="'+gIdx+'">Remove</button>'
-            : '<button type="button" class="btn" data-admin-add-user="'+esc(email)+'">Add</button>')+
-          '</div>';
-      }
-    }
-    pHtml+='</div>';
-    peopleHost.innerHTML=pHtml;
-
-    wireGrantHost(groupHost);
-    wireGrantHost(peopleHost);
-  }
-
-  sel.onchange=()=>{
-    const key=sel.value;
-    const proj=adminCache.projects.find(p=>p.key===key);
-    adminDraftGrants=proj && Array.isArray(proj.grants)
-      ? proj.grants.map(g=>({
-          principal_type:g.principal_type==='group'?'group':'user',
-          principal_id:g.principal_id,
-          permission:g.permission==='edit'?'edit':'view'
-        }))
-      : [];
-    renderGrants({ resetNotify:true });
-  };
-  if(searchEl) searchEl.oninput=()=>renderTourList();
-  if(!detail.dataset.foldWired){
-    detail.dataset.foldWired='1';
-    detail.querySelectorAll('[data-admin-toggle-project-fold]').forEach(head=>{
-      const toggle=()=>{
-        const id=head.getAttribute('data-admin-toggle-project-fold')||'';
-        if(!id) return;
-        if(adminOpenProjectFolds.has(id)) adminOpenProjectFolds.delete(id);
-        else adminOpenProjectFolds.add(id);
-        syncAdminProjectFolds();
-      };
-      head.onclick=e=>{
-        if(e.target.closest('button')) return;
-        toggle();
-      };
-      head.onkeydown=e=>{
-        if(e.key==='Enter' || e.key===' '){ e.preventDefault(); toggle(); }
-      };
-    });
-  }
-  renderGrants();
 }
 
 (function wireAdminUi(){
@@ -18919,6 +18718,8 @@ function renderAdminProjects(){
   if(peopleSearch) peopleSearch.oninput=()=>renderAdminPeople();
   const groupsSearch=document.getElementById('adminGroupsSearch');
   if(groupsSearch) groupsSearch.oninput=()=>renderAdminGroups();
+  const emailSearch=document.getElementById('adminEmailSearch');
+  if(emailSearch) emailSearch.oninput=()=>renderAdminEmailNotify();
   const addUser=document.getElementById('adminUserAdd');
   if(addUser) addUser.onclick=async()=>{
     const email=(document.getElementById('adminUserEmail')?.value||'').trim().toLowerCase();
@@ -18956,78 +18757,6 @@ function renderAdminProjects(){
       }
     }catch(e){ toast(e.message||'Create failed', true); }
   };
-  const grantAdd=document.getElementById('adminGrantAdd');
-  if(grantAdd) grantAdd.onclick=()=>{
-    const sel=document.getElementById('adminProjectSelect');
-    const projectKey=sel?.value||'';
-    if(!projectKey){ toast('Select a project first.', true); return; }
-    const type=document.getElementById('adminGrantType')?.value==='group'?'group':'user';
-    const principal=document.getElementById('adminGrantPrincipal')?.value||'';
-    const permission=document.getElementById('adminGrantPerm')?.value==='edit'?'edit':'view';
-    if(!principal){ toast('Pick a person or group.', true); return; }
-    const existing=adminDraftGrants.findIndex(g=>
-      g.principal_type===type && String(g.principal_id).toLowerCase()===String(principal).toLowerCase()
-    );
-    if(existing>=0) adminDraftGrants[existing].permission=permission;
-    else adminDraftGrants.push({ principal_type:type, principal_id:principal, permission });
-    const proj=adminCache.projects.find(p=>p.key===projectKey);
-    if(proj) proj.grants=adminDraftGrants.slice();
-    if(sel && typeof sel.onchange==='function') sel.onchange();
-  };
-  const grantSave=document.getElementById('adminGrantSave');
-  if(grantSave) grantSave.onclick=async()=>{
-    const key=document.getElementById('adminProjectSelect')?.value||'';
-    if(!key){ toast('Select a project first.', true); return; }
-    try{
-      await adminFetch('/api/admin/projects/'+encodeTourKeyPath(key)+'/grants', {
-        method:'PUT',
-        headers:{ 'Content-Type':'application/json' },
-        body:JSON.stringify({ grants:adminDraftGrants })
-      });
-      toast('Grants saved');
-      refreshAdminPanel();
-    }catch(e){ toast(e.message||'Save failed', true); }
-  };
-  const tourDel=document.getElementById('adminTourDelete');
-  if(tourDel) tourDel.onclick=async()=>{
-    const key=document.getElementById('adminProjectSelect')?.value||'';
-    if(!key){ toast('Select a project first.', true); return; }
-    await deleteCloudTour(key, { refresh:true });
-  };
-  const nGranted=document.getElementById('adminNotifySelectGranted');
-  if(nGranted) nGranted.onclick=()=>setAdminNotifyChecks('granted');
-  const nAll=document.getElementById('adminNotifySelectAll');
-  if(nAll) nAll.onclick=()=>setAdminNotifyChecks('all');
-  const nNone=document.getElementById('adminNotifySelectNone');
-  if(nNone) nNone.onclick=()=>setAdminNotifyChecks('none');
-  const nSend=document.getElementById('adminNotifySend');
-  if(nSend) nSend.onclick=async()=>{
-    const key=document.getElementById('adminProjectSelect')?.value||'';
-    if(!key){ toast('Select a project first.', true); return; }
-    const emails=adminNotifySelectedEmails();
-    if(!emails.length){ toast('Select at least one person to email.', true); return; }
-    const note=(document.getElementById('adminNotifyNote')?.value||'').trim();
-    const tourName=typeof cloudTourDisplayName==='function'?cloudTourDisplayName(key):key;
-    nSend.disabled=true;
-    try{
-      const res=await adminFetch('/api/admin/notify', {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json' },
-        body:JSON.stringify({ emails, tourKey:key, tourName, note })
-      });
-      const sent=(res && res.sent)||[];
-      const failed=(res && res.failed)||[];
-      if(failed.length){
-        toast('Sent '+sent.length+', failed '+failed.length+(failed[0]?.error?': '+failed[0].error:''), true);
-      } else if(res && res.local){
-        toast('Local stub: would email '+sent.length+' people (no Resend keys).');
-      } else {
-        toast('Emailed '+sent.length+' '+(sent.length===1?'person':'people')+' about '+tourName+'.');
-      }
-    }catch(e){ toast(e.message||'Email failed', true); }
-    finally{ nSend.disabled=false; }
-  };
-
   let adminActivityCache=null;
   function adminActivityHours(){
     const n=Number(document.getElementById('adminActivityHours')?.value||24);
@@ -19236,13 +18965,27 @@ async function selectDoublePhoto(side, idx){
   if(badge) badge.textContent=it.name||('Photo '+(idx+1));
   if(dateEl) dateEl.textContent=fmtPhotoDate(it.dateTaken);
   try{
+    if(it._pending || !it.file){
+      const ok=await resolveDoubleItemPhoto(it);
+      if(!ok || !it.file){
+        toast('Still loading this photo\u2026');
+        return;
+      }
+      if(!it.thumbUrl){
+        try{ it.thumbUrl=await makeThumb(it.file); updateDoubleStripThumb(side, idx); }catch(_){}
+      }
+    }
     await ensureMeta(it);
     if(dateEl) dateEl.textContent=fmtPhotoDate(it.dateTaken);
     if(!it._mat){ try{ const buf=await it.file.arrayBuffer(); it.file=new Blob([buf],{type:it.file.type||'image/jpeg'}); it._mat=true; }catch(_){ } }
     const res=await loadFull(it.file, p.renderer);
     if(p.uniforms.uTex.value){ try{ p.uniforms.uTex.value.dispose(); }catch(_){ } }
     p.uniforms.uTex.value=res.tex;
-  }catch(e){ console.warn('double photo load failed', e); toast('Could not load photo on side '+side.toUpperCase()+'.', true); }
+  }catch(e){
+    if(isAbortErr(e)) return;
+    console.warn('double photo load failed', e);
+    toast('Could not load photo on side '+side.toUpperCase()+'.', true);
+  }
 }
 
 function syncDoubleStripNav(side){
@@ -19281,30 +19024,34 @@ function buildDoubleStrip(side){
   if(!strip) return;
   strip.innerHTML='';
   p.items.forEach((it, idx)=>{
+    const pending=!!(it._pending || !it.file);
     const btn=document.createElement('button');
-    btn.type='button'; btn.className='ds-thumb'+(idx===p.index?' on':'');
-    btn.title=(it.name||'')+' \u00B7 '+fmtPhotoDate(it.dateTaken);
+    btn.type='button'; btn.className='ds-thumb'+(idx===p.index?' on':'')+(pending?' ds-pending':'');
+    btn.title=(it.name||'')+(pending?' \u00B7 loading\u2026':(' \u00B7 '+fmtPhotoDate(it.dateTaken)));
     btn.innerHTML='<span class="ds-media"><span class="ds-check"><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg></span>'
       +'<img alt=""'+(it.thumbUrl?(' src="'+it.thumbUrl+'"'):'')+'></span>'
       +'<div class="ds-meta"><div class="ds-name"></div><div class="ds-date"></div></div>';
     btn.querySelector('.ds-name').textContent=it.name||('#'+(idx+1));
-    btn.querySelector('.ds-date').textContent=fmtPhotoDate(it.dateTaken);
+    btn.querySelector('.ds-date').textContent=pending?'…':fmtPhotoDate(it.dateTaken);
     btn.onclick=()=>selectDoublePhoto(side, idx);
     strip.appendChild(btn);
-    if(!it.thumbUrl){
+    if(!pending && !it.thumbUrl && it.file){
       makeThumb(it.file).then(url=>{
         if(!url) return; it.thumbUrl=url;
         const img=btn.querySelector('img'); if(img) img.src=url;
+        btn.classList.remove('ds-pending');
       }).catch(()=>{});
     }
-    ensureMeta(it).then(()=>{
-      btn.querySelector('.ds-date').textContent=fmtPhotoDate(it.dateTaken);
-      btn.title=(it.name||'')+' \u00B7 '+fmtPhotoDate(it.dateTaken);
-      if(p.index===idx){
-        const dateEl=document.getElementById(side==='a'?'doubleDateA':'doubleDateB');
-        if(dateEl) dateEl.textContent=fmtPhotoDate(it.dateTaken);
-      }
-    }).catch(()=>{});
+    if(!pending){
+      ensureMeta(it).then(()=>{
+        btn.querySelector('.ds-date').textContent=fmtPhotoDate(it.dateTaken);
+        btn.title=(it.name||'')+' \u00B7 '+fmtPhotoDate(it.dateTaken);
+        if(p.index===idx){
+          const dateEl=document.getElementById(side==='a'?'doubleDateA':'doubleDateB');
+          if(dateEl) dateEl.textContent=fmtPhotoDate(it.dateTaken);
+        }
+      }).catch(()=>{});
+    }
   });
   wireDoubleStripNav(side);
   requestAnimationFrame(()=>syncDoubleStripNav(side));
@@ -19448,7 +19195,7 @@ async function pickLocalInsp360ForDouble(rec, sideLabel){
     try{
       const [h]=await window.showOpenFilePicker({
         multiple:false,
-        types:[{description:'INSP360 project', accept:{'application/zip':['.insp360','.zip']}}]
+        types:[{description:'INSP360 / 360skeleton', accept:{'application/zip':['.insp360','.360skeleton','.zip']}}]
       });
       handle=h||null;
     }catch(e){
@@ -19535,10 +19282,84 @@ async function ensureLocalDoubleRec(rec, sideLabel){
   return picked;
 }
 
-async function loadDoubleTourSide(rec){
+/** Build double-tour library rows: #1 ready, rest pending until background warm. */
+function makeDoubleTourItems(photoMetas, firstBlob, opts){
+  opts=opts||{};
+  const zipFile=opts.zipFile||null;
+  const cloudTarget=opts.cloudTarget||null;
+  const signal=opts.signal||null;
+  return photoMetas.map((p,i)=>{
+    const ready=i===0 && firstBlob;
+    const entry={ name:p.name, method:p.method, comp:p.comp, lho:p.lho };
+    return {
+      file:ready?firstBlob:null,
+      name:p.name,
+      zipName:p.name,
+      thumbUrl:null,
+      dateTaken:null,
+      metaRead:false,
+      gps:null,
+      headingTag:null,
+      _pending:!ready,
+      _mat:false,
+      _zipFile:ready?null:zipFile,
+      _zipEntry:ready?null:(zipFile?entry:null),
+      _cloudFetch:(!ready && cloudTarget)?{ target:cloudTarget, entry, signal }:null
+    };
+  });
+}
+
+/** Progressive open from a local/cached .insp360 — first photo now, rest later. */
+async function loadDoubleTourSideFromFile(file, rec, opts){
+  opts=opts||{};
+  const onProgress=typeof opts.onProgress==='function'?opts.onProgress:null;
+  const signal=opts.signal||null;
+  if(signal&&signal.aborted) throw new DOMException('Aborted','AbortError');
+  if(onProgress) onProgress('Reading archive index\u2026');
+  const zip=await readZipCd(file);
+  if(signal&&signal.aborted) throw new DOMException('Aborted','AbortError');
+  let tourJsonText=null;
+  try{
+    const tourEn=(zip.entries||[]).find(e=>String(e.name||'').toLowerCase()==='tour.json' && (e.method===0||e.method===8));
+    if(tourEn){
+      if(onProgress) onProgress('Reading tour order\u2026');
+      const tb=await resolveLocalZipEntryBlob(file, tourEn);
+      tourJsonText=await tb.text();
+    }
+  }catch(_){}
+  let photoMetas=sortPhotosByTourOrder((zip.entries||[]).filter(isLibraryTourPhotoEntry), tourJsonText);
+  if(!photoMetas.length){
+    const loose=(zip.entries||[]).filter(looseArchiveImageEntry);
+    if(loose.length) photoMetas=sortPhotosByTourOrder(loose, tourJsonText);
+  }
+  if(!photoMetas.length) throw new Error('no photos');
+  if(onProgress) onProgress('Opening first photo\u2026');
+  const firstBlob=await resolveLocalZipEntryBlob(file, photoMetas[0]);
+  if(signal&&signal.aborted) throw new DOMException('Aborted','AbortError');
+  const cloudKey=opts.cloudKey||null;
+  const label=rec.label||cloudTourDisplayName(cloudKey||rec.name||'');
+  const items=makeDoubleTourItems(photoMetas, firstBlob, { zipFile:file, signal });
+  return {
+    items,
+    name:rec.name,
+    label,
+    handle:isCloudRec(rec)?null:(rec.handle||null),
+    cloudKey,
+    bg:{ kind:'local', file, photoEntries:photoMetas.map(p=>({ name:p.name, method:p.method, comp:p.comp, lho:p.lho })) }
+  };
+}
+
+/**
+ * Open one Double Tour side with first-photo priority (cloud Range / local ZIP index).
+ * Remaining panoramas stream in via warmDoubleTourSideBackground.
+ */
+async function loadDoubleTourSide(rec, opts){
+  opts=opts||{};
+  const onProgress=typeof opts.onProgress==='function'?opts.onProgress:null;
+  const signal=opts.signal||null;
   if(!rec) throw new Error('missing project');
-  let file=null;
   let cloudKey=null;
+
   if(isCloudRec(rec)){
     cloudKey=cloudKeyFromRec(rec);
     if(!cloudKey) throw new Error('missing cloud key');
@@ -19547,34 +19368,210 @@ async function loadDoubleTourSide(rec){
     if(!publicUrl && document.body.classList.contains('embed')){
       throw new Error('Missing CDN URL for cloud tour. Refresh the Cloud list and try again.');
     }
-    const buf=await fetchCloudTourBytes(cloudKey, publicUrl);
+    const label=rec.label||cloudTourDisplayName(cloudKey);
     const fname=cloudKey.split('/').pop()||'project.insp360';
-    file=new File([buf], fname, { type:'application/zip' });
-  } else if(rec._doubleFile && rec._doubleFile.size){
+
+    // 1) Session / disk cache → progressive extract (no full re-download).
+    try{
+      let cachedBlob=null;
+      const sess=getSessionCloudTour(cloudKey);
+      if(sess&&sess.blob&&sess.blob.size) cachedBlob=sess.blob;
+      if(!cachedBlob){
+        try{
+          const target=cloudTourFetchTarget(cloudKey, publicUrl);
+          const cacheUrl=(target&&target.cacheUrl)||'';
+          if(cacheUrl){
+            const cached=await getCachedCloudTour(cacheUrl);
+            if(cached&&cached.blob&&cached.blob.size && !isCloudTourCacheStale(cloudKey)){
+              cachedBlob=cached.blob;
+              try{ rememberSessionCloudTour(cloudKey, cached.blob, cached.etag, cacheUrl); }catch(_){}
+            }
+          }
+        }catch(_){}
+      }
+      if(cachedBlob&&cachedBlob.size){
+        if(onProgress) onProgress('Using cached tour\u2026');
+        const file=new File([cachedBlob], fname, { type:'application/zip' });
+        return loadDoubleTourSideFromFile(file, rec, { onProgress, signal, cloudKey });
+      }
+    }catch(e){ if(isAbortErr(e)) throw e; }
+
+    // 2) Range first-frame progressive (same path as single-tour open).
+    try{
+      if(onProgress) onProgress('Opening first photo\u2026');
+      const first=await fetchCloudTourFirstFrame(cloudKey, publicUrl, signal, onProgress);
+      const photoMetas=(first.photoEntries||[]).map(p=>({ name:p.name, method:p.method, comp:p.comp, lho:p.lho }));
+      if(!photoMetas.length) throw new Error('no photos');
+      const firstBlob=(first.entries&&first.entries[0]&&first.entries[0].blob)||null;
+      if(!firstBlob) throw new Error('no photos');
+      const items=makeDoubleTourItems(photoMetas, firstBlob, {
+        cloudTarget:first.target||null,
+        signal
+      });
+      return {
+        items,
+        name:rec.name,
+        label,
+        handle:null,
+        cloudKey,
+        bg:{
+          kind:'cloud',
+          key:cloudKey,
+          publicUrl,
+          photoEntries:first.photoEntries||photoMetas,
+          target:first.target||null,
+          etag:first.etag||null,
+          cacheUrl:(first.target&&first.target.cacheUrl)||'',
+          signal
+        }
+      };
+    }catch(e){
+      if(isAbortErr(e)) throw e;
+      if(e&&e.message==='RANGE_NOT_SUPPORTED'&&e.fullBuffer){
+        const file=new File([e.fullBuffer], fname, { type:'application/zip' });
+        try{ rememberSessionCloudTour(cloudKey, file, e.etag||null, ''); }catch(_){}
+        return loadDoubleTourSideFromFile(file, rec, { onProgress, signal, cloudKey });
+      }
+      console.warn('double-tour progressive open failed; full download fallback', e);
+    }
+
+    // 3) Fallback: full download then progressive extract.
+    if(onProgress) onProgress('Downloading tour\u2026');
+    const buf=await fetchCloudTourBytes(cloudKey, publicUrl, signal, null);
+    const file=new File([buf], fname, { type:'application/zip' });
+    try{ rememberSessionCloudTour(cloudKey, file, null, ''); }catch(_){}
+    return loadDoubleTourSideFromFile(file, rec, { onProgress, signal, cloudKey });
+  }
+
+  // Local .insp360
+  let file=null;
+  if(rec._doubleFile && rec._doubleFile.size){
     file=rec._doubleFile;
   } else {
     try{
       file=await fileFromLocalHandle(rec.handle, rec.name||rec.label);
     }catch(e){
-      // Last chance: same-named Cloud tour for this gate.
       if(document.body.classList.contains('embed')){
         await ensureEmbedCloudToursCached();
         const matched=findCloudTourForLocalName(rec.name) || findCloudTourForLocalName(rec.label);
         const cloudRef=cloudRefFromTour(matched, rec.label||null);
         if(cloudRef && (cloudRef.publicUrl || publicUrlForCloudKey(cloudRef.cloudKey,''))){
-          return loadDoubleTourSide(cloudRef);
+          return loadDoubleTourSide(cloudRef, opts);
         }
       }
       throw e;
     }
   }
-  const list=await readProject(file, showLoadProgress);
-  const photos=list.filter(e=>/\.(jpg|jpeg|png)$/i.test(e.name) && e.method===0 && e.name.toLowerCase()!=='preview.jpg');
-  photos.sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
-  if(!photos.length) throw new Error('no photos');
-  const items=photos.map(pe=>({file:pe.blob, name:pe.name, thumbUrl:null, dateTaken:null, metaRead:false, gps:null, headingTag:null}));
-  const label=rec.label||cloudTourDisplayName(cloudKey||rec.name||'');
-  return { items, name:rec.name, label, handle:isCloudRec(rec)?null:(rec.handle||null), cloudKey };
+  return loadDoubleTourSideFromFile(file, rec, { onProgress, signal, cloudKey:null });
+}
+
+/** Resolve a pending double-tour photo (local ZIP slice or cloud Range) on demand. */
+async function resolveDoubleItemPhoto(it){
+  if(!it) return false;
+  if(it.file && !it._pending) return true;
+  if(it._zipFile && it._zipEntry){
+    const blob=await resolveLocalZipEntryBlob(it._zipFile, it._zipEntry);
+    it.file=blob; it._pending=false; it._zipFile=null; it._zipEntry=null; it._cloudFetch=null;
+    return true;
+  }
+  if(it._cloudFetch && it._cloudFetch.target && it._cloudFetch.entry){
+    const cf=it._cloudFetch;
+    if(cf.signal&&cf.signal.aborted) throw new DOMException('Aborted','AbortError');
+    const readRange=async (offset, length)=>{
+      if(cf.signal&&cf.signal.aborted) throw new DOMException('Aborted','AbortError');
+      return cloudTourReadRange(cf.target, offset, length, cf.signal);
+    };
+    const blob=await rangeZipExtractEntry(readRange, cf.entry);
+    it.file=blob; it._pending=false; it._zipFile=null; it._zipEntry=null; it._cloudFetch=null;
+    return true;
+  }
+  return false;
+}
+
+function updateDoubleStripThumb(side, idx){
+  try{
+    if(!doubleState||!doubleState[side]) return;
+    const it=doubleState[side].items[idx];
+    if(!it||!it.thumbUrl) return;
+    const strip=document.getElementById(side==='a'?'doubleStripA':'doubleStripB');
+    const btn=strip&&strip.children[idx];
+    if(!btn) return;
+    const img=btn.querySelector('img');
+    if(img) img.src=it.thumbUrl;
+    btn.classList.remove('ds-pending');
+  }catch(_){}
+}
+
+/** After first frames are on screen: stream #2… for one side (tour order). */
+async function warmDoubleTourSideBackground(side, data, loadGen){
+  if(!data||!data.bg||!data.items||data.items.length<2) return;
+  const bg=data.bg;
+  const items=data.items;
+  const total=items.length;
+  try{
+    if(bg.kind==='local' && bg.file && Array.isArray(bg.photoEntries)){
+      for(let i=1;i<bg.photoEntries.length;i++){
+        if(loadGen!==_doubleLoadGen) return;
+        const en=bg.photoEntries[i];
+        const it=items[i] || items.find(x=>x&&(x.name===en.name||x.zipName===en.name));
+        if(!it || (it.file && !it._pending)) continue;
+        showBgLoad(i+1, total, 'Tour '+side.toUpperCase()+' \u2014 photo '+(i+1)+'/'+total, loadGen);
+        try{
+          const blob=await resolveLocalZipEntryBlob(bg.file, en);
+          if(loadGen!==_doubleLoadGen) return;
+          it.file=blob; it._pending=false; it._zipFile=null; it._zipEntry=null; it._cloudFetch=null;
+          try{ it.thumbUrl=await makeThumb(it.file); }catch(_){}
+          updateDoubleStripThumb(side, items.indexOf(it));
+        }catch(e){ console.warn('double local warm failed', en&&en.name, e); }
+        await yieldUi();
+      }
+    } else if(bg.kind==='cloud' && bg.target && Array.isArray(bg.photoEntries)){
+      const signal=bg.signal||null;
+      const readRange=async (offset, length)=>{
+        if(signal&&signal.aborted) throw new DOMException('Aborted','AbortError');
+        return cloudTourReadRange(bg.target, offset, length, signal);
+      };
+      for(let i=1;i<bg.photoEntries.length;i++){
+        if(loadGen!==_doubleLoadGen) return;
+        if(signal&&signal.aborted) return;
+        const en=bg.photoEntries[i];
+        const it=items[i] || items.find(x=>x&&(x.name===en.name||x.zipName===en.name));
+        if(!it || (it.file && !it._pending)) continue;
+        showBgLoad(i+1, total, 'Tour '+side.toUpperCase()+' \u2014 photo '+(i+1)+'/'+total, loadGen);
+        try{
+          const blob=await rangeZipExtractEntry(readRange, en);
+          if(loadGen!==_doubleLoadGen) return;
+          it.file=blob; it._pending=false; it._zipFile=null; it._zipEntry=null; it._cloudFetch=null;
+          try{ it.thumbUrl=await makeThumb(it.file); }catch(_){}
+          updateDoubleStripThumb(side, items.indexOf(it));
+        }catch(e){
+          if(isAbortErr(e)) return;
+          console.warn('double cloud warm failed', en&&en.name, e);
+        }
+        await yieldUi();
+      }
+      // Keep full archive in session/disk for next open (non-blocking).
+      try{
+        void cacheCloudTourArchiveInBackground({
+          key:bg.key, publicUrl:bg.publicUrl||'', cacheUrl:bg.cacheUrl||'',
+          signal, etag:bg.etag||null, stillForeground:()=>loadGen===_doubleLoadGen
+        });
+      }catch(_){}
+    }
+  }catch(e){
+    if(!isAbortErr(e)) console.warn('double-tour background warm failed', side, e);
+  }
+}
+
+async function warmDoubleTourBackground(dataA, dataB, loadGen){
+  try{
+    await Promise.all([
+      warmDoubleTourSideBackground('a', dataA, loadGen),
+      warmDoubleTourSideBackground('b', dataB, loadGen)
+    ]);
+  }finally{
+    if(loadGen===_doubleLoadGen) hideBgLoad(loadGen);
+  }
 }
 
 function disposeDoubleState(){
@@ -19617,8 +19614,13 @@ function disposeDoubleState(){
 
 /** Abort in-flight Double Tour loads and return straight to a solid dashboard. */
 let _doubleLoadGen=0;
+let _doubleAbort=null;
 function exitDoubleTour(){
+  const prevLoadGen=_doubleLoadGen;
   _doubleLoadGen++; // discard any preloaded / still-loading A+B tours
+  try{ if(_doubleAbort) _doubleAbort.abort(); }catch(_){}
+  _doubleAbort=null;
+  try{ hideBgLoad(prevLoadGen); }catch(_){}
   disposeDoubleState();
   doubleLockView=false;
   doubleLockOffset=null;
@@ -19650,15 +19652,14 @@ function exitDoubleTour(){
   if(document.body.classList.contains('embed')){
     document.body.classList.add('embed-dash');
     embedDashOpen=true;
-    try{ setEmbedDashButton('back'); }catch(_){}
+    try{ setEmbedDashButton(hasLoadedTourForDash()?'back':'hide'); }catch(_){}
     try{ document.getElementById('btnHome').style.display='none'; }catch(_){}
-    try{ document.getElementById('btnDashboard').style.display=''; }catch(_){}
     try{ notifyEmbedDash(true); }catch(_){}
     try{ setDashViewTab(dashViewTab==='cloud'?'cloud':'local'); }catch(_){}
   } else {
     document.body.classList.remove('proj-open','proj-nophotos');
     try{ document.getElementById('btnHome').style.display='none'; }catch(_){}
-    try{ document.getElementById('btnDashboard').style.display='none'; }catch(_){}
+    try{ setEmbedDashButton('hide'); }catch(_){}
   }
 
   // Hide main WebGL stage while dashboard is up (CSS should too; inline is a hard guarantee).
@@ -19679,15 +19680,25 @@ function exitDoubleTour(){
 
 async function startDoubleTour(recA, recB){
   const loadGen=++_doubleLoadGen;
+  try{ if(_doubleAbort) _doubleAbort.abort(); }catch(_){}
+  _doubleAbort=new AbortController();
+  const signal=_doubleAbort.signal;
   try{
     try{ abortCloudThumbLoads(); }catch(_){}
-    showLoadProgress(0, 2, 'Opening tour A\u2026');
+    showLoadProgress(0, 2, 'Opening first photos\u2026');
     toast('Loading Double Tour Inspection\u2026');
-    const dataA=await loadDoubleTourSide(recA);
-    if(loadGen!==_doubleLoadGen) return; // exited / superseded while loading
-    showLoadProgress(1, 2, 'Opening tour B\u2026');
-    const dataB=await loadDoubleTourSide(recB);
-    if(loadGen!==_doubleLoadGen) return;
+    // First photo from A and B in parallel — remaining panoramas warm in the background.
+    const [dataA, dataB]=await Promise.all([
+      loadDoubleTourSide(recA, {
+        signal,
+        onProgress:(m)=>{ if(loadGen===_doubleLoadGen) showLoadProgress(0, 2, 'A: '+(m||'Opening\u2026')); }
+      }),
+      loadDoubleTourSide(recB, {
+        signal,
+        onProgress:(m)=>{ if(loadGen===_doubleLoadGen) showLoadProgress(1, 2, 'B: '+(m||'Opening\u2026')); }
+      })
+    ]);
+    if(loadGen!==_doubleLoadGen || signal.aborted) return;
     showLoadProgress(2, 2, 'Building viewer\u2026');
     cancelDoublePick();
     document.body.classList.remove('embed-dash');
@@ -19733,9 +19744,15 @@ async function startDoubleTour(recA, recB){
     if(loadGen!==_doubleLoadGen){ disposeDoubleState(); return; }
     endLoadProgress();
     requestAnimationFrame(()=>{ resizeDoublePanes(); });
-    toast('Double Tour ready \u2014 pick a photo in each strip. Lock view to navigate both together.');
+    const pendingA=(dataA.items||[]).filter(it=>it&&(it._pending||!it.file)).length;
+    const pendingB=(dataB.items||[]).filter(it=>it&&(it._pending||!it.file)).length;
+    toast(pendingA||pendingB
+      ? 'Double Tour ready \u2014 first photos loaded; remaining photos loading in background.'
+      : 'Double Tour ready \u2014 pick a photo in each strip. Lock view to navigate both together.');
+    // Stream #2… for both sides without blocking the viewer.
+    void warmDoubleTourBackground(dataA, dataB, loadGen);
   }catch(e){
-    if(loadGen!==_doubleLoadGen) return;
+    if(loadGen!==_doubleLoadGen || isAbortErr(e)) return;
     console.warn(e);
     endLoadProgress();
     exitDoubleTour();
@@ -19874,7 +19891,7 @@ window.addEventListener('resize', ()=>{ if(isDoubleTour()){ resizeDoublePanes();
 /* __BME_INSP360_INTEGRATION__ */
 (function(){
   /** Semver only (no product prefix). Patch rolls 0–99 then middle number +1. */
-  const VERSION_NUM="1.2.84";
+  const VERSION_NUM="1.3.8";
   /**
    * Product line for this HTML copy:
    * - QR360 = standalone Inspections viewer (file / :8788 / workers.dev)
@@ -20332,7 +20349,7 @@ window.addEventListener('resize', ()=>{ if(isDoubleTour()){ resizeDoublePanes();
             try{
               const pickerOpts={
                 multiple:false,
-                types:[{description:'INSP360 project', accept:{'application/zip':['.insp360','.zip']}}]
+                types:[{description:'INSP360 / 360skeleton', accept:{'application/zip':['.insp360','.360skeleton','.zip']}}]
               };
               const startIn=projectDir||photoSourceHint||startHint;
               if(startIn) pickerOpts.startIn=startIn;
