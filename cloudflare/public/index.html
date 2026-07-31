@@ -18031,6 +18031,23 @@ function groupTourGrants(groupId){
   return out;
 }
 
+/** Tours are assignment-only now; migrate any leftover group View grants to Edit. */
+async function upgradeGroupTourGrantsToEdit(){
+  const byGroup=new Map();
+  for(const p of adminCache.projects||[]){
+    for(const g of p.grants||[]){
+      if(g.principal_type!=='group' || !g.principal_id || !p.key) continue;
+      const id=String(g.principal_id);
+      if(!byGroup.has(id)) byGroup.set(id, []);
+      byGroup.get(id).push({ key:p.key, permission:g.permission==='edit'?'edit':'view' });
+    }
+  }
+  for(const [groupId, tours] of byGroup){
+    if(!tours.some(t=>t.permission!=='edit')) continue;
+    try{ await saveGroupTours(groupId, tours); }catch(_){}
+  }
+}
+
 async function saveGroupTours(groupId, tours){
   const seen=new Map();
   for(const t of tours||[]){

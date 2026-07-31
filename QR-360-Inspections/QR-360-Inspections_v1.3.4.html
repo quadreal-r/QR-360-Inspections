@@ -20511,4 +20511,21 @@ window.addEventListener('resize', ()=>{ if(isDoubleTour()){ resizeDoublePanes();
         if(p) p.textContent='Create a new .insp360 for this sphere, or open an existing one. When you close, you can link it so it reopens automatically next time.';
         const createBtn=document.getElementById('createProj');
         if(createBtn){
-          createBtn.style.display='inlin
+          createBtn.style.display='inline-flex';
+          createBtn.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Create project';
+        }
+        const openBtn=document.getElementById('openProject2');
+        if(openBtn){
+          openBtn.style.display='inline-flex';
+          openBtn.innerHTML='<svg viewBox="0 0 24 24"><path d="M21 8v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2z"/><path d="M3 11h18"/></svg>Open existing project';
+        }
+      }
+    }
+  }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', ()=>{ setTimeout(bootEmbed, 0); });
+  else setTimeout(bootEmbed, 0);
+})();
+</script>
+</body>
+</html>
