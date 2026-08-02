@@ -9,6 +9,8 @@ const REPORT_TO = 'quadreal.rpiwin@gmail.com'
 const ALLOWED_TYPES = new Set([
   'login',
   'logout',
+  'access_offline_on',
+  'access_offline_off',
   'heartbeat',
   'session_end',
   'tour_open_start',

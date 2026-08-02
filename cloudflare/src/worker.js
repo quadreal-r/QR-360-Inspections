@@ -36,7 +36,9 @@ import {
   handleAuthApi,
   sendResendEmail,
   verifySession,
+  wantsHtml,
 } from './auth.js'
+import { getAccessOffline } from './access-offline.js'
 import {
   getActivityReport,
   handleTelemetryPost,
@@ -953,6 +955,13 @@ async function handleApi(request, env) {
     return json({ error: 'Could not resolve user' }, 401)
   }
 
+  // Panic kill-switch: while Offline only Admins may touch the API, so an existing
+  // session cannot keep reading tours after the plug is pulled. /api/auth/* is
+  // already handled above and stays open so an Admin can sign in and restore.
+  if (user.role !== 'admin' && (await getAccessOffline(env))) {
+    return json({ error: 'INSP 360 is offline.', offline: true }, 403)
+  }
+
   if (path === '/api/telemetry' && request.method === 'POST') {
     return handleTelemetryPost(request, env, user)
   }
@@ -1525,6 +1534,16 @@ export default {
 
       // Brand assets must stay public so the login wall can load its background.
       const isPublicBrand = url.pathname.startsWith('/brand/')
+
+      // Panic kill-switch: while Offline, every HTML document gets the Off Line wall —
+      // even with a valid session cookie. Only document requests are checked so static
+      // assets do not pay for a D1 read on every hit.
+      if (!isPublicBrand && wantsHtml(request) && (await getAccessOffline(env))) {
+        return authWallResponse(request, {
+          error: 'INSP 360 is offline. Only an Admin can restore access.',
+          offline: true,
+        })
+      }
 
       // Session cookie gate for viewer HTML/assets. Unauthenticated → QuadReal login wall.
       const auth = await verifySession(request, env)

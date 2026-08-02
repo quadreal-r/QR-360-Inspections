@@ -112,6 +112,33 @@ Once signed in, use **Log out** next to the top identity chip — it `POST`s `/a
 
 Seeded admin: `robert.piwin@quadreal.com` (see `migrations/0002_seed_admin.sql`).
 
+### Offline kill-switch (panic)
+
+Entering **`pulltheplug@quadreal.com`** on the login wall immediately takes INSP 360
+**Offline** for everyone (no OTP is sent for that address — it is a trigger, not an
+account). Tours in R2, D1 accounts, and grants are **not** deleted.
+
+While Offline:
+
+- Every HTML document gets the **Off Line** wall, even with a valid session cookie
+- `/api/*` returns **403** for non-admins, so an already-open browser tab stops working
+- `/api/auth/*` stays reachable so an **Admin** (D1 `users.role = 'admin'`) can request a
+  code, verify it, and thereby **clear Offline** and restore the app for everyone
+- A non-admin who verifies a valid code while Offline is refused (403) and stays out
+
+Both transitions are written to the activity log as `access_offline_on` /
+`access_offline_off`, including which address triggered them.
+
+Flag storage: D1 `app_settings` key `access_offline` (see `migrations/0006_app_settings.sql`).
+
+> **Deploying this the first time requires the migration** — `wrangler deploy` does not run
+> D1 migrations. Run `npm run db:migrate` (or
+> `npx wrangler d1 migrations apply insp360-acl --remote`) or the switch cannot be armed.
+> Until the table exists the app simply stays online, and pulling the plug returns an error.
+
+Same behaviour as QR-East Industrial Database (`functions/lib/accessOffline.ts`), backed by
+D1 instead of Supabase.
+
 ## Local / cloud in the viewer
 
 | Badge | Meaning |

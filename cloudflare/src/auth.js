@@ -2,6 +2,13 @@
  * QuadReal branded session auth — OTP via Resend + HMAC session cookie.
  */
 import { QR_MARK_DATA_URL } from './qr-mark.js'
+import {
+  decideOfflineCodeRequest,
+  decideOfflineVerify,
+  getAccessOffline,
+  isAppAdmin,
+  setAccessOffline,
+} from './access-offline.js'
 
 export const SESSION_COOKIE = 'insp360_session'
 export const SESSION_TTL_SEC = 24 * 60 * 60 // 1 day
@@ -394,6 +401,32 @@ export async function handleAuthApi(request, env, path) {
       return json({ error: 'Valid email required', email: body?.email || '' }, 400)
     }
 
+    // Panic kill-switch. `pulltheplug@…` takes the app Offline for everyone with no
+    // OTP; while Offline only an Admin may request a code (to restore access).
+    const offline = await getAccessOffline(env)
+    const decision = decideOfflineCodeRequest({
+      email,
+      offline,
+      isAdmin: offline ? await isAppAdmin(email, env) : false,
+    })
+    if (decision.action === 'pull_plug') {
+      try {
+        await setAccessOffline(env, true, { setBy: email })
+      } catch (err) {
+        return json({ error: err?.message || 'Could not take the app offline' }, 500)
+      }
+      try {
+        const { recordEvent } = await import('./activity.js')
+        await recordEvent(env, { email, event_type: 'access_offline_on' })
+      } catch (_) {
+        /* telemetry must not block the kill-switch */
+      }
+      return json({ ok: true, email, mode: 'offline' })
+    }
+    if (decision.action === 'block_non_admin') {
+      return json({ error: decision.error, email, offline: true }, 403)
+    }
+
     // Anti-enumeration for unknown emails: pretend success without sending.
     // If allowlisted but mail fails, surface the error so the wall can explain Resend limits.
     const allowed = await userExists(env, email)
@@ -441,6 +474,30 @@ export async function handleAuthApi(request, env, path) {
     const checked = await consumeOtp(env, email, code)
     if (!checked.ok) {
       return json({ error: checked.error || 'Invalid or expired code', email }, 401)
+    }
+
+    // While Offline, a valid code is not enough: only an Admin gets in, and doing so
+    // clears the kill-switch and restores the app for everyone.
+    const offlineNow = await getAccessOffline(env)
+    if (offlineNow) {
+      const verdict = decideOfflineVerify({
+        offline: true,
+        isAdmin: await isAppAdmin(email, env),
+      })
+      if (verdict.action === 'refuse') {
+        return json({ error: verdict.error, email, offline: true }, 403)
+      }
+      try {
+        await setAccessOffline(env, false, { setBy: email })
+      } catch (err) {
+        return json({ error: err?.message || 'Could not restore access' }, 500)
+      }
+      try {
+        const { recordEvent } = await import('./activity.js')
+        await recordEvent(env, { email, event_type: 'access_offline_off' })
+      } catch (_) {
+        /* telemetry must not block restore */
+      }
     }
 
     try {
@@ -542,6 +599,7 @@ export function wantsHtml(request) {
 /** QuadReal two-step login wall (email → code, shows destination email). */
 export function authWallResponse(request, auth) {
   const detail = String(auth?.error || 'Sign in required').replace(/</g, '&lt;')
+  const offline = auth?.offline === true
   const reqUrl = new URL(request.url)
   const returnTo = safeReturnTo(reqUrl.searchParams.get('return_to'))
   const returnToJs = JSON.stringify(returnTo || '/')
@@ -568,7 +626,7 @@ export function authWallResponse(request, auth) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign in · INSP 360</title>
+<title>${offline ? 'Off Line · INSP 360' : 'Sign in · INSP 360'}</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -600,6 +658,7 @@ export function authWallResponse(request, auth) {
     margin:0 0 6px;font-family:var(--display);font-size:30px;font-weight:600;
     letter-spacing:-.02em;text-align:center;
   }
+  h1.offline{font-size:36px;letter-spacing:.04em}
   .sub{margin:0 0 22px;color:var(--muted);font-size:14px;line-height:1.45;text-align:center}
   .msg{margin:0 0 18px;color:var(--muted);font-size:14px;line-height:1.5;text-align:center}
   .msg strong{color:var(--text);font-weight:700;word-break:break-all}
@@ -636,9 +695,13 @@ export function authWallResponse(request, auth) {
 <body>
   <div class="card">
     <img class="qr-mark" src="${mark}" alt="QuadReal">
-    <h1>INSP 360</h1>
-    <p class="sub">Sign in with your work email</p>
-    <div class="err" id="err">${detail && detail !== 'Sign in required' ? detail : ''}</div>
+    <h1 id="appTitle" class="${offline ? 'offline' : ''}">${offline ? 'Off Line' : 'INSP 360'}</h1>
+    <p class="sub" id="appSub">${
+      offline
+        ? 'Access is paused. An Admin can sign in below to restore the app.'
+        : 'Sign in with your work email'
+    }</p>
+    <div class="err" id="err">${!offline && detail && detail !== 'Sign in required' ? detail : ''}</div>
 
     <div class="step active" id="stepEmail">
       <form id="formEmail">
@@ -660,7 +723,11 @@ export function authWallResponse(request, auth) {
         <button type="button" id="btnChange">Change email</button>
       </div>
     </div>
-    <p class="hint">Access is limited to people added by an admin.</p>
+    <p class="hint" id="appHint">${
+      offline
+        ? 'Only an Admin can reactivate. Data, files, and accounts are unchanged.'
+        : 'Access is limited to people added by an admin.'
+    }</p>
   </div>
 <script>
 (function(){
@@ -677,6 +744,15 @@ export function authWallResponse(request, auth) {
     err.textContent=msg; err.classList.add('show');
   }
   if(err.textContent.trim()) err.classList.add('show');
+
+  function applyOfflineChrome(){
+    const t=document.getElementById('appTitle');
+    t.textContent='Off Line';
+    t.classList.add('offline');
+    document.getElementById('appSub').textContent='Access is paused. An Admin can sign in below to restore the app.';
+    document.getElementById('appHint').textContent='Only an Admin can reactivate. Data, files, and accounts are unchanged.';
+    document.title='Off Line · INSP 360';
+  }
 
   function showCodeStep(email){
     pendingEmail=email;
@@ -703,7 +779,18 @@ export function authWallResponse(request, auth) {
     });
     const j=await res.json().catch(()=>({}));
     if(!res.ok) throw new Error(j.error||'Could not send code');
-    return j.email||email;
+    return { email: j.email||email, mode: j.mode==='offline'?'offline':'code' };
+  }
+
+  function showResult(result){
+    if(result.mode==='offline'){
+      applyOfflineChrome();
+      emailInput.value='';
+      showEmailStep();
+      showErr('');
+      return;
+    }
+    showCodeStep(result.email);
   }
 
   document.getElementById('formEmail').addEventListener('submit',async (e)=>{
@@ -712,8 +799,7 @@ export function authWallResponse(request, auth) {
     const btn=document.getElementById('btnSend');
     btn.disabled=true; showErr('');
     try{
-      const shown=await requestCode(email);
-      showCodeStep(shown);
+      showResult(await requestCode(email));
     }catch(ex){ showErr(ex.message||'Could not send code'); }
     finally{ btn.disabled=false; }
   });
