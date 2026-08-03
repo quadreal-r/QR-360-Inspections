@@ -84,22 +84,35 @@ export function openAclDb(dbPath) {
   const db = {
     path: resolved,
     prepare(sql) {
+      const bound = (...params) => {
+        const runStmt = () => raw.prepare(sql)
+        return {
+          first() {
+            const row = runStmt().get(...params)
+            return row ?? null
+          },
+          all() {
+            return { results: runStmt().all(...params) }
+          },
+          run() {
+            const info = runStmt().run(...params)
+            return { meta: { changes: info.changes ?? 0 } }
+          },
+        }
+      }
+      // D1 allows prepare(sql).all()/first()/run() with no bind when there are no params.
       return {
         bind(...params) {
-          const runStmt = () => raw.prepare(sql)
-          return {
-            first() {
-              const row = runStmt().get(...params)
-              return row ?? null
-            },
-            all() {
-              return { results: runStmt().all(...params) }
-            },
-            run() {
-              const info = runStmt().run(...params)
-              return { meta: { changes: info.changes ?? 0 } }
-            },
-          }
+          return bound(...params)
+        },
+        first() {
+          return bound().first()
+        },
+        all() {
+          return bound().all()
+        },
+        run() {
+          return bound().run()
         },
       }
     },
