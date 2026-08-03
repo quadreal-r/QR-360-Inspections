@@ -39,6 +39,11 @@ CREATE TABLE IF NOT EXISTS project_grants (
 );
 CREATE INDEX IF NOT EXISTS idx_project_grants_principal ON project_grants(principal_type, principal_id);
 CREATE INDEX IF NOT EXISTS idx_project_grants_key ON project_grants(cloud_key);
+CREATE TABLE IF NOT EXISTS app_settings (
+  key TEXT PRIMARY KEY NOT NULL,
+  value TEXT NOT NULL,
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
 `
 
 const SEED_SQL = `

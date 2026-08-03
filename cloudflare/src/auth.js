@@ -2,6 +2,13 @@
  * QuadReal branded session auth — OTP via Resend + HMAC session cookie.
  */
 import { QR_MARK_DATA_URL } from './qr-mark.js'
+import {
+  decideOfflineCodeRequest,
+  decideOfflineVerify,
+  getAccessOffline,
+  isAppAdmin,
+  setAccessOffline,
+} from './accessOffline.js'
 
 export const SESSION_COOKIE = 'insp360_session'
 export const SESSION_TTL_SEC = 24 * 60 * 60 // 1 day
@@ -394,13 +401,37 @@ export async function handleAuthApi(request, env, path) {
       return json({ error: 'Valid email required', email: body?.email || '' }, 400)
     }
 
+    if (!env.INSP360_DB) return json({ error: 'ACL database not configured' }, 503)
+
+    // Panic kill-switch: pulltheplug@… sets Offline; while Offline only Admins may OTP.
+    const offline = await getAccessOffline(env)
+    const adminUser = offline ? await isAppAdmin(email, env) : false
+    const offlineDecision = decideOfflineCodeRequest({
+      email,
+      offline,
+      isAdmin: adminUser,
+    })
+    if (offlineDecision.action === 'pull_plug') {
+      try {
+        await setAccessOffline(env, true, { setBy: email })
+      } catch (err) {
+        return json(
+          { error: err?.message || 'Could not update offline status.' },
+          500,
+        )
+      }
+      return json({ ok: true, email, mode: 'offline' })
+    }
+    if (offlineDecision.action === 'block_non_admin') {
+      return json({ error: offlineDecision.error, email }, 400)
+    }
+
     // Anti-enumeration for unknown emails: pretend success without sending.
     // If allowlisted but mail fails, surface the error so the wall can explain Resend limits.
     const allowed = await userExists(env, email)
     if (!allowed) {
-      return json({ ok: true, email })
+      return json({ ok: true, email, mode: 'code' })
     }
-    if (!env.INSP360_DB) return json({ error: 'ACL database not configured' }, 503)
     const code = generateOtpCode()
     await storeOtp(env, email, code)
     const sent = await sendOtpEmail(env, email, code)
@@ -416,7 +447,7 @@ export async function handleAuthApi(request, env, path) {
       )
     }
 
-    return json({ ok: true, email })
+    return json({ ok: true, email, mode: 'code' })
   }
 
   if (path === '/api/auth/verify' && request.method === 'POST') {
@@ -441,6 +472,25 @@ export async function handleAuthApi(request, env, path) {
     const checked = await consumeOtp(env, email, code)
     if (!checked.ok) {
       return json({ error: checked.error || 'Invalid or expired code', email }, 401)
+    }
+
+    const offline = await getAccessOffline(env)
+    if (offline) {
+      const adminUser = await isAppAdmin(email, env)
+      const decision = decideOfflineVerify({ offline: true, isAdmin: adminUser })
+      if (decision.action === 'refuse') {
+        return json({ error: decision.error, email }, 403)
+      }
+      if (decision.action === 'clear_offline') {
+        try {
+          await setAccessOffline(env, false, { setBy: email })
+        } catch (err) {
+          return json(
+            { error: err?.message || 'Could not restore online access.' },
+            500,
+          )
+        }
+      }
     }
 
     try {
@@ -540,15 +590,17 @@ export function wantsHtml(request) {
 }
 
 /** QuadReal two-step login wall (email → code, shows destination email). */
-export function authWallResponse(request, auth) {
+export function authWallResponse(request, auth, options) {
   const detail = String(auth?.error || 'Sign in required').replace(/</g, '&lt;')
+  const offline = Boolean(options?.offline)
   const reqUrl = new URL(request.url)
   const returnTo = safeReturnTo(reqUrl.searchParams.get('return_to'))
   const returnToJs = JSON.stringify(returnTo || '/')
   if (!wantsHtml(request)) {
     return new Response(
       JSON.stringify({
-        error: auth?.error || 'Unauthorized',
+        error: offline ? 'The app is offline' : auth?.error || 'Unauthorized',
+        offline: offline || undefined,
         hint: 'POST /api/auth/request-code then /api/auth/verify',
       }),
       {
@@ -563,12 +615,20 @@ export function authWallResponse(request, auth) {
   }
 
   const mark = QR_MARK_DATA_URL
+  const title = offline ? 'Offline' : 'INSP 360'
+  const subtitle = offline
+    ? 'Access is paused. An Admin can sign in below to restore the app.'
+    : 'Sign in with your work email'
+  const hint = offline
+    ? 'Only an Admin listed in People can reactivate. Data and accounts are unchanged.'
+    : 'Access is limited to people added by an admin.'
+  const pageTitle = offline ? 'Offline · INSP 360' : 'Sign in · INSP 360'
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign in · INSP 360</title>
+<title>${pageTitle}</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -600,6 +660,7 @@ export function authWallResponse(request, auth) {
     margin:0 0 6px;font-family:var(--display);font-size:30px;font-weight:600;
     letter-spacing:-.02em;text-align:center;
   }
+  h1.offline{font-size:36px;letter-spacing:.04em}
   .sub{margin:0 0 22px;color:var(--muted);font-size:14px;line-height:1.45;text-align:center}
   .msg{margin:0 0 18px;color:var(--muted);font-size:14px;line-height:1.5;text-align:center}
   .msg strong{color:var(--text);font-weight:700;word-break:break-all}
@@ -636,8 +697,8 @@ export function authWallResponse(request, auth) {
 <body>
   <div class="card">
     <img class="qr-mark" src="${mark}" alt="QuadReal">
-    <h1>INSP 360</h1>
-    <p class="sub">Sign in with your work email</p>
+    <h1 id="appTitle" class="${offline ? 'offline' : ''}">${title}</h1>
+    <p class="sub" id="appSub">${subtitle}</p>
     <div class="err" id="err">${detail && detail !== 'Sign in required' ? detail : ''}</div>
 
     <div class="step active" id="stepEmail">
@@ -660,7 +721,7 @@ export function authWallResponse(request, auth) {
         <button type="button" id="btnChange">Change email</button>
       </div>
     </div>
-    <p class="hint">Access is limited to people added by an admin.</p>
+    <p class="hint" id="appHint">${hint}</p>
   </div>
 <script>
 (function(){
@@ -670,6 +731,9 @@ export function authWallResponse(request, auth) {
   const destEmail=document.getElementById('destEmail');
   const emailInput=document.getElementById('email');
   const codeInput=document.getElementById('code');
+  const appTitle=document.getElementById('appTitle');
+  const appSub=document.getElementById('appSub');
+  const appHint=document.getElementById('appHint');
   let pendingEmail='';
 
   function showErr(msg){
@@ -677,6 +741,14 @@ export function authWallResponse(request, auth) {
     err.textContent=msg; err.classList.add('show');
   }
   if(err.textContent.trim()) err.classList.add('show');
+
+  function applyOfflineChrome(){
+    appTitle.textContent='Offline';
+    appTitle.classList.add('offline');
+    appSub.textContent='Access is paused. An Admin can sign in below to restore the app.';
+    appHint.textContent='Only an Admin listed in People can reactivate. Data and accounts are unchanged.';
+    document.title='Offline · INSP 360';
+  }
 
   function showCodeStep(email){
     pendingEmail=email;
@@ -703,7 +775,19 @@ export function authWallResponse(request, auth) {
     });
     const j=await res.json().catch(()=>({}));
     if(!res.ok) throw new Error(j.error||'Could not send code');
-    return j.email||email;
+    const mode=j.mode==='offline'?'offline':'code';
+    return { email: j.email||email, mode };
+  }
+
+  function showResult(result){
+    if(result.mode==='offline'){
+      applyOfflineChrome();
+      emailInput.value='';
+      showEmailStep();
+      showErr('');
+      return;
+    }
+    showCodeStep(result.email);
   }
 
   document.getElementById('formEmail').addEventListener('submit',async (e)=>{
@@ -712,8 +796,7 @@ export function authWallResponse(request, auth) {
     const btn=document.getElementById('btnSend');
     btn.disabled=true; showErr('');
     try{
-      const shown=await requestCode(email);
-      showCodeStep(shown);
+      showResult(await requestCode(email));
     }catch(ex){ showErr(ex.message||'Could not send code'); }
     finally{ btn.disabled=false; }
   });
@@ -741,7 +824,8 @@ export function authWallResponse(request, auth) {
     if(!pendingEmail) return;
     showErr('');
     try{
-      await requestCode(pendingEmail);
+      const result=await requestCode(pendingEmail);
+      if(result.mode==='offline'){ showResult(result); return; }
       showErr('');
       codeInput.focus();
     }catch(ex){ showErr(ex.message||'Could not resend'); }

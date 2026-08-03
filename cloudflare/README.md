@@ -108,6 +108,16 @@ Unauthenticated visits to `/` get the branded two-step wall:
 
 Only emails already in D1 `users` receive mail (admins add people in Admin → People). Unknown emails still get a generic success response (anti-enumeration) but no email is sent.
 
+### Offline kill-switch
+
+Same panic control as QR East Industrial Database:
+
+1. On the login wall, enter **`pulltheplug@quadreal.com`** → app goes **Offline** (no OTP email sent).
+2. While Offline, everyone sees the Offline wall (session cookies ignored for HTML). Non-admins cannot request OTP or use the API.
+3. An **Admin** (D1 `users.role = admin`) signs in with a normal OTP → Offline clears; data and accounts are unchanged.
+
+Flag is stored in D1 `app_settings` key `access_offline`.
+
 Once signed in, use **Log out** next to the top identity chip — it `POST`s `/api/auth/logout`, clears the session cookie, and returns to the branded wall.
 
 Seeded admin: `robert.piwin@quadreal.com` (see `migrations/0002_seed_admin.sql`).

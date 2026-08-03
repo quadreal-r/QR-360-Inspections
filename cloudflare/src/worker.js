@@ -37,6 +37,7 @@ import {
   sendResendEmail,
   verifySession,
 } from './auth.js'
+import { getAccessOffline, isAppAdmin } from './accessOffline.js'
 import {
   getActivityReport,
   handleTelemetryPost,
@@ -934,7 +935,13 @@ async function handleApi(request, env) {
   }
 
   if (path === '/api/health') {
-    return json({ ok: true, service: 'insp360-viewer', bucket: 'insp360' })
+    const offline = await getAccessOffline(env)
+    return json({
+      ok: true,
+      service: 'insp360-viewer',
+      bucket: 'insp360',
+      ...(offline ? { offline: true } : {}),
+    })
   }
 
   if (path.startsWith('/api/auth/')) {
@@ -946,6 +953,20 @@ async function handleApi(request, env) {
   const auth = await verifySession(request, env)
   if (!auth.ok) {
     return json({ error: auth.error || 'Unauthorized' }, 401)
+  }
+
+  // While Offline, cut non-admin API access (Admin can still restore via /api/auth/*).
+  if (await getAccessOffline(env)) {
+    const adminUser = await isAppAdmin(auth.email, env)
+    if (!adminUser) {
+      return json(
+        {
+          error: 'The app is offline. Only an Admin can restore access.',
+          offline: true,
+        },
+        403,
+      )
+    }
   }
 
   const user = await loadOrCreateUser(env, auth.email)
@@ -1525,13 +1546,18 @@ export default {
 
       // Brand assets must stay public so the login wall can load its background.
       const isPublicBrand = url.pathname.startsWith('/brand/')
+      if (isPublicBrand && env.ASSETS) {
+        return env.ASSETS.fetch(request)
+      }
+
+      // Panic kill-switch: cut all HTML access while Offline (admins reactivate via wall OTP).
+      if (await getAccessOffline(env)) {
+        return authWallResponse(request, { error: 'Sign in required' }, { offline: true })
+      }
 
       // Session cookie gate for viewer HTML/assets. Unauthenticated → QuadReal login wall.
       const auth = await verifySession(request, env)
       if (!auth.ok) {
-        if (isPublicBrand && env.ASSETS) {
-          return env.ASSETS.fetch(request)
-        }
         return authWallResponse(request, auth)
       }
 

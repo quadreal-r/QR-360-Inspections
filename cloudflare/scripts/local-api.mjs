@@ -46,6 +46,13 @@ import {
   normalizeGroupMemberList,
   resolveLocalEmail,
 } from '../src/acl-sqlite.js'
+import {
+  decideOfflineCodeRequest,
+  decideOfflineVerify,
+  getAccessOffline,
+  isAppAdmin,
+  setAccessOffline,
+} from '../src/accessOffline.js'
 
 const inflateRawAsync = promisify(zlibInflateRaw)
 
@@ -705,14 +712,50 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Auth stubs (production uses Resend OTP + session cookie; local uses ?as= bypass).
+    // Kill-switch parity: pulltheplug@… sets Offline; Admin verify clears it.
+    const offlineEnv = { INSP360_DB: aclDb }
     if (pathname === '/api/auth/request-code' && req.method === 'POST') {
       const body = (await readJsonBody(req)) || {}
       const email = normalizeEmail(body.email || resolveLocalEmail(req, url))
-      return json(res, { ok: true, email, local: true, hint: 'Local API skips Resend; use ?as=email' })
+      if (!email || !email.includes('@')) {
+        return json(res, { error: 'Valid email required' }, 400)
+      }
+      const offline = await getAccessOffline(offlineEnv)
+      const adminUser = offline ? await isAppAdmin(email, offlineEnv) : false
+      const offlineDecision = decideOfflineCodeRequest({
+        email,
+        offline,
+        isAdmin: adminUser,
+      })
+      if (offlineDecision.action === 'pull_plug') {
+        await setAccessOffline(offlineEnv, true, { setBy: email })
+        return json(res, { ok: true, email, mode: 'offline', local: true })
+      }
+      if (offlineDecision.action === 'block_non_admin') {
+        return json(res, { error: offlineDecision.error, email }, 400)
+      }
+      return json(res, {
+        ok: true,
+        email,
+        mode: 'code',
+        local: true,
+        hint: 'Local API skips Resend; use ?as=email',
+      })
     }
     if (pathname === '/api/auth/verify' && req.method === 'POST') {
       const body = (await readJsonBody(req)) || {}
       const email = normalizeEmail(body.email || resolveLocalEmail(req, url))
+      const offline = await getAccessOffline(offlineEnv)
+      if (offline) {
+        const adminUser = await isAppAdmin(email, offlineEnv)
+        const decision = decideOfflineVerify({ offline: true, isAdmin: adminUser })
+        if (decision.action === 'refuse') {
+          return json(res, { error: decision.error, email }, 403)
+        }
+        if (decision.action === 'clear_offline') {
+          await setAccessOffline(offlineEnv, false, { setBy: email })
+        }
+      }
       return json(res, { ok: true, email, local: true })
     }
     if (pathname === '/api/auth/logout' && (req.method === 'POST' || req.method === 'GET')) {
@@ -726,6 +769,20 @@ const server = http.createServer(async (req, res) => {
       pathname.startsWith('/api/admin')
     let user = null
     if (needUser) {
+      if (await getAccessOffline(offlineEnv)) {
+        const email = resolveLocalEmail(req, url)
+        const adminUser = await isAppAdmin(email, offlineEnv)
+        if (!adminUser) {
+          return json(
+            res,
+            {
+              error: 'The app is offline. Only an Admin can restore access.',
+              offline: true,
+            },
+            403,
+          )
+        }
+      }
       const email = resolveLocalEmail(req, url)
       user = await loadOrCreateUser(aclDb, email)
       if (!user) return json(res, { error: 'Could not resolve user' }, 401)
