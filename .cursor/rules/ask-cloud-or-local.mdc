@@ -2,7 +2,9 @@
 
 After finishing any meaningful feature, UI, fix, or behavior change to the viewer (`QR-360-Inspections_v*.html`), capture (`insp-capture.html`), or related shippable app behavior:
 
-1. **Do not** run `npm run sync-viewer`, `npm run deploy`, `npm run cap:sync`, or East Industrial `npm run sync:qr360-viewer` until the user chooses a target.
+**Exception:** Address-database bakes (new Excel/JSON portfolio loaded via the internal Load database / capture upload tool) always bake + deploy online + Map sync per `bake-address-db-always.mdc` — do **not** ask for a target on those.
+
+1. **Do not** run `npm run sync-viewer`, `npm run deploy`, `npm run cap:sync`, or East Industrial `npm run sync:qr360-viewer` until the user chooses a target (except address-DB bakes above).
 2. **Always ask** (use AskQuestion when available) which copies to update:
    - **1 — Local only** — bump/source files in the repo; optionally `npm run sync-viewer` into `cloudflare/public/` for local `:8788` / file testing. No Cloudflare Worker deploy.
    - **2 — Cloud only** — deploy the already-synced public assets / Worker (`npm run deploy` in `cloudflare/`) so https://insp360-viewer.krutki11.workers.dev updates. Skip if public is stale — confirm with the user.

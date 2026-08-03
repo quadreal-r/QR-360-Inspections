@@ -1,0 +1,50 @@
+---
+description: Bake every new address DB upload into the app, realign sheet/columns, deploy online
+alwaysApply: true
+---
+
+# Always bake address DB uploads into the app + online
+
+When the user uploads / drops / provides a new address database via the internal tool (**Load database** in the viewer, Excel upload in capture, or an East Industrial / QuadReal portfolio export):
+
+## Do not stop at browser IDB
+
+IndexedDB-only load is not enough. Always bake the new DB into the shipped app and update the online copy.
+
+## Required workflow
+
+1. **Schema check (sheets + columns)** before baking:
+   - Expected sheets (East Industrial export): `Buildings`, `RTUs`, `Tenant Polygons`, `Utilities` (aliases like `Polygons` OK for tenants).
+   - Expected **Buildings** headers: `Building Address`, `BU #`, `Portfolio`, `Cluster`, `Manager`, `Sq Ft`, `Status`, `RTU Count`, `Tenant Polygons`, `Latitude`, `Longitude`.
+   - Expected **Tenant Polygons** headers: `Building Address`, `Portfolio`, `Cluster`, `Manager`, `Suite`, `Tenant Name`, `Point Count`, `Color`, `Paths (JSON)`, `Centroid Lat`, `Centroid Lng`.
+   - If sheet names or headers are renamed/moved/missing, **realign parsers** (do not silently drop fields):
+     - Viewer: `buildingsFromWorkbook` / `loadGeoWorkbook` / JSON `geoIndex` load in `QR-360-Inspections_v*.html`
+     - Capture: `parseDbWorkbook` in `insp-capture.html` (+ synced `cloudflare/public/capture.html`, Android www if present)
+   - Report mismatches (what was expected vs found) and what was remapped.
+
+2. **Bake into the application**:
+   - Replace `#geoDbEmbedded` JSON in the current viewer (`geoIndex` shape: `buildings`, `polys`, plus `rooms` / `rtus` when present).
+   - Update capture built-in `BUILDINGS` from the same source (address, BU, portfolio, cluster, manager, sqft, rtu, lat/lng, units from tenant polygons).
+   - Refresh `#geoRtuCounts` when RTU counts are in the export.
+   - Set `source` / `fileName` to the upload name + date.
+
+3. **Version bump** the viewer (and capture if its built-in DB changed) per `version-bump-always.mdc`.
+
+4. **Deploy online without asking** (this overrides `ask-cloud-or-local.mdc` for address-DB bakes only):
+   ```powershell
+   cd C:\Users\Robert\Projects\QR-360-Inspections\cloudflare
+   npm run deploy
+   ```
+   Then Map Explorer embed:
+   ```powershell
+   cd C:\Users\Robert\Projects\QR-East_Industrial_Database
+   npm run sync:qr360-viewer
+   ```
+
+5. **Commit + push** the bake per `commit-push-always.mdc`.
+
+## Notes
+
+- Prefer a full QuadReal DB **JSON** (buildings + polys) when available; Excel merges buildings/SF/GPS but keeps existing polygons unless Paths are present.
+- If the user only says they uploaded in the browser and no file is on disk, ask them to drop/export the same file into the chat or a project path so it can be baked.
+- Feature/UI changes that are *not* address-DB bakes still follow `ask-cloud-or-local.mdc`.
