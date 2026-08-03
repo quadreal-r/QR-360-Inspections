@@ -535,8 +535,8 @@ export async function sendActivityReportNow(env, hours = 24) {
 }
 
 /**
- * Query last 24h, email digest to REPORT_TO, mark activity_report_sent.
- * Empty days still send a short “no activity” note.
+ * Query last 24h, email digest to REPORT_TO (admin only), mark activity_report_sent.
+ * Skips the email when there was no activity in the window (once daily via cron ~9am ET).
  */
 export async function sendDailyActivityReport(env) {
   const until = new Date()
@@ -563,13 +563,18 @@ export async function sendDailyActivityReport(env) {
       .first()
     if (prior) {
       console.log('sendDailyActivityReport: already sent for', dayKey)
-      return { ok: true, skipped: true }
+      return { ok: true, skipped: true, reason: 'already_sent' }
     }
   } catch (err) {
     console.error('sendDailyActivityReport dedupe check failed', err?.message || err)
   }
 
   const report = await buildDailyReport(env, sinceIso, untilIso)
+  if (!report.eventCount) {
+    console.log('sendDailyActivityReport: no activity, skipping email', dayKey)
+    return { ok: true, skipped: true, reason: 'no_activity', eventCount: 0 }
+  }
+
   const subject = `INSP 360 activity log — ${sinceIso.slice(0, 10)} (24h)`
 
   const sent = await sendResendEmail(env, {

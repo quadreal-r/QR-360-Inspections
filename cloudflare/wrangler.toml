@@ -33,7 +33,7 @@ ACCESS_DISABLE_CHECK = "1"
 #   RESEND_FROM      — e.g. INSP 360 <noreply@your-verified-domain>
 
 [triggers]
-crons = ["0 12 * * *"]  # once daily UTC (~8am ET / 9am EDT)
+crons = ["0 13 * * *"]  # once daily 13:00 UTC ≈ 9am EDT / 8am EST
 
 [observability]
 enabled = true
