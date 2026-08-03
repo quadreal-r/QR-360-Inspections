@@ -51,3 +51,14 @@ jobs:
           wranglerVersion: '4'
           packageManager: npm
           command: deploy
+
+      # Idempotent: ensure seeded admin stays admin (ON CONFLICT updates role).
+      - name: Seed admin user
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: e46c718ce72e30e61182c9b1c04cf286
+          workingDirectory: cloudflare
+          wranglerVersion: '4'
+          packageManager: npm
+          command: d1 execute insp360-acl --remote --file=migrations/0002_seed_admin.sql
