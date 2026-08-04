@@ -7,6 +7,7 @@ import {
   decideOfflineVerify,
   getAccessOffline,
   isAppAdmin,
+  notifyAdminsOffline,
   setAccessOffline,
 } from './accessOffline.js'
 
@@ -14,6 +15,11 @@ export const SESSION_COOKIE = 'insp360_session'
 export const SESSION_TTL_SEC = 24 * 60 * 60 // 1 day
 export const OTP_TTL_MS = 10 * 60 * 1000 // 10 minutes
 export const OTP_MAX_ATTEMPTS = 5
+/** Minimum gap between two request-code sends for the same email. */
+export const OTP_REQUEST_COOLDOWN_SECONDS = 30
+/** Max request-code sends per email per rolling hour window. */
+export const OTP_REQUEST_MAX_PER_HOUR = 5
+const OTP_REQUEST_WINDOW_MS = 60 * 60 * 1000
 
 function normalizeEmail(email) {
   return String(email || '')
@@ -193,19 +199,83 @@ async function userExists(env, email) {
   return !!row
 }
 
-async function storeOtp(env, email, code) {
+/**
+ * Pure decision for request-code throttling: a minimum gap between sends,
+ * plus a rolling-hour cap, so `/api/auth/request-code` can't be hammered to
+ * spam an allowlisted inbox or run up Resend usage. No I/O — takes/returns
+ * plain values so it's unit-testable without D1.
+ */
+export function decideOtpRequestThrottle({
+  lastCreatedAtMs = null,
+  requestCount = 0,
+  windowStartedAtMs = null,
+  nowMs = Date.now(),
+} = {}) {
+  if (lastCreatedAtMs != null) {
+    const elapsedSec = (nowMs - lastCreatedAtMs) / 1000
+    if (elapsedSec < OTP_REQUEST_COOLDOWN_SECONDS) {
+      return {
+        allowed: false,
+        error: 'Please wait before requesting another code.',
+        retryAfterSeconds: Math.ceil(OTP_REQUEST_COOLDOWN_SECONDS - elapsedSec),
+      }
+    }
+  }
+
+  const windowAgeMs = windowStartedAtMs != null ? nowMs - windowStartedAtMs : null
+  const windowExpired = windowAgeMs == null || windowAgeMs >= OTP_REQUEST_WINDOW_MS
+  const currentCount = windowExpired ? 0 : Number(requestCount) || 0
+
+  if (currentCount >= OTP_REQUEST_MAX_PER_HOUR) {
+    return {
+      allowed: false,
+      error: 'Too many code requests — try again later.',
+      retryAfterSeconds: Math.max(1, Math.ceil((OTP_REQUEST_WINDOW_MS - windowAgeMs) / 1000)),
+    }
+  }
+
+  return {
+    allowed: true,
+    nextRequestCount: currentCount + 1,
+    nextWindowStartedAtMs: windowExpired ? nowMs : windowStartedAtMs,
+  }
+}
+
+async function getOtpRequestState(env, email) {
+  const row = await env.INSP360_DB.prepare(
+    'SELECT created_at, request_count, window_started_at FROM auth_otps WHERE email = ? COLLATE NOCASE',
+  )
+    .bind(normalizeEmail(email))
+    .first()
+  return {
+    lastCreatedAtMs: row?.created_at ? new Date(row.created_at).getTime() : null,
+    requestCount: Number(row?.request_count || 0),
+    windowStartedAtMs: row?.window_started_at ? new Date(row.window_started_at).getTime() : null,
+  }
+}
+
+async function storeOtp(env, email, code, throttle) {
   const codeHash = await sha256Hex(`${normalizeEmail(email)}:${code}`)
   const expiresAt = new Date(Date.now() + OTP_TTL_MS).toISOString()
+  const windowStartedAt = new Date(throttle.nextWindowStartedAtMs).toISOString()
   await env.INSP360_DB.prepare(
-    `INSERT INTO auth_otps (email, code_hash, expires_at, attempts, created_at)
-     VALUES (?, ?, ?, 0, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    `INSERT INTO auth_otps (email, code_hash, expires_at, attempts, created_at, request_count, window_started_at)
+     VALUES (?, ?, ?, 0, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), ?, ?)
      ON CONFLICT(email) DO UPDATE SET
        code_hash = excluded.code_hash,
        expires_at = excluded.expires_at,
        attempts = 0,
-       created_at = excluded.created_at`,
+       created_at = excluded.created_at,
+       request_count = excluded.request_count,
+       window_started_at = excluded.window_started_at`,
   )
-    .bind(normalizeEmail(email), codeHash, expiresAt)
+    .bind(
+      normalizeEmail(email),
+      codeHash,
+      expiresAt,
+      throttle.nextRequestCount,
+      windowStartedAt,
+    )
     .run()
 }
 
@@ -420,6 +490,24 @@ export async function handleAuthApi(request, env, path) {
           500,
         )
       }
+      // Triggering this needs no login, so alert admins immediately — never
+      // let a logging/email failure block the offline response itself.
+      const ip = request.headers.get('CF-Connecting-IP') || ''
+      try {
+        const { recordEvent } = await import('./activity.js')
+        await recordEvent(env, {
+          email,
+          event_type: 'offline_triggered',
+          meta: { ip },
+        })
+      } catch (_) {
+        /* logging must not block the kill-switch */
+      }
+      try {
+        await notifyAdminsOffline(env, { triggeredBy: email, ip })
+      } catch (_) {
+        /* alert must not block the kill-switch */
+      }
       return json({ ok: true, email, mode: 'offline' })
     }
     if (offlineDecision.action === 'block_non_admin') {
@@ -432,8 +520,18 @@ export async function handleAuthApi(request, env, path) {
     if (!allowed) {
       return json({ ok: true, email, mode: 'code' })
     }
+
+    const throttleState = await getOtpRequestState(env, email)
+    const throttle = decideOtpRequestThrottle(throttleState)
+    if (!throttle.allowed) {
+      return json(
+        { error: throttle.error, email, retryAfterSeconds: throttle.retryAfterSeconds },
+        429,
+      )
+    }
+
     const code = generateOtpCode()
-    await storeOtp(env, email, code)
+    await storeOtp(env, email, code, throttle)
     const sent = await sendOtpEmail(env, email, code)
     if (!sent.ok) {
       console.error('OTP email failed for', email, sent.error)

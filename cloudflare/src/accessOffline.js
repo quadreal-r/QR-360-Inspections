@@ -91,6 +91,43 @@ export async function isAppAdmin(email, env) {
   }
 }
 
+/**
+ * Alert every admin the moment the kill-switch fires, since triggering it
+ * requires no login. Never throws — a Resend failure must not block the
+ * offline response itself.
+ */
+export async function notifyAdminsOffline(env, { triggeredBy, ip } = {}) {
+  if (!env?.INSP360_DB) return { ok: false, error: 'no db' }
+  try {
+    const rows = await env.INSP360_DB.prepare(
+      `SELECT email FROM users WHERE role = 'admin'`,
+    ).all()
+    const admins = (rows.results || [])
+      .map((r) => normalizeEmail(r.email))
+      .filter(Boolean)
+    if (!admins.length) return { ok: false, error: 'no admins' }
+
+    const { sendResendEmail } = await import('./auth.js')
+    const when = new Date().toISOString()
+    const who = triggeredBy || 'unknown'
+    const from = ip || 'unknown IP'
+    const text =
+      `INSP 360 was just taken OFFLINE.\n\n` +
+      `Triggered by: ${who}\n` +
+      `From: ${from}\n` +
+      `At: ${when}\n\n` +
+      `Only an Admin can sign in with a normal code to restore access.`
+    return await sendResendEmail(env, {
+      to: admins,
+      subject: 'INSP 360 — app taken OFFLINE',
+      text,
+    })
+  } catch (err) {
+    console.error('notifyAdminsOffline failed', err?.message || err)
+    return { ok: false, error: err?.message || 'notify failed' }
+  }
+}
+
 /** Decide how request-code should behave given offline state. */
 export function decideOfflineCodeRequest(input) {
   if (isPullThePlugEmail(input.email)) return { action: 'pull_plug' }

@@ -20,6 +20,7 @@ const ALLOWED_TYPES = new Set([
   'tour_photo_save',
   'tour_delete',
   'tour_grants_update',
+  'offline_triggered',
 ])
 
 /** Client-ingestable types only (login/logout/tour_* mutations are server-side). */

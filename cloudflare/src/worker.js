@@ -3,7 +3,7 @@
  *
  * Routes:
  *   GET  /api/health
- *   POST /api/auth/request-code | verify | logout
+ *   POST /api/auth/request-code | verify | logout  (request-code is rate-limited: 30s cooldown, 5/hr)
  *   POST /api/telemetry
  *   GET  /api/me
  *   GET  /api/tours?prefix=

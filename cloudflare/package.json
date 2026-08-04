@@ -12,10 +12,12 @@
     "setup:access": "node scripts/setup-cloudflare-access.mjs",
     "seed:admin": "wrangler d1 execute insp360-acl --remote --file=migrations/0002_seed_admin.sql",
     "db:migrate": "wrangler d1 migrations apply insp360-acl --remote",
-    "tail": "wrangler tail"
+    "tail": "wrangler tail",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",
+    "vitest": "^3.0.0",
     "wrangler": "^4.28.0"
   }
 }
