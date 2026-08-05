@@ -437,6 +437,13 @@ function serveStatic(req, res, urlPath) {
 async function handleAdmin(req, res, user, pathname, url) {
   if (user.role !== 'admin') return json(res, { error: 'Admin only' }, 403)
 
+  // People picker for the add-a-person field — mirrors the worker's bundled copy.
+  if (pathname === '/api/admin/address-book' && req.method === 'GET') {
+    const abPath = path.resolve(__dirname, '..', 'data', 'address-book.json')
+    if (!fs.existsSync(abPath)) return json(res, { ok: true, people: [] })
+    return json(res, { ok: true, ...JSON.parse(fs.readFileSync(abPath, 'utf8')) })
+  }
+
   if (pathname === '/api/admin/users' && req.method === 'GET') {
     const rows = await aclDb
       .prepare(

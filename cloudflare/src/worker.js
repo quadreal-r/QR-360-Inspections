@@ -38,6 +38,14 @@ import {
   verifySession,
 } from './auth.js'
 import { getAccessOffline, isAppAdmin } from './accessOffline.js'
+
+// QuadReal GAL snapshot for the Admin → People typeahead, served admin-only. It lives in the
+// private R2 bucket (config/address-book.json), NOT in this public repo and NOT as a static
+// asset (assets are readable pre-login). Refresh: scripts/import-address-book.mjs then
+// scripts/upload-address-book.mjs. Cached per isolate so R2 is not hit on every keystroke.
+const ADDRESS_BOOK_KEY = 'config/address-book.json'
+const ADDRESS_BOOK_TTL_MS = 5 * 60 * 1000
+let addressBookCache = { at: 0, people: null }
 import {
   getActivityReport,
   handleTelemetryPost,
@@ -581,6 +589,22 @@ async function handleAdmin(request, env, user, path) {
   if (denied) return denied
 
   const url = new URL(request.url)
+
+  // GET /api/admin/address-book — people picker for the add-a-person field
+  if (path === '/api/admin/address-book' && request.method === 'GET') {
+    const now = Date.now()
+    if (!addressBookCache.people || now - addressBookCache.at > ADDRESS_BOOK_TTL_MS) {
+      let people = []
+      try {
+        const obj = await env.INSP360_BUCKET.get(ADDRESS_BOOK_KEY)
+        if (obj) people = (await obj.json())?.people || []
+      } catch (_) {
+        /* missing/corrupt file just means no suggestions */
+      }
+      addressBookCache = { at: now, people }
+    }
+    return json({ ok: true, people: addressBookCache.people })
+  }
 
   // GET /api/admin/users
   if (path === '/api/admin/users' && request.method === 'GET') {

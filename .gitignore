@@ -30,3 +30,7 @@ captures/
 Thumbs.db
 .idea/
 *.log
+
+# QuadReal GAL snapshot for the admin typeahead — employee names/emails. This repo is PUBLIC;
+# the file must never be committed. It is bundled into the worker only at deploy time.
+cloudflare/data/
